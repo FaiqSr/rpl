@@ -3,10 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Product extends Model
+class Product extends BaseModel
 {
     /** @use HasFactory<\Database\Factories\ProductFactory> */
     use HasFactory;
+
+    protected $table = 'products';
+    protected $primaryKey = 'product_id';
+    protected $fillable = [
+        'name',
+        'description',
+        'price',
+        'stock'
+    ];
+
+    public function orderDetail(): HasMany
+    {
+        return $this->hasMany(OrderDetail::class, 'product_id', 'product_id');
+    }
+
+    public function productImages(): HasMany
+    {
+        return $this->hasMany(ProductImage::class, 'product_id', 'product_id');
+    }
 }

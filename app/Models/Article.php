@@ -3,10 +3,30 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Article extends Model
+class Article extends BaseModel
 {
-    /** @use HasFactory<\Database\Factories\ArticleFactory> */
     use HasFactory;
+
+    protected $table = 'articles';
+    protected $primaryKey = 'article_id';
+    protected $keyType = 'uuid';
+    protected $fillable = [
+        'user_id',
+        'title',
+        'content'
+    ];
+
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function comment(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'article_id', 'article_id');
+    }
 }

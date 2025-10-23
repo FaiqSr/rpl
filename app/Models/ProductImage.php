@@ -3,10 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProductImage extends Model
+class ProductImage extends BaseModel
 {
-    /** @use HasFactory<\Database\Factories\ProductImageFactory> */
     use HasFactory;
+
+    protected $table = 'product_images';
+    protected $primaryKey = 'product_image_id';
+    protected $keyType = 'uuid';
+    protected $fillable = ['product_id', 'name', 'url'];
+
+
+    public function products(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+    }
 }

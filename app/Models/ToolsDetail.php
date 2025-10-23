@@ -3,10 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ToolsDetail extends Model
+class ToolsDetail extends BaseModel
 {
-    /** @use HasFactory<\Database\Factories\ToolsDetailFactory> */
     use HasFactory;
+
+
+    public function tools(): BelongsTo
+    {
+        return $this->belongsTo(Tools::class, 'tools_id', 'tools');
+    }
 }
