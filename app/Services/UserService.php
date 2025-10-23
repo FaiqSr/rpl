@@ -12,5 +12,4 @@ class UserService extends Service
     {
         $this->userModel = $userModel;
     }
-
 }
