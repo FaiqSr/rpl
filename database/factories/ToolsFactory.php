@@ -3,10 +3,8 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Tools>
- */
 class ToolsFactory extends Factory
 {
     /**
@@ -17,7 +15,11 @@ class ToolsFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'tool_code' => (string) Str::uuid(), // Sesuai 'uuid('tool_code')'
+            'name' => fake()->words(2, true),
+            'category' => fake()->randomElement(['Hand Tool', 'Power Tool', 'Measurement', 'Safety']),
+            'description' => fake()->optional()->sentence(),
+            'stock' => fake()->numberBetween(0, 50),
         ];
     }
 }

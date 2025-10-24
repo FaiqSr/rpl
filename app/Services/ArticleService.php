@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Article;
+use Illuminate\Http\Request;
 
 class ArticleService extends Service
 {
@@ -12,4 +13,6 @@ class ArticleService extends Service
     {
         $this->articleModel = $articleModel;
     }
+
+    public function getArticle(Request $request) {}
 }

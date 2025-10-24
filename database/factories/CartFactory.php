@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Cart>
- */
 class CartFactory extends Factory
 {
     /**
@@ -17,7 +17,10 @@ class CartFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'cart_id' => (string) Str::uuid(),
+            'user_id' => User::factory(),
+            'product_id' => Product::factory(),
+            'qty' => fake()->numberBetween(1, 3), // Default di migrasi 0, tapi di cart biasanya > 0
         ];
     }
 }

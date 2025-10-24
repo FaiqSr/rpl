@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tool_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignUuid('tool_id')->constrained('tools')->onDelete('cascade');
+            $table->uuid('tool_detail_id')->primary();
+            $table->foreignUuid('tool_code')->constrained('tools', 'tool_code')->onDelete('cascade');
             $table->string('serial_number')->unique();
             $table->string('condition')->default('good');
             $table->date('purchase_date')->nullable();

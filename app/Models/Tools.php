@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tools extends BaseModel
@@ -11,11 +10,11 @@ class Tools extends BaseModel
     use HasFactory;
 
     protected $table = 'tools';
-    protected $primaryKey = 'tool_id';
+    protected $primaryKey = 'tool_code';
 
 
-    public function toolsId(): HasMany
+    public function details(): HasMany
     {
-        return $this->hasMany(ToolsDetail::class, 'tool_id', 'tool_id');
+        return $this->hasMany(ToolsDetail::class, 'tool_code', 'tool_code');
     }
 }

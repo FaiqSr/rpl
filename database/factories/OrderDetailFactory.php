@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\OrderDetail>
- */
 class OrderDetailFactory extends Factory
 {
     /**
@@ -17,7 +17,11 @@ class OrderDetailFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'order_detail_id' => (string) Str::uuid(),
+            'order_id' => Order::factory(),
+            'product_id' => Product::factory(),
+            'qty' => fake()->numberBetween(1, 5),
+            'price' => fake()->numberBetween(10000, 1000000), // Sesuai 'integer'
         ];
     }
 }

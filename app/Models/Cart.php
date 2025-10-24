@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class Cart extends BaseModel
 {
@@ -17,18 +18,26 @@ class Cart extends BaseModel
 
     protected $primaryKey = 'cart_id';
 
-    public function getCartByUserId($userId): Cart
+    public function getCartByUserId($userId)
     {
-        return $this->where(User::class, '=', $userId)->first();
+        $query = DB::table("$this->table as c")->join('products as p', 'c.product_id', '=', 'p.product_id')->join('product_images as pi', 'p.product_id', '=', 'pi.product_id')->select([
+            'c.qty',
+            'p.slug',
+            'pi.name',
+            'pi.url',
+            'c.updated_at'
+        ])->where('c.user_id', $userId)->get();
+
+        return $query;
     }
 
     public function users(): BelongsTo
     {
-        return $this->belongsTo('user_id', 'user_id', 'users');
+        return $this->belongsTo(User::class, 'user_id', 'users');
     }
 
     public function products(): BelongsTo
     {
-        return $this->belongsTo('product_id', 'product_id', 'products');
+        return $this->belongsTo(Product::class, 'product_id', 'products');
     }
 }

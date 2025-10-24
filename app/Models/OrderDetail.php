@@ -12,6 +12,7 @@ class OrderDetail extends BaseModel
 
     protected $table = 'order_details';
     protected $primaryKey = 'order_detail_id';
+    public $timestamps = false;
 
     protected $fillable = [
         'order_id',

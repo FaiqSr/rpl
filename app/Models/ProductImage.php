@@ -11,7 +11,6 @@ class ProductImage extends BaseModel
 
     protected $table = 'product_images';
     protected $primaryKey = 'product_image_id';
-    protected $keyType = 'uuid';
     protected $fillable = ['product_id', 'name', 'url'];
 
 

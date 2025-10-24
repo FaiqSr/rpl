@@ -3,10 +3,8 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
- */
 class ProductFactory extends Factory
 {
     /**
@@ -16,8 +14,14 @@ class ProductFactory extends Factory
      */
     public function definition(): array
     {
+        $name = fake()->words(3, true);
         return [
-            //
+            'product_id' => (string) Str::uuid(),
+            'name' => $name,
+            'slug' => Str::slug($name),
+            'description' => fake()->optional()->paragraph(),
+            'price' => fake()->randomFloat(2, 10000, 1000000), // Sesuai 'decimal(10, 2)'
+            'stock' => fake()->numberBetween(0, 100),
         ];
     }
 }

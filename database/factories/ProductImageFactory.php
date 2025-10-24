@@ -2,11 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductImage>
- */
 class ProductImageFactory extends Factory
 {
     /**
@@ -17,7 +16,10 @@ class ProductImageFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'product_image_id' => (string) Str::uuid(),
+            'product_id' => Product::factory(),
+            'name' => fake()->sentence(2) . '.jpg',
+            'url' => fake()->imageUrl(640, 480, 'products', true),
         ];
     }
 }

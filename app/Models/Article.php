@@ -12,9 +12,8 @@ class Article extends BaseModel
 
     protected $table = 'articles';
     protected $primaryKey = 'article_id';
-    protected $keyType = 'uuid';
     protected $fillable = [
-        'user_id',
+        'author_id',
         'title',
         'content'
     ];
@@ -22,7 +21,7 @@ class Article extends BaseModel
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'author_id', 'user_id');
     }
 
     public function comment(): HasMany

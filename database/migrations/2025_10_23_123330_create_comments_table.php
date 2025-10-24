@@ -12,11 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('comments', function (Blueprint $table) {
-            $table->uuid('comment_id');
-            $table->foreignUuid('article_id')->constrained('articles')->onDelete('cascade');
-            $table->foreignUuid('user_id')->constrained('users')->onDelete('cascade');
+            $table->uuid('comment_id')->primary();
+            $table->foreignUuid('article_id')->constrained('articles', 'article_id')->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained('users', 'user_id')->onDelete('cascade');
             $table->Text('content');
-            $table->foreignUuid('comment_id')->constrained('comments')->onDelete('cascade');
+            $table->foreignUuid('parent_id')->nullable()->constrained('comments', 'comment_id')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

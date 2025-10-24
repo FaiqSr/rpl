@@ -12,7 +12,7 @@ class Order extends BaseModel
 
 
     protected $table = 'orders';
-    protected $primaryKey = 'orders_id';
+    protected $primaryKey = 'order_id';
     protected $fillable = [
         'user_id',
         'total_price'

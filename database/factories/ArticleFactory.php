@@ -2,11 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Article>
- */
 class ArticleFactory extends Factory
 {
     /**
@@ -17,7 +16,10 @@ class ArticleFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'article_id' => (string) Str::uuid(),
+            'author_id' => User::factory(),
+            'title' => fake()->sentence(6),
+            'content' => fake()->paragraphs(3, true), // 3 paragraf sebagai string
         ];
     }
 }
