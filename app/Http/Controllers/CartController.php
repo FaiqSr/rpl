@@ -14,9 +14,22 @@ class CartController extends Controller
         $this->cartService = $cartService;
     }
 
-    public function CartByUserJson(Request $request)
+    public function cartByUserJson(Request $request)
     {
+        $token = $request->header('Authorization');
+
+        return $this->cartService->jsonResponse(['token' => $token]);
 
         return $this->cartService->getCartByUserId('81193245-c73c-4da1-b243-8ea16ee42e2c');
+    }
+
+    public function updateQtyCartByIdJson(Request $request)
+    {
+        $request->validate([
+            'qty' => 'integer|min:0|required',
+            'cart_id' => 'string|required'
+        ]);
+
+        return $this->cartService->updateQtyCartById($request->cart_id, $request->qty);
     }
 }

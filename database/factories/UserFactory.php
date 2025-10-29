@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
@@ -17,9 +18,12 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $role = ['admin', 'pembeli', 'peternak'];
         return [
             'user_id' => (string) Str::uuid(),
+            'username' => fake()->userName(),
             'name' => fake()->name(),
+            'role' => Arr::random($role),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => bcrypt('password'), // password

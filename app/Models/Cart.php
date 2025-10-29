@@ -18,6 +18,15 @@ class Cart extends BaseModel
 
     protected $primaryKey = 'cart_id';
 
+    public function users(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function products(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
+    }
     public function getCartByUserId($userId)
     {
         $query = DB::table("$this->table as c")->join('products as p', 'c.product_id', '=', 'p.product_id')->join('product_images as pi', 'p.product_id', '=', 'pi.product_id')->select([
@@ -31,13 +40,16 @@ class Cart extends BaseModel
         return $query;
     }
 
-    public function users(): BelongsTo
+    public function deleteCartByUserId($cartId)
     {
-        return $this->belongsTo(User::class, 'user_id', 'users');
+        $query = DB::table("$this->table as c")->where('cart_id', '=', $cartId)->delete();
+        return $query;
     }
 
-    public function products(): BelongsTo
+    public function updateQtyCartById($data)
     {
-        return $this->belongsTo(Product::class, 'product_id', 'products');
+        return $this->where('cart_id', '=', $data['cartId'])->update([
+            'qty' => $data['qty']
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,9 +13,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('user_id')->primary();
+            $table->uuid('user_id')->primary()->default(DB::raw('(UUID())'));
             $table->string('name');
+            $table->string('username')->unique();
             $table->string('email')->unique();
+            $table->enum('role', ['admin', 'pembeli', 'peternak'])->default('pembeli');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
