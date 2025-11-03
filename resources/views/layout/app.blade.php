@@ -9,6 +9,6 @@
     @stack('scripts')
 </head>
 <body>
-    @yield('content')
+   
 </body>
 </html>
