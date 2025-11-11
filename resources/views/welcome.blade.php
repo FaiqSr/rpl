@@ -72,7 +72,7 @@
                     <a href="#fitur" class="text-dark hover:text-primary font-medium transition duration-200">Fitur</a>
                     <a href="#artikel" class="text-dark hover:text-primary font-medium transition duration-200">Artikel</a>
                     <a href="#marketplace" class="text-dark hover:text-primary font-medium transition duration-200">Marketplace</a>
-                    <a href="{{ url('/login') }}" class="bg-primary hover:bg-yellow-400 text-dark font-semibold py-2 px-6 rounded-lg transition duration-200 transform hover:-translate-y-0.5 shadow-md">
+                    <a href="/login" class="bg-primary hover:bg-yellow-400 text-dark font-semibold py-2 px-6 rounded-lg transition duration-200 transform hover:-translate-y-0.5 shadow-md">
                         Login Peternak
                     </a>
                 </div>
@@ -101,7 +101,7 @@
                         Sistem cerdas berbasis IoT dan Machine Learning untuk mengoptimalkan produktivitas peternakan ayam broiler Anda. Pantau kondisi kandang secara real-time dan kelola bisnis ternak dengan efisien.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="{{ url('/login') }}" class="bg-dark hover:bg-gray-800 text-white font-semibold py-3 px-8 rounded-lg text-center transition duration-200 transform hover:-translate-y-1 shadow-lg">
+                        <a href="/login" class="bg-dark hover:bg-gray-800 text-white font-semibold py-3 px-8 rounded-lg text-center transition duration-200 transform hover:-translate-y-1 shadow-lg">
                             Mulai Pantau Sekarang
                         </a>
                         <a href="#marketplace" class="bg-white hover:bg-gray-50 text-dark font-semibold py-3 px-8 rounded-lg border border-gray-300 text-center transition duration-200 transform hover:-translate-y-1 shadow-sm">
@@ -321,7 +321,7 @@
                 Bergabunglah dengan ratusan peternak yang telah meningkatkan produktivitas hingga 40% dengan sistem Chick Patrol.
             </p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="{{ url('/login') }}" class="bg-primary hover:bg-yellow-400 text-dark font-bold py-4 px-8 rounded-lg text-lg transition duration-200 transform hover:-translate-y-1 shadow-2xl">
+                <a href="{{ route('login') }}" class="bg-primary hover:bg-yellow-400 text-dark font-bold py-4 px-8 rounded-lg text-lg transition duration-200 transform hover:-translate-y-1 shadow-2xl">
                     Login Peternak <i class="fas fa-arrow-right ml-2"></i>
                 </a>
                 <a href="#" class="bg-transparent border-2 border-white hover:bg-white hover:bg-opacity-10 text-white font-bold py-4 px-8 rounded-lg text-lg transition duration-200 transform hover:-translate-y-1">
