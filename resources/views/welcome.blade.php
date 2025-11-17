@@ -70,9 +70,9 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#beranda" class="text-dark hover:text-primary font-medium transition duration-200">Beranda</a>
                     <a href="#fitur" class="text-dark hover:text-primary font-medium transition duration-200">Fitur</a>
-                    <a href="#artikel" class="text-dark hover:text-primary font-medium transition duration-200">Artikel</a>
-                    <a href="#marketplace" class="text-dark hover:text-primary font-medium transition duration-200">Marketplace</a>
-                    <a href="/login" class="bg-primary hover:bg-yellow-400 text-dark font-semibold py-2 px-6 rounded-lg transition duration-200 transform hover:-translate-y-0.5 shadow-md">
+                    <a href="{{ route('articles') }}" class="text-dark hover:text-primary font-medium transition duration-200">Artikel</a>
+                    <a href="{{ route('marketplace') }}" class="text-dark hover:text-primary font-medium transition duration-200">Marketplace</a>
+                    <a href="{{ route('login') }}" class="bg-primary hover:bg-yellow-400 text-dark font-semibold py-2 px-6 rounded-lg transition duration-200 transform hover:-translate-y-0.5 shadow-md">
                         Login Peternak
                     </a>
                 </div>
@@ -101,10 +101,10 @@
                         Sistem cerdas berbasis IoT dan Machine Learning untuk mengoptimalkan produktivitas peternakan ayam broiler Anda. Pantau kondisi kandang secara real-time dan kelola bisnis ternak dengan efisien.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="/login" class="bg-dark hover:bg-gray-800 text-white font-semibold py-3 px-8 rounded-lg text-center transition duration-200 transform hover:-translate-y-1 shadow-lg">
+                        <a href="{{ route('login') }}" class="bg-dark hover:bg-gray-800 text-white font-semibold py-3 px-8 rounded-lg text-center transition duration-200 transform hover:-translate-y-1 shadow-lg">
                             Mulai Pantau Sekarang
                         </a>
-                        <a href="#marketplace" class="bg-white hover:bg-gray-50 text-dark font-semibold py-3 px-8 rounded-lg border border-gray-300 text-center transition duration-200 transform hover:-translate-y-1 shadow-sm">
+                        <a href="{{ route('marketplace') }}" class="bg-white hover:bg-gray-50 text-dark font-semibold py-3 px-8 rounded-lg border border-gray-300 text-center transition duration-200 transform hover:-translate-y-1 shadow-sm">
                             Jelajahi Marketplace
                         </a>
                     </div>
