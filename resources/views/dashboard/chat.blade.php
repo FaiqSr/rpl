@@ -413,9 +413,9 @@
       flex: 1;
       padding: 0.75rem 1rem;
       border: 1px solid #e9ecef;
-      border-radius: 25px;
+      border-radius: 6px;
       font-size: 0.875rem;
-      background: #f8f9fa;
+      background: white;
     }
     
     .chat-input-wrapper input:focus {
@@ -425,22 +425,25 @@
     }
     
     .chat-send-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #69B578;
-      color: white;
-      border: none;
+      min-width: 80px;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      background: white;
+      color: #69B578;
+      border: 1px solid #69B578;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
       flex-shrink: 0;
+      font-size: 0.875rem;
+      font-weight: 500;
     }
     
     .chat-send-btn:hover {
-      background: #5a9d66;
+      background: #69B578;
+      color: white;
     }
     
     .performa-badge {
@@ -655,7 +658,7 @@
           <div class="chat-input-wrapper">
             <input type="text" id="chatInput" placeholder="Ketik pesan disini..." onkeypress="handleEnter(event)">
             <button class="chat-send-btn" onclick="sendMessage()">
-              <i class="fa-solid fa-paper-plane"></i>
+              Kirim
             </button>
           </div>
         </div>

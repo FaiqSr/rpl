@@ -162,7 +162,7 @@
     .content-card {
       background: white;
       border: 1px solid #e9ecef;
-      border-radius: 10px;
+      border-radius: 8px;
       overflow: hidden;
     }
     
@@ -451,7 +451,7 @@
       background: #69B578;
       color: white;
       border: none;
-      padding: 0.5rem 1.5rem;
+      padding: 0.6rem 1.75rem;
       border-radius: 6px;
       font-size: 0.875rem;
       font-weight: 500;
