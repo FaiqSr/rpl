@@ -12,9 +12,19 @@ Route::get('/register', function () {
     return view('auth.register');
 })->name('register');
 
+Route::post('/register', function () {
+    // TODO: Implement registration logic
+    return redirect()->route('dashboard')->with('success', 'Registrasi berhasil!');
+})->name('register.post');
+
 Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
+
+Route::post('/login', function () {
+    // TODO: Implement login logic
+    return redirect()->route('dashboard')->with('success', 'Login berhasil!');
+})->name('login.post');
 
 // Dashboard (bisa langsung diakses tanpa login)
 Route::get('/dashboard', function () {

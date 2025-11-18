@@ -27,7 +27,7 @@
         }
         
         body {
-            background-color: #f5f5f5;
+            background-color: #ffffff;
             min-height: 100vh;
             margin: 0;
             padding: 0;
@@ -48,7 +48,7 @@
             left: 0;
             width: 40%;
             height: 100%;
-            background: #69B578;
+            background: #ffffff;
             clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
             z-index: 0;
         }
@@ -59,7 +59,7 @@
             right: 0;
             width: 40%;
             height: 100%;
-            background: #69B578;
+            background: #ffffff;
             clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
             z-index: 0;
         }

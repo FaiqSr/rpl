@@ -6,7 +6,7 @@
 <div class="container-fluid p-0">
     <div class="row g-0 row-equal-height" style="min-height: 100vh;">
         <!-- Left Side - Form -->
-        <div class="col-lg-5 d-flex align-items-center justify-content-center" style="background-color: #f8f9fa;">
+        <div class="col-lg-5 d-flex align-items-center justify-content-center" style="background-color: #ffffff;">
             <div class="w-100 px-4" style="max-width: 500px;">
                 <div class="auth-card">
                     <a href="{{ route('home') }}" class="brand-logo">ChickPatrol</a>
