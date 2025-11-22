@@ -46,7 +46,7 @@ class ProductSeeder extends Seeder
                 'unit' => 'kg',
             ]);
 
-        // Dummy products without images
+        // Dummy products with images
         $dummyProducts = [
             ['name' => 'Sayap Ayam', 'slug' => 'sayap-ayam', 'price' => 35000, 'stock' => 20, 'unit' => 'kg', 'description' => 'Sayap ayam segar'],
             ['name' => 'Paha Ayam', 'slug' => 'paha-ayam', 'price' => 38000, 'stock' => 18, 'unit' => 'kg', 'description' => 'Paha ayam berkualitas'],
@@ -61,7 +61,9 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($dummyProducts as $prod) {
-            Product::factory()->create($prod);
+            Product::factory()
+                ->hasImages(1)
+                ->create($prod);
         }
     }
 }

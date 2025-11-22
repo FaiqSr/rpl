@@ -99,6 +99,47 @@
           </div>
 
           <div>
+            <label class="block font-semibold text-gray-900 mb-2">Jasa Pengiriman</label>
+            <select name="shipping_service" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+              <option value="">Pilih Jasa Pengiriman</option>
+              <option value="JNE Reguler">JNE Reguler</option>
+              <option value="JNE Express">JNE Express</option>
+              <option value="J&T Reguler">J&T Reguler</option>
+              <option value="J&T Express">J&T Express</option>
+              <option value="SiCepat Reguler">SiCepat Reguler</option>
+              <option value="SiCepat HALU">SiCepat HALU</option>
+              <option value="GoSend">GoSend</option>
+              <option value="Grab Express">Grab Express</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-gray-900 mb-2">Metode Pembayaran</label>
+            <div class="space-y-2">
+              <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="payment_method" value="QRIS" class="me-3" required>
+                <div class="flex items-center">
+                  <i class="fa-solid fa-qrcode text-2xl me-2 text-emerald-600"></i>
+                  <div>
+                    <div class="font-semibold">QRIS</div>
+                    <div class="text-xs text-gray-500">Scan QR Code untuk pembayaran</div>
+                  </div>
+                </div>
+              </label>
+              <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="payment_method" value="Transfer Bank" class="me-3" required>
+                <div class="flex items-center">
+                  <i class="fa-solid fa-building-columns text-2xl me-2 text-blue-600"></i>
+                  <div>
+                    <div class="font-semibold">Transfer Bank</div>
+                    <div class="text-xs text-gray-500">BCA, Mandiri, BRI, BNI</div>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div>
             <label class="block font-semibold text-gray-900 mb-2">Catatan (Opsional)</label>
             <textarea name="notes" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Jangan langsung di bumbu di rmh msh"></textarea>
           </div>

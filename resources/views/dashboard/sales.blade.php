@@ -264,12 +264,6 @@
       gap: 1rem;
     }
     
-    .order-header-left input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-    
     .order-buyer {
       display: flex;
       align-items: center;
@@ -419,19 +413,6 @@
       gap: 0.5rem;
     }
     
-    .order-footer-left input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-    
-    .order-footer-left label {
-      font-size: 0.75rem;
-      color: #6c757d;
-      margin: 0;
-      cursor: pointer;
-    }
-    
     .order-footer-right {
       display: flex;
       align-items: center;
@@ -551,9 +532,9 @@
       <!-- Filter Bar -->
       <div class="filter-bar">
         <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all">Semua Pesanan</button>
-          <button class="filter-tab" data-filter="selesai">Pesanan Selesai</button>
-          <button class="filter-tab" data-filter="dibatalkan">Dibatalkan</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'all' ? 'active' : '' }}" data-filter="all" onclick="filterOrders('all')">Semua Pesanan</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'dikirim' ? 'active' : '' }}" data-filter="dikirim" onclick="filterOrders('dikirim')">Pesanan Dikirim</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'selesai' ? 'active' : '' }}" data-filter="selesai" onclick="filterOrders('selesai')">Pesanan Selesai</button>
         </div>
       </div>
       
@@ -566,12 +547,11 @@
           $qtyTotal = $order->orderDetail->sum('qty');
           $unitPrice = $detail ? ($detail->price) : 0;
           $productName = $product?->name ?? 'Produk';
-          $image = $product?->images?->first()?->path ?? null;
+          $image = $product?->images?->first()?->url ?? null;
         @endphp
         <div class="order-item">
           <div class="order-header">
             <div class="order-header-left">
-              <input type="checkbox">
               <div class="order-buyer">
                 <i class="fa-solid fa-user"></i>
                 <span>{{ $order->buyer_name }}</span>
@@ -607,22 +587,63 @@
               <div class="order-address-text">{{ $order->buyer_address }}</div>
             </div>
             <div class="order-courier">
-              <div class="order-courier-title">Kurir</div>
-              <div class="order-courier-info">Reguler - JNE</div>
-              <a href="#" class="order-courier-link">lihat detail</a>
+              <div class="order-courier-title">Pengiriman & Pembayaran</div>
+              <div class="order-courier-info">
+                <div class="mb-2">
+                  <strong>Jasa Kirim:</strong> {{ $order->shipping_service ?? 'Belum dipilih' }}
+                </div>
+                @if($order->tracking_number)
+                  <div class="mb-2">
+                    <strong>Resi:</strong> 
+                    <span id="tracking-{{ $order->order_id }}">{{ $order->tracking_number }}</span>
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="editTracking('{{ $order->order_id }}')" title="Edit Resi">
+                      <i class="fa-solid fa-edit"></i>
+                    </button>
+                  </div>
+                @else
+                  <div class="mb-2">
+                    <strong>Resi:</strong> 
+                    <span class="text-muted">Belum ada</span>
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="addTracking('{{ $order->order_id }}')" title="Tambah Resi">
+                      <i class="fa-solid fa-plus"></i> Tambah Resi
+                    </button>
+                  </div>
+                @endif
+                <div>
+                  <strong>Pembayaran:</strong> 
+                  @if($order->payment_method === 'QRIS')
+                    <span class="badge bg-success"><i class="fa-solid fa-qrcode me-1"></i>QRIS</span>
+                  @elseif($order->payment_method === 'Transfer Bank')
+                    <span class="badge bg-info"><i class="fa-solid fa-building-columns me-1"></i>Transfer Bank</span>
+                  @else
+                    <span class="text-muted">Belum dipilih</span>
+                  @endif
+                </div>
+              </div>
             </div>
           </div>
           <div class="order-footer">
             <div class="order-footer-left">
-              <input type="checkbox" id="chat-pembeli-{{ $order->order_id }}">
-              <label for="chat-pembeli-{{ $order->order_id }}">Chat Pembeli</label>
+              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm btn-outline-primary" title="Chat Pembeli">
+                <i class="fa-solid fa-comment"></i> Chat Pembeli
+              </a>
             </div>
             <div class="order-footer-right">
               <div class="order-total">
                 Total Harga <strong>({{ $qtyTotal }} Barang)</strong>
                 <span style="margin-left: 2rem; font-weight: 600;">Rp {{ number_format($order->total_price,0,',','.') }}</span>
               </div>
-              <button class="btn-accept">Terima Pesanan</button>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                @if($order->status === 'pending')
+                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}')">Kirim Pesanan</button>
+                @elseif($order->status === 'dikirim')
+                  <span class="badge bg-info">Pesanan Dikirim</span>
+                @elseif($order->status === 'selesai')
+                  <span class="badge bg-success">Pesanan Selesai</span>
+                @elseif($order->status === 'dibatalkan')
+                  <span class="badge bg-danger">Dibatalkan</span>
+                @endif
+              </div>
             </div>
           </div>
         </div>
@@ -667,20 +688,129 @@
         chevron.classList.toggle('rotate');
     }
     
-    // Accept Order
-    document.querySelectorAll('.btn-accept').forEach(btn => {
-        btn.addEventListener('click', function() {
-            showSuccess('Pesanan berhasil diterima!');
+    // Ship Order (Kirim Pesanan)
+    async function shipOrder(orderId) {
+        const result = await Swal.fire({
+            title: 'Kirim Pesanan?',
+            text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#69B578',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Kirim Pesanan',
+            cancelButtonText: 'Batal'
         });
-    });
+        
+        if (result.isConfirmed) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/dashboard/orders/${orderId}/ship`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    // Reload page to refresh data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Terjadi kesalahan saat mengirim pesanan');
+                }
+            } catch (error) {
+                console.error('Error shipping order:', error);
+                showError('Terjadi kesalahan saat mengirim pesanan');
+            }
+        }
+    }
     
-    // Filter tabs
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
+    // Filter Orders
+    function filterOrders(filter) {
+        window.location.href = `{{ route('dashboard.sales') }}?filter=${filter}`;
+    }
+    
+    // Add/Edit Tracking Number
+    async function addTracking(orderId) {
+        const { value: trackingNumber } = await Swal.fire({
+            title: 'Tambah Resi Pengiriman',
+            input: 'text',
+            inputLabel: 'Nomor Resi',
+            inputPlaceholder: 'Masukkan nomor resi pengiriman',
+            showCancelButton: true,
+            confirmButtonColor: '#69B578',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Simpan',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Nomor resi tidak boleh kosong';
+                }
+            }
         });
-    });
+        
+        if (trackingNumber) {
+            await updateTracking(orderId, trackingNumber);
+        }
+    }
+    
+    async function editTracking(orderId) {
+        const currentTracking = document.getElementById(`tracking-${orderId}`).textContent;
+        const { value: trackingNumber } = await Swal.fire({
+            title: 'Edit Resi Pengiriman',
+            input: 'text',
+            inputLabel: 'Nomor Resi',
+            inputValue: currentTracking,
+            showCancelButton: true,
+            confirmButtonColor: '#69B578',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Update',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Nomor resi tidak boleh kosong';
+                }
+            }
+        });
+        
+        if (trackingNumber) {
+            await updateTracking(orderId, trackingNumber);
+        }
+    }
+    
+    async function updateTracking(orderId, trackingNumber) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const response = await fetch(`/dashboard/orders/${orderId}/tracking`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ tracking_number: trackingNumber })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showSuccess(data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showError(data.message || 'Terjadi kesalahan saat menyimpan resi');
+            }
+        } catch (error) {
+            console.error('Error updating tracking:', error);
+            showError('Terjadi kesalahan saat menyimpan resi');
+        }
+    }
     
     // Show success message if redirected with success
     @if(session('success'))

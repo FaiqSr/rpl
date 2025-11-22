@@ -266,6 +266,9 @@
       
       <div class="navbar-actions">
         @if(Auth::check())
+          <a href="{{ route('orders') }}" class="text-gray-600 text-sm me-3 text-decoration-none" title="Pesanan Saya">
+            <i class="fa-solid fa-shopping-bag me-1"></i> Pesanan Saya
+          </a>
           <a href="{{ route('profile') }}" class="text-gray-600 text-sm me-2 text-decoration-none">Halo, {{ Auth::user()->name }}</a>
           <a href="{{ route('logout') }}" class="btn-outline-secondary">Logout</a>
         @else

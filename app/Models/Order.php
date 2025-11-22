@@ -21,7 +21,10 @@ class Order extends BaseModel
         'notes',
         'buyer_name',
         'buyer_phone',
-        'buyer_address'
+        'buyer_address',
+        'shipping_service',
+        'payment_method',
+        'tracking_number'
     ];
 
     protected static function boot()

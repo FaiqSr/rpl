@@ -89,8 +89,18 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
             'address' => 'required|string',
             'phone' => 'required|string',
             'notes' => 'nullable|string',
+            'shipping_service' => 'required|string',
+            'payment_method' => 'required|string|in:QRIS,Transfer Bank',
             'total_price' => 'required|numeric'
         ]);
+
+        // Check stock availability
+        $product = Product::find($validated['product_id']);
+        if (!$product || $product->stock < $validated['qty']) {
+            return response()->json([
+                'message' => 'Stok tidak mencukupi. Stok tersedia: ' . ($product->stock ?? 0)
+            ], 400);
+        }
 
         // Create order (for demo, use first user or create guest user)
         $user = Auth::user();
@@ -102,7 +112,9 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
             'notes' => $validated['notes'] ?? null,
             'buyer_name' => $validated['buyer_name'],
             'buyer_phone' => $validated['phone'],
-            'buyer_address' => $validated['address']
+            'buyer_address' => $validated['address'],
+            'shipping_service' => $validated['shipping_service'],
+            'payment_method' => $validated['payment_method']
         ]);
 
         \App\Models\OrderDetail::create([
@@ -121,19 +133,306 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
     }
 })->name('order.create');
 
+// Confirm Order Received (for buyer)
+Route::post('/order/{id}/confirm-received', function ($id) {
+    try {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        
+        $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
+        
+        // Verify that the order belongs to the logged-in user
+        if ($order->user_id !== Auth::user()->user_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        
+        if ($order->status !== 'dikirim') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan harus dalam status dikirim terlebih dahulu'
+            ], 400);
+        }
+        
+        $order->status = 'selesai';
+        $order->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesanan telah dikonfirmasi diterima'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengonfirmasi pesanan: ' . $e->getMessage()
+        ], 500);
+    }
+})->middleware('auth.session')->name('order.confirm-received');
+
 // Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
 Route::middleware(['auth.session','admin'])->group(function() {
     Route::get('/dashboard', function () {
         return view('dashboard.seller');
     })->name('dashboard');
-    Route::get('/dashboard/products', function () { return view('dashboard.products'); })->name('dashboard.products');
+    Route::get('/dashboard/products', function () {
+        $products = Product::with('images')->orderByDesc('created_at')->get();
+        return view('dashboard.products', compact('products'));
+    })->name('dashboard.products');
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
     Route::get('/dashboard/tools/monitoring', function () { return view('dashboard.tools-monitoring'); })->name('dashboard.tools.monitoring');
-    Route::get('/dashboard/sales', function () {
-        $orders = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at')->get();
-        return view('dashboard.sales', compact('orders'));
+    Route::get('/dashboard/sales', function (\Illuminate\Http\Request $request) {
+        $filter = $request->get('filter', 'all');
+        $query = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at');
+        
+        if ($filter === 'dikirim') {
+            $query->where('status', 'dikirim');
+        } elseif ($filter === 'selesai') {
+            $query->where('status', 'selesai');
+        } elseif ($filter === 'all') {
+            // Show all orders
+        } else {
+            // Default: show all orders
+        }
+        
+        $orders = $query->get();
+        return view('dashboard.sales', compact('orders', 'filter'));
     })->name('dashboard.sales');
     Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
+    
+    // Product CRUD API
+    Route::post('/dashboard/products', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'price' => 'required|numeric|min:0',
+                'stock' => 'required|integer|min:0',
+                'unit' => 'required|string|max:50',
+                'image' => 'nullable|string', // Base64 image or URL
+            ]);
+            
+            // Generate unique slug
+            $baseSlug = Str::slug($validated['name']);
+            $slug = $baseSlug;
+            $counter = 1;
+            while (Product::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+            
+            $product = Product::create([
+                'product_id' => (string) Str::uuid(),
+                'name' => $validated['name'],
+                'slug' => $slug,
+                'description' => $validated['description'] ?? null,
+                'price' => $validated['price'],
+                'stock' => $validated['stock'],
+                'unit' => $validated['unit'],
+            ]);
+            
+            // Save image if provided
+            if (!empty($validated['image'])) {
+                \App\Models\ProductImage::create([
+                    'product_image_id' => (string) Str::uuid(),
+                    'product_id' => $product->product_id,
+                    'name' => $product->name . '.jpg',
+                    'url' => $validated['image'],
+                ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Produk berhasil ditambahkan',
+                'product' => $product->fresh()->load('images')
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error creating product: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan produk: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.products.store');
+    
+    Route::put('/dashboard/products/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $product = Product::where('product_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'price' => 'required|numeric|min:0',
+                'stock' => 'required|integer|min:0',
+                'unit' => 'required|string|max:50',
+                'image' => 'nullable|string',
+            ]);
+            
+            // Generate unique slug
+            $baseSlug = Str::slug($validated['name']);
+            $slug = $baseSlug;
+            $counter = 1;
+            while (Product::where('slug', $slug)->where('product_id', '!=', $product->product_id)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+            
+            $product->update([
+                'name' => $validated['name'],
+                'slug' => $slug,
+                'description' => $validated['description'] ?? null,
+                'price' => $validated['price'],
+                'stock' => $validated['stock'],
+                'unit' => $validated['unit'],
+            ]);
+            
+            // Update image if provided
+            if (!empty($validated['image'])) {
+                $existingImage = $product->images->first();
+                if ($existingImage) {
+                    $existingImage->update(['url' => $validated['image']]);
+                } else {
+                    \App\Models\ProductImage::create([
+                        'product_image_id' => (string) Str::uuid(),
+                        'product_id' => $product->product_id,
+                        'name' => $product->name . '.jpg',
+                        'url' => $validated['image'],
+                    ]);
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Produk berhasil diperbarui',
+                'product' => $product->fresh()->load('images')
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error updating product: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui produk: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.products.update');
+    
+    Route::delete('/dashboard/products/{id}', function ($id) {
+        try {
+            $product = Product::where('product_id', $id)->firstOrFail();
+            $product->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Produk berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus produk: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.products.delete');
+    
+    // Order Management API
+    Route::post('/dashboard/orders/{id}/ship', function ($id) {
+        try {
+            $order = \App\Models\Order::with('orderDetail.product')->where('order_id', $id)->firstOrFail();
+            
+            if ($order->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pesanan sudah diproses sebelumnya'
+                ], 400);
+            }
+            
+            // Update order status to "dikirim" (not "selesai" yet)
+            $order->status = 'dikirim';
+            $order->save();
+            
+            // Reduce stock for each product in order
+            foreach ($order->orderDetail as $detail) {
+                $product = $detail->product;
+                if ($product) {
+                    $newStock = max(0, $product->stock - $detail->qty);
+                    $product->update(['stock' => $newStock]);
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesanan berhasil dikirim dan stok telah dikurangi'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error shipping order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengirim pesanan: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.orders.ship');
+    
+    Route::delete('/dashboard/orders/{id}', function ($id) {
+        try {
+            $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
+            
+            // Only allow delete if status is pending
+            if ($order->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya pesanan pending yang dapat dihapus'
+                ], 400);
+            }
+            
+            $order->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Pesanan berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus pesanan: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.orders.delete');
+    
+    // Update Tracking Number
+    Route::put('/dashboard/orders/{id}/tracking', function ($id, \Illuminate\Http\Request $request) {
+        try {
+            $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'tracking_number' => 'required|string|max:255'
+            ]);
+            
+            $order->update([
+                'tracking_number' => $validated['tracking_number']
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Resi pengiriman berhasil disimpan'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating tracking: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan resi: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.orders.tracking');
 });
 
 
@@ -158,6 +457,16 @@ Route::middleware('auth.session')->group(function(){
         $user->update($data);
         return redirect()->route('profile')->with('success','Profil berhasil diperbarui');
     })->name('profile.update');
+    
+    // Buyer Orders Page
+    Route::get('/orders', function () {
+        $user = Auth::user();
+        $orders = \App\Models\Order::with(['orderDetail.product.images'])
+            ->where('user_id', $user->user_id)
+            ->orderByDesc('created_at')
+            ->get();
+        return view('store.orders', compact('orders'));
+    })->name('orders');
 });
 
 // Monitoring API mock (sensor + ML predictions + anomaly detection + status)

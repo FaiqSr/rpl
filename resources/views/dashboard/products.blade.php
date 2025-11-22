@@ -464,7 +464,7 @@
               <input type="checkbox" id="selectAll">
             </th>
             <th>Info Produk</th>
-            <th>Statistik</th>
+            <th>Rating</th>
             <th>Harga</th>
             <th>Stok</th>
             <th>Aksi</th>
@@ -625,66 +625,30 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
   
   <script>
-    // Product data storage - sync with database seeded products
-    let products = [
-      {
-        id: 1,
-        name: 'Daging segar',
-        category: 'Daging Segar',
-        price: 40000,
-        stock: 15,
-        unit: 'kg',
-        rating: 4,
-        description: 'Daging ayam segar berkualitas',
-        image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
-      },
-      {
-        id: 2,
-        name: 'Daging segar',
-        category: 'Daging Segar',
-        price: 40000,
-        stock: 15,
-        unit: 'kg',
-        rating: 3,
-        description: 'Daging ayam segar',
-        image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
-      },
-      {
-        id: 3,
-        name: 'Dada Fillet',
-        category: 'Daging Segar',
-        price: 50000,
-        stock: 10,
-        unit: 'kg',
-        rating: 0,
-        description: 'Dada fillet ayam premium',
-        image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fff' font-size='14'%3EFillet%3C/text%3E%3C/svg%3E"
-      }
-    ];
+    // Product data from database
+    @php
+        $productsData = $products->map(function($product) {
+            $firstImage = $product->images->first();
+            $imageUrl = $firstImage ? $firstImage->url : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E";
+            
+            return [
+                'id' => $product->product_id,
+                'name' => $product->name,
+                'category' => 'Daging Segar',
+                'price' => (float)$product->price,
+                'stock' => (int)$product->stock,
+                'unit' => $product->unit ?? 'kg',
+                'rating' => 0,
+                'description' => $product->description ?? '',
+                'image' => $imageUrl
+            ];
+        });
+    @endphp
+    let products = @json($productsData);
     
-    let nextId = 4;
+    // Calculate nextId for new products (using numeric counter for compatibility)
+    let nextId = products.length > 0 ? products.length + 1 : 1;
     let editingProductId = null;
-
-    // Persistence helpers (save to browser storage so Home can read)
-    const STORE_KEY = 'cp_products';
-    function loadProducts() {
-      try {
-        const raw = localStorage.getItem(STORE_KEY);
-        if (raw) {
-          const data = JSON.parse(raw);
-          if (Array.isArray(data) && data.length) {
-            products = data;
-            nextId = Math.max(...products.map(p => p.id)) + 1;
-          }
-        }
-      } catch (e) {
-        console.warn('Gagal memuat produk dari storage:', e);
-      }
-    }
-    function saveProducts() {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(products)); }
-      catch (e) { console.warn('Gagal menyimpan produk:', e); }
-    }
     
     // SweetAlert Helper Functions
     window.showSuccess = function(message) {
@@ -744,7 +708,7 @@
     }
     
     // Save Product Function
-    function saveProduct() {
+    async function saveProduct() {
         const form = document.getElementById('productForm');
         if (!form.checkValidity()) {
             form.reportValidity();
@@ -753,79 +717,87 @@
         
         const name = document.getElementById('productName').value;
         const category = document.getElementById('productCategory').value;
-        const price = parseInt(document.getElementById('productPrice').value);
+        const price = parseFloat(document.getElementById('productPrice').value);
         const stock = parseInt(document.getElementById('productStock').value);
         const unit = document.getElementById('productUnit').value;
         const description = document.getElementById('productDescription').value;
         const imageFile = document.getElementById('productImage').files[0];
         
-        if (editingProductId) {
-            // Update existing product
-            const productIndex = products.findIndex(p => p.id === editingProductId);
-            if (productIndex !== -1) {
-                products[productIndex] = {
-                    ...products[productIndex],
-                    name,
-                    category,
-                    price,
-                    stock,
-                    unit,
-                    description
-                };
-                
-                if (imageFile) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        products[productIndex].image = e.target.result;
-                        renderProducts();
-                        saveProducts();
-                    };
-                    reader.readAsDataURL(imageFile);
-                } else {
-                    renderProducts();
-                    saveProducts();
-                }
-                
-                showSuccess('Produk berhasil diperbarui!');
-            }
-        } else {
-            // Add new product
-            const newProduct = {
-                id: nextId++,
-                name,
-                category,
-                price,
-                stock,
-                unit,
-                description,
-                rating: 0,
-                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
-            };
-            
-            if (imageFile) {
-                const reader = new FileReader();
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Process image
+        let imageData = null;
+        if (imageFile) {
+            const reader = new FileReader();
+            imageData = await new Promise((resolve) => {
                 reader.onload = function(e) {
-                    newProduct.image = e.target.result;
-                    products.push(newProduct);
-                    renderProducts();
-                    saveProducts();
+                    resolve(e.target.result);
                 };
                 reader.readAsDataURL(imageFile);
-            } else {
-                  products.push(newProduct);
-                  renderProducts();
-                  saveProducts();
+            });
+        } else if (editingProductId) {
+            // Keep existing image if editing and no new image
+            const existingProduct = products.find(p => p.id === editingProductId);
+            if (existingProduct && existingProduct.image) {
+                imageData = existingProduct.image;
             }
-            
-            showSuccess('Produk berhasil ditambahkan!');
         }
         
-        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+        const payload = {
+            name: name,
+            description: description,
+            price: price,
+            stock: stock,
+            unit: unit,
+            image: imageData || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
+        };
+        
+        try {
+            let response;
+            if (editingProductId) {
+                // Update existing product
+                response = await fetch(`/dashboard/products/${editingProductId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                // Create new product
+                response = await fetch('/dashboard/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(editingProductId ? 'Produk berhasil diperbarui!' : 'Produk berhasil ditambahkan!');
+                bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+                // Reload page to refresh data from database
+                window.location.reload();
+            } else {
+                showError(result.message || 'Terjadi kesalahan saat menyimpan produk');
+            }
+        } catch (error) {
+            console.error('Error saving product:', error);
+            showError('Terjadi kesalahan saat menyimpan produk');
+        }
     }
     
     // Delete Product Function
-    function deleteProduct(id) {
-        Swal.fire({
+    async function deleteProduct(id) {
+        const result = await Swal.fire({
             title: 'Hapus Produk?',
             text: 'Produk yang dihapus tidak dapat dikembalikan',
             icon: 'warning',
@@ -834,14 +806,33 @@
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Ya, Hapus',
             cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                products = products.filter(p => p.id !== id);
-                renderProducts();
-                saveProducts();
-                showSuccess('Produk berhasil dihapus!');
-            }
         });
+        
+        if (result.isConfirmed) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/dashboard/products/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('Produk berhasil dihapus!');
+                    // Reload page to refresh data from database
+                    window.location.reload();
+                } else {
+                    showError(data.message || 'Terjadi kesalahan saat menghapus produk');
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                showError('Terjadi kesalahan saat menghapus produk');
+            }
+        }
     }
     
     // Render Products Function
@@ -875,10 +866,10 @@
                     <td>Rp ${product.price.toLocaleString('id-ID')}</td>
                     <td>${product.stock}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(${product.id})" title="Edit">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${product.id}')" title="Edit">
                             <i class="fa-solid fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${product.id})" title="Hapus">
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product.id}')" title="Hapus">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
@@ -888,8 +879,6 @@
         
         // Update tab counts
         updateTabCounts();
-        // Persist after any render (keeps storage fresh after bulk ops)
-        saveProducts();
     }
     
     // Update Tab Counts
@@ -942,12 +931,7 @@
         }
     });
     
-    // Initialize: load from storage first, then render
-    loadProducts();
-    // If no products loaded (first time), save default products
-    if (products.length === 3 && nextId === 4) {
-        saveProducts();
-    }
+    // Initialize: render products from database
     updateTabCounts();
     renderProducts();
     
