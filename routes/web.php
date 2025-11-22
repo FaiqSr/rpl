@@ -1,10 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Models\Product;
 
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
-    return view('store.home');
+    $products = Product::with('images')->orderByDesc('created_at')->paginate(24);
+    return view('store.home', compact('products'));
 })->name('home');
 
 // Authentication Pages (hanya tampilan, tidak ada proses backend)
@@ -26,7 +28,7 @@ Route::post('/login', function () {
     return redirect()->route('dashboard')->with('success', 'Login berhasil!');
 })->name('login.post');
 
-// Dashboard (bisa langsung diakses tanpa login)
+// Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
 Route::get('/dashboard', function () {
     return view('dashboard.seller');
 })->name('dashboard');

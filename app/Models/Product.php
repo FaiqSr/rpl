@@ -16,7 +16,9 @@ class Product extends BaseModel
         'name',
         'description',
         'price',
-        'stock'
+        'stock',
+        'category_id',
+        'unit'
     ];
 
     public function orderDetail(): HasMany

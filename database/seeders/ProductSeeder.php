@@ -12,9 +12,27 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed a small, predictable set to match dashboard demo
         Product::factory()
-            ->count(50)
-            ->hasImages(rand(2, 4))
-            ->create();
+            ->hasImages(1)
+            ->create([
+                'name' => 'Daging segar',
+                'slug' => 'daging-segar',
+                'description' => 'Daging ayam segar berkualitas',
+                'price' => 40000,
+                'stock' => 15,
+                'unit' => 'kg',
+            ]);
+
+        Product::factory()
+            ->hasImages(1)
+            ->create([
+                'name' => 'Daging segar',
+                'slug' => 'daging-segar-2',
+                'description' => 'Daging ayam segar',
+                'price' => 40000,
+                'stock' => 15,
+                'unit' => 'kg',
+            ]);
     }
 }

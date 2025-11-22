@@ -24,19 +24,23 @@ class OrderSeeder extends Seeder
             return;
         }
 
+        // Keep orders small for SQLite demo
         Order::factory()
-            ->count(100)
+            ->count(10)
             ->make()
             ->each(function ($order) use ($users, $products) {
                 $order->user_id = $users->random()->user_id;
                 $order->save();
 
                 $totalPrice = 0;
-                $numItems = rand(1, 5);
-                $orderProducts = $products->random($numItems);
+                $numItems = rand(1, min(2, $products->count()));
+                // Safe random selection even if product count < requested
+                $orderProducts = $products->count() > 1
+                    ? $products->random($numItems)
+                    : collect([$products->first()]);
 
                 foreach ($orderProducts as $product) {
-                    $qty = rand(1, 3);
+                    $qty = rand(1, 2);
                     $price = (int) $product->price;
 
                     OrderDetail::factory()->create([
