@@ -424,7 +424,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>
@@ -446,9 +446,7 @@
       <!-- Filter Bar -->
       <div class="filter-bar">
         <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all">Semua Produk (4)</button>
-          <button class="filter-tab" data-filter="active">Aktif</button>
-          <button class="filter-tab" data-filter="inactive">Tidak Aktif</button>
+          <button class="filter-tab active" data-filter="all">Semua Produk</button>
         </div>
         <div class="filter-right">
           <div class="search-box">
@@ -469,7 +467,6 @@
             <th>Statistik</th>
             <th>Harga</th>
             <th>Stok</th>
-            <th>Status</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -613,14 +610,6 @@
                 <img id="previewImg" style="max-width: 200px; border-radius: 8px;">
               </div>
             </div>
-            
-            <div class="mb-3">
-              <label for="productStatus" class="form-label">Status</label>
-              <select class="form-select" id="productStatus" required>
-                <option value="active">Aktif</option>
-                <option value="inactive">Tidak Aktif</option>
-              </select>
-            </div>
           </form>
         </div>
         <div class="modal-footer border-0 pt-0">
@@ -636,7 +625,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
   
   <script>
-    // Product data storage
+    // Product data storage - sync with database seeded products
     let products = [
       {
         id: 1,
@@ -645,7 +634,6 @@
         price: 40000,
         stock: 15,
         unit: 'kg',
-        status: 'active',
         rating: 4,
         description: 'Daging ayam segar berkualitas',
         image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
@@ -657,14 +645,24 @@
         price: 40000,
         stock: 15,
         unit: 'kg',
-        status: 'inactive',
         rating: 3,
         description: 'Daging ayam segar',
         image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
+      },
+      {
+        id: 3,
+        name: 'Dada Fillet',
+        category: 'Daging Segar',
+        price: 50000,
+        stock: 10,
+        unit: 'kg',
+        rating: 0,
+        description: 'Dada fillet ayam premium',
+        image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fff' font-size='14'%3EFillet%3C/text%3E%3C/svg%3E"
       }
     ];
     
-    let nextId = 3;
+    let nextId = 4;
     let editingProductId = null;
 
     // Persistence helpers (save to browser storage so Home can read)
@@ -735,7 +733,6 @@
         document.getElementById('productStock').value = product.stock;
         document.getElementById('productUnit').value = product.unit;
         document.getElementById('productDescription').value = product.description || '';
-        document.getElementById('productStatus').value = product.status;
         
         if (product.image) {
             document.getElementById('imagePreview').style.display = 'block';
@@ -760,7 +757,6 @@
         const stock = parseInt(document.getElementById('productStock').value);
         const unit = document.getElementById('productUnit').value;
         const description = document.getElementById('productDescription').value;
-        const status = document.getElementById('productStatus').value;
         const imageFile = document.getElementById('productImage').files[0];
         
         if (editingProductId) {
@@ -774,8 +770,7 @@
                     price,
                     stock,
                     unit,
-                    description,
-                    status
+                    description
                 };
                 
                 if (imageFile) {
@@ -783,6 +778,7 @@
                     reader.onload = function(e) {
                         products[productIndex].image = e.target.result;
                         renderProducts();
+                        saveProducts();
                     };
                     reader.readAsDataURL(imageFile);
                 } else {
@@ -802,7 +798,6 @@
                 stock,
                 unit,
                 description,
-                status,
                 rating: 0,
                 image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E"
             };
@@ -852,17 +847,8 @@
     // Render Products Function
     function renderProducts() {
         const tbody = document.getElementById('productTableBody');
-        const activeTab = document.querySelector('.filter-tab.active');
-        const filterText = activeTab ? activeTab.textContent.trim().toLowerCase() : 'semua';
         
-        let filteredProducts = products;
-        if (filterText.includes('aktif') && !filterText.includes('tidak')) {
-            filteredProducts = products.filter(p => p.status === 'active');
-        } else if (filterText.includes('tidak aktif')) {
-            filteredProducts = products.filter(p => p.status === 'inactive');
-        }
-        
-        tbody.innerHTML = filteredProducts.map(product => {
+        tbody.innerHTML = products.map(product => {
             const stars = Array(5).fill(0).map((_, i) => 
                 i < product.rating 
                     ? '<i class="fa-solid fa-star"></i>'
@@ -870,7 +856,7 @@
             ).join('');
             
             return `
-                <tr data-product-id="${product.id}" data-status="${product.status}">
+                <tr data-product-id="${product.id}">
                     <td class="checkbox-cell">
                         <input type="checkbox" class="product-checkbox">
                     </td>
@@ -888,9 +874,6 @@
                     </td>
                     <td>Rp ${product.price.toLocaleString('id-ID')}</td>
                     <td>${product.stock}</td>
-                    <td>
-                        <span class="status-badge ${product.status}">${product.status === 'active' ? 'Aktif' : 'Tidak Aktif'}</span>
-                    </td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(${product.id})" title="Edit">
                             <i class="fa-solid fa-edit"></i>
@@ -912,17 +895,10 @@
     // Update Tab Counts
     function updateTabCounts() {
         const allCount = products.length;
-        const activeCount = products.filter(p => p.status === 'active').length;
-        const inactiveCount = products.filter(p => p.status === 'inactive').length;
-        
         document.querySelectorAll('.filter-tab').forEach(tab => {
             const text = tab.textContent.trim().toLowerCase();
             if (text.includes('semua')) {
                 tab.textContent = `Semua Produk (${allCount})`;
-            } else if (text.includes('aktif') && !text.includes('tidak')) {
-                tab.textContent = `Aktif (${activeCount})`;
-            } else if (text.includes('tidak')) {
-                tab.textContent = `Tidak Aktif (${inactiveCount})`;
             }
         });
     }
@@ -934,15 +910,6 @@
         submenu.classList.toggle('show');
         chevron.classList.toggle('rotate');
     }
-    
-    // Filter tabs
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            renderProducts();
-        });
-    });
     
     // Search functionality
     document.querySelector('.search-box input').addEventListener('input', function(e) {
@@ -977,6 +944,10 @@
     
     // Initialize: load from storage first, then render
     loadProducts();
+    // If no products loaded (first time), save default products
+    if (products.length === 3 && nextId === 4) {
+        saveProducts();
+    }
     updateTabCounts();
     renderProducts();
     

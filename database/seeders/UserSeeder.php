@@ -19,6 +19,8 @@ class UserSeeder extends Seeder
             'email' => 'admin@example.com',
             'password' => bcrypt('password'),
             'role' => 'admin',
+            'phone' => '081234567890',
+            'address' => 'Jl. Admin No.1, Kota Contoh'
         ]);
 
         // 2. Buat 10 pengguna biasa,

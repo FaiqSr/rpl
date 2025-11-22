@@ -27,10 +27,13 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'name',
         'email',
         'password',
         'role',
+        'phone',
+        'address',
     ];
 
     /**
@@ -54,6 +57,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->user_id)) {
+                $model->user_id = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
     }
 
     public function addresses(): HasMany

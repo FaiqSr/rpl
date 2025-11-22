@@ -261,21 +261,17 @@
       </div>
       
       <div class="navbar-search">
-        <input type="text" placeholder="Cari Produk ...">
+        <input type="text" id="searchInput" placeholder="Cari Produk ..." onkeyup="filterProducts()">
       </div>
       
       <div class="navbar-actions">
-        @auth
-        <a href="{{ url('/cart') }}" class="navbar-icon" title="Keranjang">
-          <i class="fa-solid fa-cart-shopping"></i>
-        </a>
-        <a href="{{ route('profile') }}" class="navbar-icon" title="Akun">
-          <i class="fa-regular fa-user"></i>
-        </a>
+        @if(Auth::check())
+          <a href="{{ route('profile') }}" class="text-gray-600 text-sm me-2 text-decoration-none">Halo, {{ Auth::user()->name }}</a>
+          <a href="{{ route('logout') }}" class="btn-outline-secondary">Logout</a>
         @else
-        <a href="{{ route('login') }}" class="btn-outline-secondary">Masuk</a>
-        <a href="{{ route('register') }}" class="btn-primary">Daftar</a>
-        @endauth
+          <a href="{{ route('login') }}" class="btn-outline-secondary">Masuk</a>
+          <a href="{{ route('register') }}" class="btn-primary">Daftar</a>
+        @endif
       </div>
     </div>
   </nav>
@@ -302,50 +298,23 @@
         <div class="w-24 h-10 skeleton"></div>
       </div>
       <div class="mt-3 flex gap-3 text-[11px] text-gray-500">
-        <button class="chip px-3 py-1 rounded-md">Filter Default</button>
-        <button class="chip px-3 py-1 rounded-md">Filter Sale</button>
-        <button class="chip px-3 py-1 rounded-md">Filter Deka</button>
-        <button class="chip px-3 py-1 rounded-md">Filter Date</button>
-        <button class="chip px-3 py-1 rounded-md">Filter Diskon</button>
+        <button class="chip px-3 py-1 rounded-md bg-emerald-100 text-emerald-700 font-semibold" onclick="filterByCategory('')">Semua</button>
+        <button class="chip px-3 py-1 rounded-md" onclick="filterByCategory('daging')">Daging</button>
+        <button class="chip px-3 py-1 rounded-md" onclick="filterByCategory('telur')">Telur</button>
+        <button class="chip px-3 py-1 rounded-md" onclick="filterByCategory('ayam')">Ayam Utuh</button>
+        <button class="chip px-3 py-1 rounded-md" onclick="filterByCategory('jeroan')">Jeroan</button>
       </div>
     </section>
 
     <!-- For You section -->
     <section class="mb-4">
       <h2 class="text-sm font-semibold text-gray-700 mb-3">For You</h2>
-      <!-- Row of featured items -->
-      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
-        @php($forYou = isset($products) ? collect($products->items())->take(6) : collect())
-        @forelse($forYou as $p)
-          <div class="card-border bg-white rounded-lg p-2">
-            @php($img = optional($p->images->first())->url ?? null)
-            @if($img)
-              <img src="{{ $img }}" alt="{{ $p->name }}" class="h-20 w-full object-cover rounded-md mb-2">
-            @else
-              <div class="skeleton h-20 rounded-md mb-2"></div>
-            @endif
-            <div class="text-[12px] font-medium text-gray-800 truncate">{{ $p->name }}</div>
-            <div class="text-[11px] text-gray-500 truncate">{{ $p->unit ?? '-' }}</div>
-            <div class="text-[11px] text-emerald-700 font-semibold">Rp {{ number_format($p->price ?? 0, 0, ',', '.') }}</div>
-          </div>
-        @empty
-          <!-- Fallback placeholders if no products -->
-          @for($i=0;$i<6;$i++)
-          <div class="card-border bg-white rounded-lg p-2">
-            <div class="skeleton h-20 rounded-md mb-2"></div>
-            <div class="h-3 bg-gray-100 rounded mb-1"></div>
-            <div class="h-3 bg-gray-100 rounded w-3/4 mb-2"></div>
-            <div class="text-[11px] text-emerald-700 font-semibold">Rp 1.000.000</div>
-          </div>
-          @endfor
-        @endforelse
-      </div>
 
       <!-- Product grid -->
       <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
         @isset($products)
           @forelse($products as $product)
-            <div class="card-border bg-white rounded-lg p-2">
+            <a href="{{ route('product.detail', $product->product_id) }}" class="product-card card-border bg-white rounded-lg p-2 block hover:shadow-md transition-shadow" data-name="{{ strtolower($product->name) }}" data-slug="{{ strtolower($product->slug) }}">
               @php($img = optional($product->images->first())->url ?? null)
               @if($img)
                 <img src="{{ $img }}" alt="{{ $product->name }}" class="h-24 w-full object-cover rounded-md mb-2">
@@ -356,9 +325,9 @@
               <div class="text-[11px] text-gray-500 truncate">{{ $product->unit ?? '-' }}</div>
               <div class="flex items-center justify-between text-[11px] mt-1">
                 <span class="text-emerald-700 font-semibold">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
-                <button class="text-gray-500 hover:text-emerald-700" title="Favorit"><i class="fa-regular fa-heart"></i></button>
+                <button onclick="event.preventDefault(); event.stopPropagation();" class="text-gray-500 hover:text-emerald-700" title="Favorit"><i class="fa-regular fa-heart"></i></button>
               </div>
-            </div>
+            </a>
           @empty
             @for($i=0;$i<24;$i++)
             <div class="card-border bg-white rounded-lg p-2">
@@ -444,64 +413,35 @@
       });
     });
 
-    // Client-side fallback: if no server products rendered, show from dashboard storage
-    document.addEventListener('DOMContentLoaded', () => {
-      const grid = document.getElementById('productGrid');
-      if (!grid) return;
-
-      try {
-        const raw = localStorage.getItem('cp_products');
-        const items = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(items) && items.length > 0) {
-          // If dashboard list exists, override any server-rendered items
-          grid.innerHTML = '';
-          const frag = document.createDocumentFragment();
-          items.forEach(p => {
-            const card = document.createElement('div');
-            card.className = 'card-border bg-white rounded-lg p-2';
-
-            if (p.image) {
-              const img = document.createElement('img');
-              img.src = p.image; img.alt = p.name || 'Produk';
-              img.className = 'h-24 w-full object-cover rounded-md mb-2';
-              card.appendChild(img);
-            } else {
-              const ph = document.createElement('div');
-              ph.className = 'skeleton h-24 rounded-md mb-2';
-              card.appendChild(ph);
-            }
-
-            const name = document.createElement('div');
-            name.className = 'text-[12px] font-medium text-gray-800 truncate';
-            name.title = p.name || '';
-            name.textContent = p.name || 'Produk';
-            card.appendChild(name);
-
-            const unit = document.createElement('div');
-            unit.className = 'text-[11px] text-gray-500 truncate';
-            unit.textContent = p.unit || '-';
-            card.appendChild(unit);
-
-            const meta = document.createElement('div');
-            meta.className = 'flex items-center justify-between text-[11px] mt-1';
-            const price = document.createElement('span');
-            try { price.textContent = 'Rp ' + (p.price||0).toLocaleString('id-ID'); }
-            catch { price.textContent = 'Rp ' + (p.price||0); }
-            price.className = 'text-emerald-700 font-semibold';
-            meta.appendChild(price);
-            const btn = document.createElement('button');
-            btn.className = 'text-gray-500 hover:text-emerald-700';
-            btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
-            meta.appendChild(btn);
-            card.appendChild(meta);
-
-            frag.appendChild(card);
-          });
-          grid.appendChild(frag);
+    // Product display is now fully handled by server-side rendering
+    
+    // Search filter
+    function filterProducts() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const cards = document.querySelectorAll('.product-card');
+      cards.forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        card.style.display = name.includes(search) ? '' : 'none';
+      });
+    }
+    
+    // Category filter
+    let currentCategory = '';
+    function filterByCategory(category) {
+      currentCategory = category;
+      const cards = document.querySelectorAll('.product-card');
+      const chips = document.querySelectorAll('.chip');
+      chips.forEach(c => {
+        c.classList.remove('bg-emerald-100','text-emerald-700','font-semibold');
+        if (c.textContent.toLowerCase().includes(category) || (category==='' && c.textContent==='Semua')) {
+          c.classList.add('bg-emerald-100','text-emerald-700','font-semibold');
         }
-      } catch (e) {
-        console.warn('Gagal memuat produk dari storage:', e);
-      }
+      });
+      cards.forEach(card => {
+        const slug = card.getAttribute('data-slug') || '';
+        card.style.display = (category==='' || slug.includes(category)) ? '' : 'none';
+      });
+    }
     });
   </script>
 </body>

@@ -10,6 +10,16 @@ class OrderDetail extends BaseModel
     /** @use HasFactory<\Database\Factories\OrderDetailFactory> */
     use HasFactory;
 
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->{$model->getKeyName()})) {
+                $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+    }
+
     protected $table = 'order_details';
     protected $primaryKey = 'order_detail_id';
     public $timestamps = false;

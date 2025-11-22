@@ -531,7 +531,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>

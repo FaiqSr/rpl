@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Models\Product;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
@@ -14,44 +16,126 @@ Route::get('/register', function () {
     return view('auth.register');
 })->name('register');
 
-Route::post('/register', function () {
-    // TODO: Implement registration logic
-    return redirect()->route('dashboard')->with('success', 'Registrasi berhasil!');
+Route::post('/register', function (\Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'first_name' => 'required|string|max:50',
+        'last_name' => 'required|string|max:50',
+        'phone' => 'required|string|max:30',
+        'email' => 'required|email|unique:users,email',
+        'password' => 'required|min:8|confirmed'
+    ]);
+    $user = \App\Models\User::create([
+        'user_id' => (string) Str::uuid(),
+        'name' => $validated['first_name'].' '.$validated['last_name'],
+        'email' => $validated['email'],
+        'password' => bcrypt($validated['password']),
+        'role' => 'visitor'
+    ]);
+    Auth::login($user);
+    return redirect()->route('home')->with('success', 'Registrasi berhasil, selamat datang!');
 })->name('register.post');
 
 Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 
-Route::post('/login', function () {
-    // TODO: Implement login logic
-    return redirect()->route('dashboard')->with('success', 'Login berhasil!');
+Route::post('/login', function (\Illuminate\Http\Request $request) {
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required'
+    ]);
+    if (Auth::attempt($credentials, true)) {
+        $request->session()->regenerate();
+        return Auth::user()->role === 'admin'
+            ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
+            : redirect()->route('home')->with('success', 'Login berhasil');
+    }
+    return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
 })->name('login.post');
 
+Route::get('/logout', function (\Illuminate\Http\Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect()->route('home')->with('success', 'Logout berhasil');
+})->name('logout');
+
+// Product Detail
+Route::get('/product/{id}', function ($id) {
+    // Try to find by product_id first (database UUID), then by numeric id (localStorage)
+    $product = \App\Models\Product::with('images')->where('product_id', $id)->first();
+    
+    // If not found and id is numeric, this might be a localStorage product
+    if (!$product && is_numeric($id)) {
+        // Create a mock product from localStorage data for demo
+        // In production, you'd want to sync localStorage to DB first
+        return response()->view('store.product-detail-mock', ['productId' => $id]);
+    }
+    
+    if (!$product) abort(404);
+    return view('store.product-detail', compact('product'));
+})->name('product.detail');
+
+// Create Order
+Route::post('/order/create', function (\Illuminate\Http\Request $request) {
+    try {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,product_id',
+            'qty' => 'required|integer|min:1',
+            'buyer_name' => 'required|string',
+            'address' => 'required|string',
+            'phone' => 'required|string',
+            'notes' => 'nullable|string',
+            'total_price' => 'required|numeric'
+        ]);
+
+        // Create order (for demo, use first user or create guest user)
+        $user = Auth::user();
+
+        $order = \App\Models\Order::create([
+            'user_id' => $user->user_id,
+            'total_price' => $validated['total_price'],
+            'status' => 'pending',
+            'notes' => $validated['notes'] ?? null,
+            'buyer_name' => $validated['buyer_name'],
+            'buyer_phone' => $validated['phone'],
+            'buyer_address' => $validated['address']
+        ]);
+
+        \App\Models\OrderDetail::create([
+            'order_detail_id' => (string) \Illuminate\Support\Str::uuid(),
+            'order_id' => $order->order_id,
+            'product_id' => $validated['product_id'],
+            'qty' => $validated['qty'],
+            'price' => $validated['total_price'] / $validated['qty']
+        ]);
+
+        return response()->json(['message' => 'Order created successfully', 'order_id' => $order->order_id]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Failed to create order: ' . $e->getMessage()], 500);
+    }
+})->name('order.create');
+
 // Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
-Route::get('/dashboard', function () {
-    return view('dashboard.seller');
-})->name('dashboard');
+Route::middleware(['auth.session','admin'])->group(function() {
+    Route::get('/dashboard', function () {
+        return view('dashboard.seller');
+    })->name('dashboard');
+    Route::get('/dashboard/products', function () { return view('dashboard.products'); })->name('dashboard.products');
+    Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
+    Route::get('/dashboard/tools/monitoring', function () { return view('dashboard.tools-monitoring'); })->name('dashboard.tools.monitoring');
+    Route::get('/dashboard/sales', function () {
+        $orders = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at')->get();
+        return view('dashboard.sales', compact('orders'));
+    })->name('dashboard.sales');
+    Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
+});
 
-Route::get('/dashboard/products', function () {
-    return view('dashboard.products');
-})->name('dashboard.products');
-
-Route::get('/dashboard/tools', function () {
-    return view('dashboard.tools');
-})->name('dashboard.tools');
-
-Route::get('/dashboard/tools/monitoring', function () {
-    return view('dashboard.tools-monitoring');
-})->name('dashboard.tools.monitoring');
-
-Route::get('/dashboard/sales', function () {
-    return view('dashboard.sales');
-})->name('dashboard.sales');
-
-Route::get('/dashboard/chat', function () {
-    return view('dashboard.chat');
-})->name('dashboard.chat');
 
 // Other Pages
 Route::get('/articles', function () {
@@ -62,9 +146,19 @@ Route::get('/marketplace', function () {
     return view('marketplace');
 })->name('marketplace');
 
-Route::get('/profile', function () {
-    return view('profile');
-})->name('profile');
+Route::middleware('auth.session')->group(function(){
+    Route::get('/profile', function () { return view('profile'); })->name('profile');
+    Route::post('/profile/update', function (\Illuminate\Http\Request $request) {
+        $user = Auth::user();
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+            'phone' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:500'
+        ]);
+        $user->update($data);
+        return redirect()->route('profile')->with('success','Profil berhasil diperbarui');
+    })->name('profile.update');
+});
 
 // Monitoring API mock (sensor + ML predictions + anomaly detection + status)
 Route::get('/api/monitoring/tools', function () {

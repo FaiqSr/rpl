@@ -529,7 +529,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>
@@ -552,8 +552,6 @@
       <div class="filter-bar">
         <div class="filter-tabs">
           <button class="filter-tab active" data-filter="all">Semua Pesanan</button>
-          <button class="filter-tab" data-filter="active">Aktif</button>
-          <button class="filter-tab" data-filter="inactive">Tidak Aktif</button>
           <button class="filter-tab" data-filter="selesai">Pesanan Selesai</button>
           <button class="filter-tab" data-filter="dibatalkan">Dibatalkan</button>
         </div>
@@ -561,121 +559,76 @@
       
       <!-- Order Items -->
       <div class="order-list">
-        <!-- Order Item 1 -->
+        @forelse($orders as $order)
+        @php
+          $detail = $order->orderDetail->first();
+          $product = $detail?->product;
+          $qtyTotal = $order->orderDetail->sum('qty');
+          $unitPrice = $detail ? ($detail->price) : 0;
+          $productName = $product?->name ?? 'Produk';
+          $image = $product?->images?->first()?->path ?? null;
+        @endphp
         <div class="order-item">
           <div class="order-header">
             <div class="order-header-left">
               <input type="checkbox">
               <div class="order-buyer">
                 <i class="fa-solid fa-user"></i>
-                <span>Ratna Sulawasti</span>
+                <span>{{ $order->buyer_name }}</span>
               </div>
               <div class="order-date">
                 <i class="fa-regular fa-clock"></i>
-                <span>18 Oktober 2015 12:00 WIB</span>
+                <span>{{ $order->created_at?->format('d M Y H:i') }} WIB</span>
               </div>
             </div>
             <div class="order-header-right">
-              <span class="order-status">Respon sebelum</span>
-              <span class="order-response-time">18 Okt 2015 12:00</span>
+              <span class="order-status">Status</span>
+              <span class="order-response-time">{{ ucfirst($order->status ?? 'pending') }}</span>
             </div>
           </div>
-          
           <div class="order-body">
             <div class="order-product">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="order-product-img">
+              @if($image)
+                <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img">
+              @else
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" class="order-product-img" />
+              @endif
               <div class="order-product-info">
-                <div class="order-product-name">Daging segar</div>
-                <div class="order-product-qty">10 x Rp 40.000</div>
-                <div class="order-product-note">"Jangan langsung di bumbui di rmh msh"</div>
+                <div class="order-product-name">{{ $productName }}</div>
+                <div class="order-product-qty">{{ $qtyTotal }} x Rp {{ number_format($unitPrice,0,',','.') }}</div>
+                @if($order->notes)
+                  <div class="order-product-note">"{{ $order->notes }}"</div>
+                @endif
               </div>
             </div>
-            
             <div class="order-address">
               <div class="order-address-title">Alamat</div>
-              <div class="order-address-name">Sulawasti (0812345678)</div>
-              <div class="order-address-text">Jl. Melon Raya No. 27, Kel. Sukamaju, Kec. Cendana, Kota Nirwana, Jawa Barat 41234</div>
+              <div class="order-address-name">{{ $order->buyer_name }} ({{ $order->buyer_phone }})</div>
+              <div class="order-address-text">{{ $order->buyer_address }}</div>
             </div>
-            
             <div class="order-courier">
               <div class="order-courier-title">Kurir</div>
               <div class="order-courier-info">Reguler - JNE</div>
               <a href="#" class="order-courier-link">lihat detail</a>
             </div>
           </div>
-          
           <div class="order-footer">
             <div class="order-footer-left">
-              <input type="checkbox" id="chat-pembeli-1">
-              <label for="chat-pembeli-1">Chat Pembeli</label>
+              <input type="checkbox" id="chat-pembeli-{{ $order->order_id }}">
+              <label for="chat-pembeli-{{ $order->order_id }}">Chat Pembeli</label>
             </div>
             <div class="order-footer-right">
               <div class="order-total">
-                Total Harga <strong>(10 Barang)</strong>
-                <span style="margin-left: 2rem; font-weight: 600;">Rp 400.000,00</span>
+                Total Harga <strong>({{ $qtyTotal }} Barang)</strong>
+                <span style="margin-left: 2rem; font-weight: 600;">Rp {{ number_format($order->total_price,0,',','.') }}</span>
               </div>
               <button class="btn-accept">Terima Pesanan</button>
             </div>
           </div>
         </div>
-        
-        <!-- Order Item 2 -->
-        <div class="order-item">
-          <div class="order-header">
-            <div class="order-header-left">
-              <input type="checkbox">
-              <div class="order-buyer">
-                <i class="fa-solid fa-user"></i>
-                <span>Ratna Sulawasti</span>
-              </div>
-              <div class="order-date">
-                <i class="fa-regular fa-clock"></i>
-                <span>18 Oktober 2015 12:00 WIB</span>
-              </div>
-            </div>
-            <div class="order-header-right">
-              <span class="order-status">Respon sebelum</span>
-              <span class="order-response-time">18 Okt 2015 12:00</span>
-            </div>
-          </div>
-          
-          <div class="order-body">
-            <div class="order-product">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="order-product-img">
-              <div class="order-product-info">
-                <div class="order-product-name">Daging segar</div>
-                <div class="order-product-qty">10 x Rp 40.000</div>
-                <div class="order-product-note">"Jangan langsung di bumbui di rmh msh"</div>
-              </div>
-            </div>
-            
-            <div class="order-address">
-              <div class="order-address-title">Alamat</div>
-              <div class="order-address-name">Sulawasti (0812345678)</div>
-              <div class="order-address-text">Jl. Melon Raya No. 27, Kel. Sukamaju, Kec. Cendana, Kota Nirwana, Jawa Barat 41234</div>
-            </div>
-            
-            <div class="order-courier">
-              <div class="order-courier-title">Kurir</div>
-              <div class="order-courier-info">Reguler - JNE</div>
-              <a href="#" class="order-courier-link">lihat detail</a>
-            </div>
-          </div>
-          
-          <div class="order-footer">
-            <div class="order-footer-left">
-              <input type="checkbox" id="chat-pembeli-2">
-              <label for="chat-pembeli-2">Chat Pembeli</label>
-            </div>
-            <div class="order-footer-right">
-              <div class="order-total">
-                Total Harga <strong>(10 Barang)</strong>
-                <span style="margin-left: 2rem; font-weight: 600;">Rp 400.000,00</span>
-              </div>
-              <button class="btn-accept">Terima Pesanan</button>
-            </div>
-          </div>
-        </div>
+        @empty
+          <div class="p-4 text-center text-muted">Belum ada pesanan.</div>
+        @endforelse
       </div>
     </div>
   </main>
