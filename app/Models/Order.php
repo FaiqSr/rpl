@@ -24,7 +24,13 @@ class Order extends BaseModel
         'buyer_address',
         'shipping_service',
         'payment_method',
-        'tracking_number'
+        'tracking_number',
+        'payment_status',
+        'paid_at'
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
     ];
 
     protected static function boot()

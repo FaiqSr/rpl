@@ -587,39 +587,16 @@
               <div class="order-address-text">{{ $order->buyer_address }}</div>
             </div>
             <div class="order-courier">
-              <div class="order-courier-title">Pengiriman & Pembayaran</div>
-              <div class="order-courier-info">
-                <div class="mb-2">
-                  <strong>Jasa Kirim:</strong> {{ $order->shipping_service ?? 'Belum dipilih' }}
+              <div class="order-courier-title">Kurir</div>
+              <div class="order-courier-info">{{ $order->shipping_service ?? 'Belum dipilih' }}</div>
+              @if($order->tracking_number)
+                <div class="order-courier-info mt-2">
+                  <strong>Resi:</strong> {{ $order->tracking_number }}
                 </div>
-                @if($order->tracking_number)
-                  <div class="mb-2">
-                    <strong>Resi:</strong> 
-                    <span id="tracking-{{ $order->order_id }}">{{ $order->tracking_number }}</span>
-                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="editTracking('{{ $order->order_id }}')" title="Edit Resi">
-                      <i class="fa-solid fa-edit"></i>
-                    </button>
-                  </div>
-                @else
-                  <div class="mb-2">
-                    <strong>Resi:</strong> 
-                    <span class="text-muted">Belum ada</span>
-                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="addTracking('{{ $order->order_id }}')" title="Tambah Resi">
-                      <i class="fa-solid fa-plus"></i> Tambah Resi
-                    </button>
-                  </div>
-                @endif
-                <div>
-                  <strong>Pembayaran:</strong> 
-                  @if($order->payment_method === 'QRIS')
-                    <span class="badge bg-success"><i class="fa-solid fa-qrcode me-1"></i>QRIS</span>
-                  @elseif($order->payment_method === 'Transfer Bank')
-                    <span class="badge bg-info"><i class="fa-solid fa-building-columns me-1"></i>Transfer Bank</span>
-                  @else
-                    <span class="text-muted">Belum dipilih</span>
-                  @endif
-                </div>
-              </div>
+                <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="order-courier-link">Cek Resi</a>
+              @else
+                <div class="order-courier-info mt-2 text-muted">Resi akan muncul setelah pesanan dikirim</div>
+              @endif
             </div>
           </div>
           <div class="order-footer">
@@ -633,7 +610,22 @@
                 Total Harga <strong>({{ $qtyTotal }} Barang)</strong>
                 <span style="margin-left: 2rem; font-weight: 600;">Rp {{ number_format($order->total_price,0,',','.') }}</span>
               </div>
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                @if($order->payment_method)
+                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-success' : 'bg-info' }}">
+                    <i class="fa-solid fa-{{ $order->payment_method === 'QRIS' ? 'qrcode' : 'building-columns' }} me-1"></i>
+                    {{ $order->payment_method }}
+                  </span>
+                @endif
+                @if($order->payment_status === 'paid')
+                  <span class="badge bg-success">
+                    <i class="fa-solid fa-check-circle me-1"></i>Lunas
+                  </span>
+                @else
+                  <span class="badge bg-warning text-dark">
+                    <i class="fa-solid fa-clock me-1"></i>Menunggu Pembayaran
+                  </span>
+                @endif
                 @if($order->status === 'pending')
                   <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}')">Kirim Pesanan</button>
                 @elseif($order->status === 'dikirim')
@@ -733,83 +725,6 @@
     // Filter Orders
     function filterOrders(filter) {
         window.location.href = `{{ route('dashboard.sales') }}?filter=${filter}`;
-    }
-    
-    // Add/Edit Tracking Number
-    async function addTracking(orderId) {
-        const { value: trackingNumber } = await Swal.fire({
-            title: 'Tambah Resi Pengiriman',
-            input: 'text',
-            inputLabel: 'Nomor Resi',
-            inputPlaceholder: 'Masukkan nomor resi pengiriman',
-            showCancelButton: true,
-            confirmButtonColor: '#69B578',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Simpan',
-            cancelButtonText: 'Batal',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'Nomor resi tidak boleh kosong';
-                }
-            }
-        });
-        
-        if (trackingNumber) {
-            await updateTracking(orderId, trackingNumber);
-        }
-    }
-    
-    async function editTracking(orderId) {
-        const currentTracking = document.getElementById(`tracking-${orderId}`).textContent;
-        const { value: trackingNumber } = await Swal.fire({
-            title: 'Edit Resi Pengiriman',
-            input: 'text',
-            inputLabel: 'Nomor Resi',
-            inputValue: currentTracking,
-            showCancelButton: true,
-            confirmButtonColor: '#69B578',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Update',
-            cancelButtonText: 'Batal',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'Nomor resi tidak boleh kosong';
-                }
-            }
-        });
-        
-        if (trackingNumber) {
-            await updateTracking(orderId, trackingNumber);
-        }
-    }
-    
-    async function updateTracking(orderId, trackingNumber) {
-        try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const response = await fetch(`/dashboard/orders/${orderId}/tracking`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ tracking_number: trackingNumber })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showSuccess(data.message);
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                showError(data.message || 'Terjadi kesalahan saat menyimpan resi');
-            }
-        } catch (error) {
-            console.error('Error updating tracking:', error);
-            showError('Terjadi kesalahan saat menyimpan resi');
-        }
     }
     
     // Show success message if redirected with success

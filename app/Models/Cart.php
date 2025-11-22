@@ -31,13 +31,13 @@ class Cart extends BaseModel
         return $query;
     }
 
-    public function users(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'users');
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function products(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class, 'product_id', 'products');
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
     }
 }

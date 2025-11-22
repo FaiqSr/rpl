@@ -3,7 +3,47 @@
 use Illuminate\Support\Facades\Route;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+
+// Helper function untuk generate tracking number
+if (!function_exists('generateTrackingNumber')) {
+    function generateTrackingNumber($shippingService) {
+        $prefixes = [
+            'JNE' => 'JNE',
+            'JNT' => 'JNT',
+            'SiCepat' => 'SP',
+            'Gojek' => 'GJ',
+            'Grab' => 'GR'
+        ];
+        
+        $prefix = $prefixes[$shippingService] ?? 'TRK';
+        $random = strtoupper(Str::random(10));
+        return $prefix . $random;
+    }
+}
+
+// Helper function untuk generate nomor rekening (consistent per payment method)
+if (!function_exists('getPaymentAccount')) {
+    function getPaymentAccount($paymentMethod) {
+        // Use consistent account numbers based on payment method
+        $accounts = [
+            'QRIS' => [
+                'name' => 'QRIS - ChickPatrol Store',
+                'account' => 'QR-' . substr(md5('qris_chickpatrol'), 0, 6) . '-' . substr(md5('qris_chickpatrol'), 6, 4),
+                'type' => 'QRIS'
+            ],
+            'Transfer Bank' => [
+                'name' => 'Bank BCA',
+                'account' => '1234567890', // Consistent account number
+                'account_name' => 'PT ChickPatrol Indonesia',
+                'type' => 'Bank Transfer'
+            ]
+        ];
+        
+        return $accounts[$paymentMethod] ?? null;
+    }
+}
 
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
@@ -76,6 +116,50 @@ Route::get('/product/{id}', function ($id) {
     return view('store.product-detail', compact('product'));
 })->name('product.detail');
 
+// Order Payment Page
+Route::get('/order/{id}/payment', function ($id) {
+    if (!Auth::check()) {
+        return redirect()->route('login')->with('error', 'Harus login terlebih dahulu');
+    }
+    
+    $order = \App\Models\Order::with(['orderDetail.product.images'])
+        ->where('order_id', $id)
+        ->where('user_id', Auth::user()->user_id)
+        ->firstOrFail();
+    
+    $paymentAccount = getPaymentAccount($order->payment_method);
+    
+    return view('store.payment', compact('order', 'paymentAccount'));
+})->middleware('auth.session')->name('order.payment');
+
+// Confirm Payment (Manual confirmation for demo)
+Route::post('/order/{id}/confirm-payment', function ($id) {
+    if (!Auth::check()) {
+        return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+    }
+    
+    $order = \App\Models\Order::where('order_id', $id)
+        ->where('user_id', Auth::user()->user_id)
+        ->firstOrFail();
+    
+    if ($order->payment_status === 'paid') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Pembayaran sudah dikonfirmasi sebelumnya'
+        ], 400);
+    }
+    
+    $order->payment_status = 'paid';
+    $order->paid_at = now();
+    $order->save();
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Pembayaran berhasil dikonfirmasi',
+        'redirect' => route('orders')
+    ]);
+})->middleware('auth.session')->name('order.confirm-payment');
+
 // Create Order
 Route::post('/order/create', function (\Illuminate\Http\Request $request) {
     try {
@@ -105,7 +189,11 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
         // Create order (for demo, use first user or create guest user)
         $user = Auth::user();
 
-        $order = \App\Models\Order::create([
+        // Generate tracking number based on shipping service
+        $trackingNumber = generateTrackingNumber($validated['shipping_service']);
+        
+        // Create order with all fields
+        $orderData = [
             'user_id' => $user->user_id,
             'total_price' => $validated['total_price'],
             'status' => 'pending',
@@ -114,8 +202,19 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
             'buyer_phone' => $validated['phone'],
             'buyer_address' => $validated['address'],
             'shipping_service' => $validated['shipping_service'],
-            'payment_method' => $validated['payment_method']
-        ]);
+            'payment_method' => $validated['payment_method'],
+            'tracking_number' => $trackingNumber,
+        ];
+        
+        // Add payment_status and paid_at only if columns exist
+        if (\Schema::hasColumn('orders', 'payment_status')) {
+            $orderData['payment_status'] = 'pending';
+        }
+        if (\Schema::hasColumn('orders', 'paid_at')) {
+            $orderData['paid_at'] = null;
+        }
+        
+        $order = \App\Models\Order::create($orderData);
 
         \App\Models\OrderDetail::create([
             'order_detail_id' => (string) \Illuminate\Support\Str::uuid(),
@@ -125,7 +224,12 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
             'price' => $validated['total_price'] / $validated['qty']
         ]);
 
-        return response()->json(['message' => 'Order created successfully', 'order_id' => $order->order_id]);
+        // Redirect to payment page
+        return response()->json([
+            'message' => 'Order created successfully',
+            'order_id' => $order->order_id,
+            'redirect' => route('order.payment', $order->order_id)
+        ]);
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
     } catch (\Exception $e) {
@@ -407,32 +511,6 @@ Route::middleware(['auth.session','admin'])->group(function() {
             ], 500);
         }
     })->name('dashboard.orders.delete');
-    
-    // Update Tracking Number
-    Route::put('/dashboard/orders/{id}/tracking', function ($id, \Illuminate\Http\Request $request) {
-        try {
-            $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
-            
-            $validated = $request->validate([
-                'tracking_number' => 'required|string|max:255'
-            ]);
-            
-            $order->update([
-                'tracking_number' => $validated['tracking_number']
-            ]);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Resi pengiriman berhasil disimpan'
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error updating tracking: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal menyimpan resi: ' . $e->getMessage()
-            ], 500);
-        }
-    })->name('dashboard.orders.tracking');
 });
 
 
@@ -457,6 +535,263 @@ Route::middleware('auth.session')->group(function(){
         $user->update($data);
         return redirect()->route('profile')->with('success','Profil berhasil diperbarui');
     })->name('profile.update');
+    
+    // Cart Routes
+    // Cart Page
+    Route::get('/cart', function () {
+        $user = Auth::user();
+        $cartItems = \App\Models\Cart::with(['product.images'])
+            ->where('user_id', $user->user_id)
+            ->get();
+        
+        // Calculate total
+        $subtotal = 0;
+        foreach ($cartItems as $item) {
+            $subtotal += $item->product->price * $item->qty;
+        }
+        
+        return view('store.cart', compact('cartItems', 'subtotal'));
+    })->name('cart');
+    
+    // Add to Cart API
+    Route::post('/cart/add', function (\Illuminate\Http\Request $request) {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,product_id',
+            'qty' => 'required|integer|min:1'
+        ]);
+        
+        $user = Auth::user();
+        $product = Product::find($validated['product_id']);
+        
+        // Check stock
+        if ($product->stock < $validated['qty']) {
+            return response()->json([
+                'message' => 'Stok tidak mencukupi. Stok tersedia: ' . $product->stock
+            ], 400);
+        }
+        
+        // Check if product already in cart
+        $existingCart = \App\Models\Cart::where('user_id', $user->user_id)
+            ->where('product_id', $validated['product_id'])
+            ->first();
+        
+        if ($existingCart) {
+            // Update qty
+            $newQty = $existingCart->qty + $validated['qty'];
+            if ($product->stock < $newQty) {
+                return response()->json([
+                    'message' => 'Stok tidak mencukupi. Stok tersedia: ' . $product->stock . ', di keranjang: ' . $existingCart->qty
+                ], 400);
+            }
+            $existingCart->qty = $newQty;
+            $existingCart->save();
+        } else {
+            // Create new cart item
+            \App\Models\Cart::create([
+                'user_id' => $user->user_id,
+                'product_id' => $validated['product_id'],
+                'qty' => $validated['qty']
+            ]);
+        }
+        
+        // Get cart count
+        $cartCount = \App\Models\Cart::where('user_id', $user->user_id)->sum('qty');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk berhasil ditambahkan ke keranjang',
+            'cart_count' => $cartCount
+        ]);
+    })->name('cart.add');
+    
+    // Update Cart Item
+    Route::put('/cart/update/{id}', function ($id, \Illuminate\Http\Request $request) {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        
+        $validated = $request->validate([
+            'qty' => 'required|integer|min:1'
+        ]);
+        
+        $user = Auth::user();
+        $cartItem = \App\Models\Cart::where('cart_id', $id)
+            ->where('user_id', $user->user_id)
+            ->firstOrFail();
+        
+        $product = $cartItem->product;
+        
+        // Check stock
+        if ($product->stock < $validated['qty']) {
+            return response()->json([
+                'message' => 'Stok tidak mencukupi. Stok tersedia: ' . $product->stock
+            ], 400);
+        }
+        
+        $cartItem->qty = $validated['qty'];
+        $cartItem->save();
+        
+        // Calculate totals
+        $cartItems = \App\Models\Cart::with(['product'])
+            ->where('user_id', $user->user_id)
+            ->get();
+        
+        $subtotal = 0;
+        foreach ($cartItems as $item) {
+            $subtotal += $item->product->price * $item->qty;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Keranjang berhasil diperbarui',
+            'item_total' => $product->price * $validated['qty'],
+            'subtotal' => $subtotal
+        ]);
+    })->name('cart.update');
+    
+    // Delete Cart Item
+    Route::delete('/cart/delete/{id}', function ($id) {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        
+        $user = Auth::user();
+        $cartItem = \App\Models\Cart::where('cart_id', $id)
+            ->where('user_id', $user->user_id)
+            ->firstOrFail();
+        
+        $cartItem->delete();
+        
+        // Get cart count
+        $cartCount = \App\Models\Cart::where('user_id', $user->user_id)->sum('qty');
+        
+        // Calculate subtotal
+        $cartItems = \App\Models\Cart::with(['product'])
+            ->where('user_id', $user->user_id)
+            ->get();
+        
+        $subtotal = 0;
+        foreach ($cartItems as $item) {
+            $subtotal += $item->product->price * $item->qty;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Produk berhasil dihapus dari keranjang',
+            'cart_count' => $cartCount,
+            'subtotal' => $subtotal
+        ]);
+    })->name('cart.delete');
+    
+    // Get Cart Count (for navbar)
+    Route::get('/cart/count', function () {
+        if (!Auth::check()) {
+            return response()->json(['count' => 0]);
+        }
+        
+        $user = Auth::user();
+        $cartCount = \App\Models\Cart::where('user_id', $user->user_id)->sum('qty');
+        
+        return response()->json(['count' => $cartCount]);
+    })->name('cart.count');
+    
+    // Checkout from Cart (Create Order with Multiple Products)
+    Route::post('/cart/checkout', function (\Illuminate\Http\Request $request) {
+        if (!Auth::check()) {
+            return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
+        }
+        
+        $validated = $request->validate([
+            'buyer_name' => 'required|string',
+            'address' => 'required|string',
+            'phone' => 'required|string',
+            'notes' => 'nullable|string',
+            'shipping_service' => 'required|string',
+            'payment_method' => 'required|string|in:QRIS,Transfer Bank'
+        ]);
+        
+        $user = Auth::user();
+        
+        // Get all cart items
+        $cartItems = \App\Models\Cart::with(['product'])
+            ->where('user_id', $user->user_id)
+            ->get();
+        
+        if ($cartItems->isEmpty()) {
+            return response()->json(['message' => 'Keranjang kosong'], 400);
+        }
+        
+        // Check stock for all items
+        foreach ($cartItems as $item) {
+            if ($item->product->stock < $item->qty) {
+                return response()->json([
+                    'message' => 'Stok tidak mencukupi untuk produk: ' . $item->product->name . '. Stok tersedia: ' . $item->product->stock
+                ], 400);
+            }
+        }
+        
+        // Calculate total price
+        $totalPrice = 0;
+        foreach ($cartItems as $item) {
+            $totalPrice += $item->product->price * $item->qty;
+        }
+        
+        // Generate tracking number
+        $trackingNumber = generateTrackingNumber($validated['shipping_service']);
+        
+        // Create order
+        $orderData = [
+            'user_id' => $user->user_id,
+            'total_price' => $totalPrice,
+            'status' => 'pending',
+            'notes' => $validated['notes'] ?? null,
+            'buyer_name' => $validated['buyer_name'],
+            'buyer_phone' => $validated['phone'],
+            'buyer_address' => $validated['address'],
+            'shipping_service' => $validated['shipping_service'],
+            'payment_method' => $validated['payment_method'],
+            'tracking_number' => $trackingNumber,
+        ];
+        
+        // Add payment_status and paid_at only if columns exist
+        if (Schema::hasColumn('orders', 'payment_status')) {
+            $orderData['payment_status'] = 'pending';
+        }
+        if (Schema::hasColumn('orders', 'paid_at')) {
+            $orderData['paid_at'] = null;
+        }
+        
+        $order = \App\Models\Order::create($orderData);
+        
+        // Create order details for each cart item
+        foreach ($cartItems as $item) {
+            \App\Models\OrderDetail::create([
+                'order_detail_id' => (string) Str::uuid(),
+                'order_id' => $order->order_id,
+                'product_id' => $item->product_id,
+                'qty' => $item->qty,
+                'price' => $item->product->price
+            ]);
+            
+            // Reduce stock
+            $item->product->stock -= $item->qty;
+            $item->product->save();
+        }
+        
+        // Clear cart
+        \App\Models\Cart::where('user_id', $user->user_id)->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesanan berhasil dibuat',
+            'order_id' => $order->order_id,
+            'redirect' => route('order.payment', $order->order_id)
+        ]);
+    })->name('cart.checkout');
     
     // Buyer Orders Page
     Route::get('/orders', function () {

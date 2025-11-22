@@ -187,12 +187,7 @@
     
     @forelse($orders as $order)
       @php
-        $detail = $order->orderDetail->first();
-        $product = $detail?->product;
         $qtyTotal = $order->orderDetail->sum('qty');
-        $unitPrice = $detail ? ($detail->price) : 0;
-        $productName = $product?->name ?? 'Produk';
-        $image = $product?->images?->first()?->url ?? null;
       @endphp
       <div class="order-card">
         <div class="order-header">
@@ -216,23 +211,32 @@
           </div>
         </div>
         
-        <div class="order-product">
-          @if($image)
-            <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img">
-          @else
-            <div class="order-product-img d-flex align-items-center justify-content-center">
-              <i class="fa-solid fa-image text-gray-400"></i>
+        <div class="mb-3">
+          <h6 class="mb-2 fw-semibold">Produk yang Dipesan:</h6>
+          @foreach($order->orderDetail as $detail)
+            @php
+              $product = $detail->product;
+              $image = $product?->images?->first()?->url ?? null;
+            @endphp
+            <div class="order-product mb-2">
+              @if($image)
+                <img src="{{ $image }}" alt="{{ $product->name }}" class="order-product-img">
+              @else
+                <div class="order-product-img d-flex align-items-center justify-content-center">
+                  <i class="fa-solid fa-image text-gray-400"></i>
+                </div>
+              @endif
+              <div class="order-product-info">
+                <div class="order-product-name">{{ $product->name }}</div>
+                <div class="order-product-qty">{{ $detail->qty }} x Rp {{ number_format($detail->price,0,',','.') }} = Rp {{ number_format($detail->qty * $detail->price,0,',','.') }}</div>
+              </div>
+            </div>
+          @endforeach
+          @if($order->notes)
+            <div class="text-sm text-gray-500 mt-2 p-2 bg-gray-50 rounded">
+              <i class="fa-solid fa-note-sticky me-1"></i> <strong>Catatan:</strong> {{ $order->notes }}
             </div>
           @endif
-          <div class="order-product-info">
-            <div class="order-product-name">{{ $productName }}</div>
-            <div class="order-product-qty">{{ $qtyTotal }} x Rp {{ number_format($unitPrice,0,',','.') }}</div>
-            @if($order->notes)
-              <div class="text-sm text-gray-500 mt-1">
-                <i class="fa-solid fa-note-sticky me-1"></i> Catatan: {{ $order->notes }}
-              </div>
-            @endif
-          </div>
         </div>
         
         <div class="mb-3 p-3 bg-gray-50 rounded-lg">
@@ -258,6 +262,27 @@
                 <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
                   <i class="fa-solid fa-external-link me-1"></i>Cek Resi
                 </a>
+              </div>
+            @endif
+            @if($order->payment_status === 'paid')
+              <div class="col-md-12 mt-2">
+                <span class="badge bg-success">
+                  <i class="fa-solid fa-check-circle me-1"></i>Pembayaran Diterima
+                </span>
+                @if($order->paid_at)
+                  <small class="text-muted ms-2">Dibayar pada {{ $order->paid_at instanceof \Carbon\Carbon ? $order->paid_at->format('d M Y H:i') : \Carbon\Carbon::parse($order->paid_at)->format('d M Y H:i') }}</small>
+                @endif
+              </div>
+            @else
+              <div class="col-md-12 mt-2">
+                <span class="badge bg-warning text-dark">
+                  <i class="fa-solid fa-clock me-1"></i>Menunggu Pembayaran
+                </span>
+                @if($order->payment_method)
+                  <a href="{{ route('order.payment', $order->order_id) }}" class="btn btn-sm btn-primary ms-2">
+                    <i class="fa-solid fa-credit-card me-1"></i>Bayar Sekarang
+                  </a>
+                @endif
               </div>
             @endif
           </div>

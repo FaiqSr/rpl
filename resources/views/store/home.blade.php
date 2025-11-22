@@ -266,6 +266,10 @@
       
       <div class="navbar-actions">
         @if(Auth::check())
+          <a href="{{ route('cart') }}" class="text-gray-600 text-sm me-3 text-decoration-none position-relative" title="Keranjang">
+            <i class="fa-solid fa-shopping-cart me-1"></i> Keranjang
+            <span id="cartBadge" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
+          </a>
           <a href="{{ route('orders') }}" class="text-gray-600 text-sm me-3 text-decoration-none" title="Pesanan Saya">
             <i class="fa-solid fa-shopping-bag me-1"></i> Pesanan Saya
           </a>
@@ -363,6 +367,30 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script>
+    // Update cart count
+    @if(Auth::check())
+    function updateCartCount() {
+      fetch('{{ route("cart.count") }}')
+        .then(res => res.json())
+        .then(data => {
+          const badge = document.getElementById('cartBadge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.textContent = data.count;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCartCount();
+    });
+    @endif
+  </script>
   <script>
     // Toggle category dropdown
     function toggleCategory() {

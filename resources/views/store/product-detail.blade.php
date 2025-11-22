@@ -29,7 +29,13 @@
   <nav class="navbar">
     <div class="navbar-container">
       <a href="{{ route('home') }}" class="navbar-brand">ChickPatrol</a>
-      <div class="ms-auto">
+      <div class="ms-auto d-flex align-items-center gap-3">
+        @if(Auth::check())
+          <a href="{{ route('cart') }}" class="text-gray-600 text-sm text-decoration-none position-relative" title="Keranjang">
+            <i class="fa-solid fa-shopping-cart me-1"></i> Keranjang
+            <span id="cartBadge" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
+          </a>
+        @endif
         <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-900"><i class="fa-solid fa-arrow-left me-2"></i>Kembali</a>
       </div>
     </div>
@@ -100,43 +106,26 @@
 
           <div>
             <label class="block font-semibold text-gray-900 mb-2">Jasa Pengiriman</label>
-            <select name="shipping_service" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <select name="shipping_service" id="shipping_service" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
               <option value="">Pilih Jasa Pengiriman</option>
-              <option value="JNE Reguler">JNE Reguler</option>
-              <option value="JNE Express">JNE Express</option>
-              <option value="J&T Reguler">J&T Reguler</option>
-              <option value="J&T Express">J&T Express</option>
-              <option value="SiCepat Reguler">SiCepat Reguler</option>
-              <option value="SiCepat HALU">SiCepat HALU</option>
-              <option value="GoSend">GoSend</option>
-              <option value="Grab Express">Grab Express</option>
+              <option value="JNE">JNE - Reguler</option>
+              <option value="JNE">JNE - Express</option>
+              <option value="JNT">JNT - Reguler</option>
+              <option value="JNT">JNT - Express</option>
+              <option value="SiCepat">SiCepat - Reguler</option>
+              <option value="SiCepat">SiCepat - HALU</option>
+              <option value="Gojek">Gojek - Instant</option>
+              <option value="Grab">Grab - Instant</option>
             </select>
           </div>
 
           <div>
             <label class="block font-semibold text-gray-900 mb-2">Metode Pembayaran</label>
-            <div class="space-y-2">
-              <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="payment_method" value="QRIS" class="me-3" required>
-                <div class="flex items-center">
-                  <i class="fa-solid fa-qrcode text-2xl me-2 text-emerald-600"></i>
-                  <div>
-                    <div class="font-semibold">QRIS</div>
-                    <div class="text-xs text-gray-500">Scan QR Code untuk pembayaran</div>
-                  </div>
-                </div>
-              </label>
-              <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="payment_method" value="Transfer Bank" class="me-3" required>
-                <div class="flex items-center">
-                  <i class="fa-solid fa-building-columns text-2xl me-2 text-blue-600"></i>
-                  <div>
-                    <div class="font-semibold">Transfer Bank</div>
-                    <div class="text-xs text-gray-500">BCA, Mandiri, BRI, BNI</div>
-                  </div>
-                </div>
-              </label>
-            </div>
+            <select name="payment_method" id="payment_method" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+              <option value="">Pilih Metode Pembayaran</option>
+              <option value="QRIS">QRIS</option>
+              <option value="Transfer Bank">Transfer Bank</option>
+            </select>
           </div>
 
           <div>
@@ -149,9 +138,14 @@
               <span class="font-semibold text-gray-900">Total</span>
               <span id="totalPrice" class="text-2xl font-bold text-emerald-600">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
             </div>
-            <button type="submit" class="btn-primary w-full">
-              <i class="fa-solid fa-shopping-cart me-2"></i>Pesan Sekarang
-            </button>
+            <div class="flex gap-3">
+              <button type="button" onclick="addToCart()" class="btn-outline-secondary flex-1" style="padding: 0.75rem 2rem; border: 2px solid var(--primary-green); border-radius: 8px; background: white; color: var(--primary-green); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                <i class="fa-solid fa-cart-plus me-2"></i>Tambah ke Keranjang
+              </button>
+              <button type="submit" class="btn-primary flex-1">
+                <i class="fa-solid fa-bolt me-2"></i>Beli Sekarang
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -167,6 +161,13 @@
       phone: '{{ Auth::check() ? addslashes(Auth::user()->phone) : '' }}',
       address: `{{ Auth::check() ? addslashes(Auth::user()->address) : '' }}`
     };
+    
+    // Load cart count on page load
+    @if(Auth::check())
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCartCount();
+    });
+    @endif
   </script>
   <script>
     const productPrice = {{ $product->price ?? 0 }};
@@ -199,6 +200,73 @@
     }
 
     document.getElementById('qty').addEventListener('change', updateTotal);
+
+    async function addToCart() {
+      if(!window.isLoggedIn){
+        Swal.fire({icon:'warning',title:'Login Diperlukan',text:'Silakan login dahulu untuk menambahkan produk ke keranjang.'});
+        return;
+      }
+      
+      const qty = parseInt(document.getElementById('qty').value) || 1;
+      
+      try {
+        const response = await fetch('{{ route("cart.add") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({
+            product_id: '{{ $product->product_id }}',
+            qty: qty
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: result.message || 'Produk berhasil ditambahkan ke keranjang',
+            confirmButtonColor: '#69B578',
+            showCancelButton: true,
+            confirmButtonText: 'Lihat Keranjang',
+            cancelButtonText: 'Lanjut Belanja'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              window.location.href = '{{ route("cart") }}';
+            }
+          });
+          updateCartCount();
+        } else {
+          throw new Error(result.message || 'Gagal menambahkan ke keranjang');
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: error.message || 'Terjadi kesalahan',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    }
+    
+    function updateCartCount() {
+      fetch('{{ route("cart.count") }}')
+        .then(res => res.json())
+        .then(data => {
+          const badge = document.getElementById('cartBadge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.textContent = data.count;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        });
+    }
 
       document.getElementById('orderForm').addEventListener('submit', async function(e){
       e.preventDefault();
