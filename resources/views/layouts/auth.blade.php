@@ -222,6 +222,52 @@
         .text-small a:hover {
             text-decoration: underline;
         }
+        
+        /* Curved Green Background for Register Page */
+        .green-section {
+            position: relative;
+            background: linear-gradient(135deg, #69B578 0%, #5a9a68 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .green-section::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 60%;
+            height: 60%;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            transform: translate(-20%, -20%);
+        }
+        
+        .green-section::after {
+            content: '';
+            position: absolute;
+            bottom: -15%;
+            right: -15%;
+            width: 70%;
+            height: 70%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(15%, 15%);
+        }
+        
+        /* Curved white overlay on left side */
+        .register-curve-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            background: #ffffff;
+            clip-path: ellipse(100% 100% at 0% 50%);
+            z-index: 0;
+        }
     </style>
     
     @stack('styles')

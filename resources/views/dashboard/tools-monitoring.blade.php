@@ -411,6 +411,90 @@
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        min-height: auto;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+      }
+      
+      .monitoring-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .sensor-card {
+        min-width: 100%;
+      }
+      
+      .chart-card, .anomaly-card {
+        margin-bottom: 1rem;
+      }
+      
+      .forecast-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .prediction-banner {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        gap: .5rem;
+      }
+      
+      .chart-card form {
+        display: grid;
+        gap: .75rem;
+      }
+      
+      .chart-card form > div {
+        width: 100%;
+      }
+      
+      .chart-card form button {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .sensor-card h6 {
+        font-size: .7rem;
+      }
+      
+      .sensor-value {
+        font-size: 1.5rem !important;
+      }
+      
+      .trend-chip {
+        font-size: .65rem !important;
+        padding: .2rem .4rem !important;
+      }
+      
+      .chart-card h6, .anomaly-card h6 {
+        font-size: .75rem;
+      }
+      
+      .prediction-banner {
+        padding: .75rem 1rem !important;
+      }
+      
+      .prediction-banner h5 {
+        font-size: .85rem !important;
+      }
+      
+      .prediction-banner p {
+        font-size: .65rem !important;
+      }
+    }
     .sensor-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -474,9 +558,24 @@
     .forecast-col h5{ margin:0 0 .4rem; font-size:.78rem; font-weight:700; color:#2F2F2F; }
     .metric-item{ display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .6rem; border-radius:8px; background:#f8f9fa; font-size:.72rem; }
     .metric-icon{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; font-size:.8rem; flex:0 0 26px; }
-    .metric-item.risk-ok{ border-left:3px solid #69B578; }
-    .metric-item.risk-warn{ border-left:3px solid #F4C430; }
-    .metric-item.risk-crit{ border-left:3px solid #dc3545; }
+    /* Warna sesuai kondisi: hijau=aman, kuning=perhatian, merah=bahaya */
+    .metric-item.risk-ok{ border-left:3px solid #28a745; background:#f0f9f4; }
+    .metric-item.risk-ok .metric-icon{ background:#28a745; } /* Hijau untuk aman */
+    .metric-item.risk-warn{ border-left:3px solid #ffc107; background:#fffbf0; }
+    .metric-item.risk-warn .metric-icon{ background:#ffc107; color:#000; } /* Kuning untuk perhatian */
+    .metric-item.risk-crit{ border-left:3px solid #dc3545; background:#fff0f0; }
+    .metric-item.risk-crit .metric-icon{ background:#dc3545; } /* Merah untuk bahaya */
+    /* Pagination button styles */
+    #anomalyPrevBtn:disabled, #anomalyNextBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed !important;
+      background: #f5f5f5 !important;
+    }
+    #anomalyPrevBtn:hover:not(:disabled), #anomalyNextBtn:hover:not(:disabled) {
+      background: #f0f0f0 !important;
+      border-color: #999 !important;
+    }
+    
     .anomaly-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -498,22 +597,66 @@
     .anomaly-item .anomaly-tag {
       font-size:.6rem;
       padding:.2rem .4rem;
-      background:#dc3545;
+      background:#dc3545; /* Default merah untuk bahaya */
       color:white;
       border-radius:4px;
       text-transform:uppercase;
       letter-spacing:.5px;
+      font-weight:600;
     }
+    /* Warna anomaly tag berdasarkan severity */
+    .anomaly-item[data-severity="critical"] .anomaly-tag { background:#dc3545; } /* Merah untuk bahaya */
+    .anomaly-item[data-severity="warning"] .anomaly-tag { background:#ffc107; color:#000; } /* Kuning untuk perhatian */
+    .anomaly-item[data-severity="normal"] .anomaly-tag { background:#28a745; } /* Hijau untuk aman */
     .loading-overlay { text-align:center; padding:2rem 0; font-size:.8rem; color:#6c757d; }
 
     /* Data preview */
     .data-card { background:white; border:1px solid #e9ecef; border-radius:10px; padding:1rem 1.25rem; }
     .data-card h6 { margin:0 0 .6rem; font-size:.8rem; font-weight:600; color:#6c757d; }
-    .data-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; }
-    .data-tile { background:#f8f9fa; border-radius:10px; padding:.7rem .8rem; display:flex; align-items:center; gap:.6rem; }
-    .data-tile .kpi-icon{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; }
-    .data-tile .label { font-size:.68rem; color:#6c757d; }
-    .data-tile .val { font-size:1.1rem; font-weight:700; color:#2F2F2F; }
+    .data-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:.75rem; }
+    .data-tile { background:#f8f9fa; border-radius:10px; padding:.7rem .8rem; display:flex; align-items:flex-start; gap:.6rem; }
+    .data-tile .kpi-icon{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; flex-shrink:0; }
+    .data-tile .label { font-size:.68rem; color:#6c757d; margin-bottom:.15rem; }
+    .data-tile .val { font-size:1.1rem; font-weight:700; color:#2F2F2F; margin-bottom:.25rem; }
+    /* ML Info */
+    .ml-info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .6rem .8rem;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: .75rem;
+    }
+    .ml-info-label {
+      color: #6c757d;
+      font-weight: 500;
+    }
+    .ml-info-value {
+      color: #2F2F2F;
+      font-weight: 600;
+    }
+    .ml-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .3rem .6rem;
+      border-radius: 6px;
+      font-size: .7rem;
+      font-weight: 500;
+    }
+    .ml-badge.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    .ml-badge.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .ml-badge.fallback {
+      background: #fff3cd;
+      color: #856404;
+    }
   </style>
 </head>
 <body>
@@ -526,8 +669,8 @@
     <div class="sidebar-profile">
       <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
       <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
+        <h6>Fantastic F</h6>
+        <p>Founder</p>
       </div>
     </div>
     
@@ -553,6 +696,7 @@
       <div class="sidebar-submenu show">
         <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
         <a href="{{ route('dashboard.tools.monitoring') }}" class="active">Monitoring Alat</a>
+        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
       </div>
       <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-shopping-cart"></i>
@@ -565,7 +709,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>
@@ -578,7 +722,7 @@
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
       <i class="fa-solid fa-chart-line"></i>
       <div>
-        <h5 id="envStatusTitle">Memuat...</h5>
+        <h5 id="envStatusTitle">Memuat... <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span></h5>
         <p id="envStatusDetail">Analisis kondisi lingkungan kandang akan muncul di sini.</p>
         <p id="envForecastDetail" style="margin-top:.4rem; font-weight:500;"></p>
       </div>
@@ -607,33 +751,33 @@
       </div>
     </div>
 
-    <!-- Data & Results Preview (for UI) -->
-    <div class="data-card" id="dataPreview" style="display:none;">
-      <h6>Data & Hasil</h6>
-      <div id="latestGrid" class="data-grid"></div>
-      <div style="margin-top:.75rem;">
-        <strong style="font-size:.75rem;">Ringkasan 6 Jam</strong>
-        <div id="summary6" style="display:grid; gap:.25rem; margin-top:.25rem; font-size:.72rem;"></div>
-      </div>
-      <div style="margin-top:.5rem;">
-        <strong style="font-size:.75rem;">Ringkasan 24 Jam</strong>
-        <div id="summary24" style="display:grid; gap:.25rem; margin-top:.25rem; font-size:.72rem;"></div>
-      </div>
-      <details style="margin-top:.75rem;">
-        <summary style="cursor:pointer; font-size:.75rem;">Lihat JSON</summary>
-        <pre id="jsonDump" style="white-space:pre-wrap; background:#0f172a; color:#e2e8f0; padding:.75rem; border-radius:8px; overflow:auto; max-height:240px; font-size:.72rem;"></pre>
-      </details>
-    </div>
+
 
     <!-- Anomaly List -->
     <div class="anomaly-card" id="anomalyPanel" style="display:none;">
       <h6>Deteksi Anomali Sensor</h6>
       <div id="anomalyList"></div>
+      <div id="anomalyPagination" style="display:none; margin-top:.75rem; padding-top:.75rem; border-top:1px solid #e0e0e0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
+          <div style="font-size:.75rem; color:#6c757d;">
+            <span id="anomalyPageInfo">Halaman 1 dari 1</span>
+          </div>
+          <div style="display:flex; gap:.25rem;">
+            <button id="anomalyPrevBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
+              <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+            </button>
+            <button id="anomalyNextBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
+              Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="noAnomaly" style="display:none;" class="anomaly-card">
       <h6>Deteksi Anomali Sensor</h6>
       <p style="font-size:.75rem; color:#6c757d; margin:0;">Tidak ada anomali terdeteksi. Semua sensor dalam batas aman.</p>
     </div>
+
     
     <!-- Content Section -->
     <div style="padding: 1.5rem 0;">
@@ -779,8 +923,65 @@
     const predictionBanner = document.getElementById('predictionBanner');
     const anomalyPanel = document.getElementById('anomalyPanel');
     const anomalyList = document.getElementById('anomalyList');
+    const anomalyPagination = document.getElementById('anomalyPagination');
+    const anomalyPrevBtn = document.getElementById('anomalyPrevBtn');
+    const anomalyNextBtn = document.getElementById('anomalyNextBtn');
+    const anomalyPageInfo = document.getElementById('anomalyPageInfo');
+    
+    // State untuk pagination anomali
+    let allAnomalies = [];
+    let currentAnomalyPage = 1;
+    const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
+    // Fungsi untuk menentukan status sensor berdasarkan threshold
+    function getSensorStatus(key, value){
+      const thresholds = {
+        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 23, danger_high: 34 },
+        humidity: { ideal_min: 50, ideal_max: 70, warn_high: 80, danger_high: 80 },
+        ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
+        light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
+      };
+      
+      const th = thresholds[key];
+      if (!th) return { status: 'unknown', color: '#6c757d' };
+      
+      if (key === 'temperature') {
+        if (value >= th.ideal_min && value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value < th.danger_low || value > th.danger_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        }
+      } else if (key === 'humidity') {
+        if (value >= th.ideal_min && value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value > th.danger_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else if (value < th.ideal_min || value > th.ideal_max) {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      } else if (key === 'ammonia') {
+        if (value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value > th.danger_max) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else if (value > th.warn_max) {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      } else if (key === 'light') {
+        // Untuk cahaya, nilai ratusan langsung dibandingkan dengan threshold 10-60
+        if (value >= th.ideal_low && value <= th.ideal_high) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value < th.warn_low || value > th.warn_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      }
+      
+      return { status: 'unknown', color: '#6c757d' };
+    }
+    
     function createSensorCard(key, label, value, unit, history, prediction){
       // Determine trend (compare last two points)
       const len = history.length;
@@ -789,29 +990,64 @@
         const diff = history[len-1][key] - history[len-2][key];
         if (diff > 0.2) trend = 'up'; else if (diff < -0.2) trend = 'down';
       }
-      return `<div class="sensor-card">
+      
+      // Tentukan status sensor berdasarkan threshold
+      const sensorStatus = getSensorStatus(key, value);
+      
+      return `<div class="sensor-card" style="border-left: 4px solid ${sensorStatus.color};">
         <h6>${label}</h6>
         <p class="sensor-value">${value}<span class="sensor-unit">${unit}</span></p>
         <div class="trend-chip ${trend}">
           <i class="fa-solid fa-arrow-${trend==='down'?'down':'up'}"></i>
           ${trend==='flat'?'Stabil': trend==='up'?'Naik':'Turun'}
         </div>
+        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600;">
+          <i class="fa-solid fa-circle" style="font-size: 0.5rem; margin-right: 0.25rem;"></i>
+          ${sensorStatus.status}
+        </div>
       </div>`;
     }
 
-    function buildBanner(latest, status, forecast6){
+    function buildBanner(latest, status, forecast6, meta){
       // Simple health heuristic
       const titleEl = document.getElementById('envStatusTitle');
       const detailEl = document.getElementById('envStatusDetail');
       const forecastEl = document.getElementById('envForecastDetail');
+      const mlActiveBadge = document.getElementById('mlActiveBadge');
+      
       titleEl.textContent = 'Kondisi lingkungan ' + status.label;
-      detailEl.textContent = status.message;
+      
+      // Update detail dengan info bahwa ini dari ML (bukan simulasi)
+      detailEl.textContent = status.message + ' (Hasil analisis Machine Learning)';
+      
+      // ML Active badge
+      if (meta && meta.ml_connected) {
+          if (mlActiveBadge) {
+              mlActiveBadge.style.display = 'inline-block';
+              mlActiveBadge.textContent = 'ML Active';
+              mlActiveBadge.className = 'badge bg-success ms-2';
+          }
+      } else {
+          if (mlActiveBadge) mlActiveBadge.style.display = 'none';
+      }
+      
       // Build quick 6h forecast sentence from first two summaries (suhu & kelembaban)
       const suhuSummary = forecast6.find(f=>f.metric==='Suhu');
       const lembabSummary = forecast6.find(f=>f.metric==='Kelembaban');
       if (suhuSummary && lembabSummary){
         forecastEl.textContent = `Prediksi 6 jam: ${suhuSummary.trend} suhu (${suhuSummary.range.min}–${suhuSummary.range.max}°C) & ${lembabSummary.trend} kelembaban (${lembabSummary.range.min}–${lembabSummary.range.max}%).`;
       }
+      
+      // Set warna banner berdasarkan severity: hijau=aman, kuning=perhatian, merah=bahaya
+      const severity = status.severity || 'normal';
+      if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('tidak optimal')) {
+          predictionBanner.style.background = 'linear-gradient(90deg, #dc3545, #c82333)'; // Merah untuk bahaya
+      } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
+          predictionBanner.style.background = 'linear-gradient(90deg, #ffc107, #e0a800)'; // Kuning untuk perhatian
+      } else {
+          predictionBanner.style.background = 'linear-gradient(90deg, #28a745, #218838)'; // Hijau untuk aman
+      }
+      
       predictionBanner.style.display = 'flex';
     }
 
@@ -855,13 +1091,94 @@
       }
       anomalyPanel.style.display='block';
       noAnomaly.style.display='none';
-      anomalyList.innerHTML = anomalies.map(a=>`<div class='anomaly-item'>
-        <span class='anomaly-tag'>${a.type}</span>
-        <div>
-          <div style='font-size:.7rem; color:#6c757d;'>${a.time}</div>
-          <div>${a.message} (nilai: ${a.value})</div>
-        </div>
-      </div>`).join('');
+      
+      // Sort anomali: critical dulu, lalu warning, lalu urutkan berdasarkan waktu (terbaru)
+      const sortedAnomalies = [...anomalies].sort((a, b) => {
+        const severityOrder = { 'critical': 0, 'warning': 1, 'normal': 2 };
+        const aSeverity = severityOrder[a.severity] ?? 2;
+        const bSeverity = severityOrder[b.severity] ?? 2;
+        
+        if (aSeverity !== bSeverity) {
+          return aSeverity - bSeverity; // Critical dulu
+        }
+        
+        // Jika severity sama, urutkan berdasarkan waktu (terbaru dulu)
+        const aTime = new Date(a.time || 0).getTime();
+        const bTime = new Date(b.time || 0).getTime();
+        return bTime - aTime;
+      });
+      
+      // Simpan semua anomali untuk pagination
+      allAnomalies = sortedAnomalies;
+      currentAnomalyPage = 1;
+      
+      // Render halaman pertama
+      renderAnomalyPage();
+    }
+    
+    function renderAnomalyPage(){
+      if (!allAnomalies.length) return;
+      
+      const totalPages = Math.ceil(allAnomalies.length / ANOMALIES_PER_PAGE);
+      const startIndex = (currentAnomalyPage - 1) * ANOMALIES_PER_PAGE;
+      const endIndex = startIndex + ANOMALIES_PER_PAGE;
+      const displayAnomalies = allAnomalies.slice(startIndex, endIndex);
+      
+      // Render anomali
+      anomalyList.innerHTML = displayAnomalies.map(a=>{
+        // Tentukan severity berdasarkan type atau severity dari data
+        const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
+        return `<div class='anomaly-item' data-severity="${severity}">
+          <span class='anomaly-tag'>${a.type || 'unknown'}</span>
+          <div>
+            <div style='font-size:.7rem; color:#6c757d;'>${a.time}</div>
+            <div>${a.message}${a.value !== undefined ? ` (nilai: ${a.value})` : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+      
+      // Update pagination info
+      if (anomalyPageInfo) {
+        anomalyPageInfo.textContent = `Halaman ${currentAnomalyPage} dari ${totalPages} (Total: ${allAnomalies.length} anomali)`;
+      }
+      
+      // Update tombol pagination
+      if (anomalyPrevBtn) {
+        anomalyPrevBtn.disabled = currentAnomalyPage === 1;
+      }
+      if (anomalyNextBtn) {
+        anomalyNextBtn.disabled = currentAnomalyPage === totalPages;
+      }
+      
+      // Tampilkan/sembunyikan pagination
+      if (anomalyPagination) {
+        if (totalPages > 1) {
+          anomalyPagination.style.display = 'block';
+        } else {
+          anomalyPagination.style.display = 'none';
+        }
+      }
+    }
+    
+    function changeAnomalyPage(direction){
+      const totalPages = Math.ceil(allAnomalies.length / ANOMALIES_PER_PAGE);
+      // Pastikan perubahan halaman hanya +1 atau -1, tidak melompat
+      const newPage = currentAnomalyPage + (direction > 0 ? 1 : -1);
+      
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentAnomalyPage = newPage;
+        renderAnomalyPage();
+        // Scroll ke atas daftar anomali
+        if (anomalyList) {
+          anomalyList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+    
+    // Attach event listeners untuk tombol pagination setelah elemen tersedia
+    if (anomalyPrevBtn && anomalyNextBtn) {
+      anomalyPrevBtn.addEventListener('click', () => changeAnomalyPage(-1));
+      anomalyNextBtn.addEventListener('click', () => changeAnomalyPage(1));
     }
 
     // Client-side mock generator (used when API not available)
@@ -933,9 +1250,89 @@
     }
     function riskClass(risk){
       if(!risk) return 'risk-ok';
-      if(String(risk).toLowerCase().includes('krit')) return 'risk-crit';
-      if(String(risk).toLowerCase().includes('potensi') || String(risk).toLowerCase().includes('keluar')) return 'risk-warn';
+      // Merah (bahaya): kritik, tidak optimal, bahaya, DI LUAR BATAS AMAN (bukan potensi lagi)
+      if(String(risk).toLowerCase().includes('krit') || String(risk).toLowerCase().includes('bahaya') || String(risk).toLowerCase().includes('tidak optimal') || String(risk).toLowerCase().includes('di luar batas aman')) return 'risk-crit';
+      // Kuning (perhatian): potensi keluar batas, perlu perhatian
+      if(String(risk).toLowerCase().includes('potensi') || String(risk).toLowerCase().includes('perhatian')) return 'risk-warn';
+      // Hijau (aman): dalam kisaran aman
       return 'risk-ok';
+    }
+
+    function renderMLInfo(mlMetadata, meta){
+      const mlInfoCard = document.getElementById('mlInfoCard');
+      const mlInfoContent = document.getElementById('mlInfoContent');
+      
+      if(!mlMetadata || Object.keys(mlMetadata).length === 0){
+        mlInfoCard.style.display = 'none';
+        return;
+      }
+      
+      const source = meta?.ml_source || 'fallback';
+      const connected = meta?.ml_connected || false;
+      
+      let html = '';
+      
+      // Status Connection
+      if(connected && source === 'ml_service'){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Status Koneksi</span>
+          <span class="ml-badge connected">
+            <i class="fa-solid fa-check-circle"></i>
+            Terhubung ke ML Service
+          </span>
+        </div>`;
+      } else {
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Status Koneksi</span>
+          <span class="ml-badge ${source === 'fallback' ? 'fallback' : 'disconnected'}">
+            <i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i>
+            ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}
+          </span>
+        </div>`;
+      }
+      
+      // Model Name
+      if(mlMetadata.model_name){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Nama Model</span>
+          <span class="ml-info-value">${mlMetadata.model_name}</span>
+        </div>`;
+      }
+      
+      // Model Version
+      if(mlMetadata.model_version){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Versi Model</span>
+          <span class="ml-info-value">v${mlMetadata.model_version}</span>
+        </div>`;
+      }
+      
+      // Accuracy
+      if(mlMetadata.accuracy !== null && mlMetadata.accuracy !== undefined){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Akurasi Model</span>
+          <span class="ml-info-value">${(mlMetadata.accuracy * 100).toFixed(2)}%</span>
+        </div>`;
+      }
+      
+      // Confidence
+      if(mlMetadata.confidence){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Tingkat Keyakinan</span>
+          <span class="ml-info-value" style="text-transform: capitalize;">${mlMetadata.confidence}</span>
+        </div>`;
+      }
+      
+      // Prediction Time
+      if(mlMetadata.prediction_time){
+        html += `<div class="ml-info-item">
+          <span class="ml-info-label">Waktu Prediksi</span>
+          <span class="ml-info-value">${mlMetadata.prediction_time}ms</span>
+        </div>`;
+      }
+      
+      mlInfoContent.innerHTML = html;
+      mlInfoCard.style.display = 'block';
     }
 
     async function loadMonitoring(){
@@ -944,8 +1341,8 @@
         const res = await fetch('/api/monitoring/tools?t=' + Date.now(), { headers:{ 'Accept':'application/json' } });
         if (!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
-        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h } = data;
-        buildBanner(latest, status, forecast_summary_6h);
+        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta } = data;
+        buildBanner(latest, status, forecast_summary_6h, meta);
         sensorGrid.innerHTML = [
           createSensorCard('temperature','Suhu', latest.temperature,'°C', history, prediction_6h.temperature),
           createSensorCard('humidity','Kelembaban', latest.humidity,'%', history, prediction_6h.humidity),
@@ -961,58 +1358,34 @@
         list6.innerHTML = forecast_summary_6h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
         list24.innerHTML = forecast_summary_24h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
         forecastCard.style.display='block';
+        
+        // ML Info Card - moved to Information Management page
 
         // Data Preview panel
-        const dataPreview = document.getElementById('dataPreview');
-        const latestGrid = document.getElementById('latestGrid');
-        const summary6 = document.getElementById('summary6');
-        const summary24 = document.getElementById('summary24');
-        const jsonDump = document.getElementById('jsonDump');
-        latestGrid.innerHTML = `
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-temperature-half"></i></div><div><div class="label">Suhu</div><div class="val">${latest.temperature} °C</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-droplet"></i></div><div><div class="label">Kelembaban</div><div class="val">${latest.humidity} %</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-flask"></i></div><div><div class="label">Amoniak</div><div class="val">${latest.ammonia} ppm</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-sun"></i></div><div><div class="label">Cahaya</div><div class="val">${latest.light} lux</div></div></div>
-        `;
-        summary6.innerHTML = forecast_summary_6h.map(f=>`<div>• ${f.summary}</div>`).join('');
-        summary24.innerHTML = forecast_summary_24h.map(f=>`<div>• ${f.summary}</div>`).join('');
-        jsonDump.textContent = JSON.stringify(data, null, 2);
-        dataPreview.style.display = 'block';
       } catch (e){
-        console.warn('API tidak tersedia, gunakan data simulasi.', e);
-        const data = generateMockData();
-        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h } = data;
-        buildBanner(latest, status, forecast_summary_6h);
-        sensorGrid.innerHTML = [
-          createSensorCard('temperature','Suhu', latest.temperature,'°C', history, prediction_6h.temperature),
-          createSensorCard('humidity','Kelembaban', latest.humidity,'%', history, prediction_6h.humidity),
-          createSensorCard('ammonia','Amoniak', latest.ammonia,'ppm', history, prediction_6h.ammonia),
-          createSensorCard('light','Cahaya', latest.light,'lux', history, prediction_6h.light)
-        ].join('');
-        buildChart(history, prediction_6h);
-        renderAnomalies(anomalies);
-        const forecastCard = document.getElementById('forecastCard');
-        const list6 = document.getElementById('forecastList6');
-        const list24 = document.getElementById('forecastList24');
-        list6.innerHTML = forecast_summary_6h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
-        list24.innerHTML = forecast_summary_24h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
-        forecastCard.style.display='block';
-
-        const dataPreview = document.getElementById('dataPreview');
-        const latestGrid = document.getElementById('latestGrid');
-        const summary6 = document.getElementById('summary6');
-        const summary24 = document.getElementById('summary24');
-        const jsonDump = document.getElementById('jsonDump');
-        latestGrid.innerHTML = `
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-temperature-half"></i></div><div><div class="label">Suhu</div><div class="val">${latest.temperature} °C</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-droplet"></i></div><div><div class="label">Kelembaban</div><div class="val">${latest.humidity} %</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-flask"></i></div><div><div class="label">Amoniak</div><div class="val">${latest.ammonia} ppm</div></div></div>
-          <div class="data-tile"><div class="kpi-icon"><i class="fa-solid fa-sun"></i></div><div><div class="label">Cahaya</div><div class="val">${latest.light} lux</div></div></div>
+        console.error('Error loading monitoring data:', e);
+        sensorGrid.innerHTML = '<div class="alert alert-danger">Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</div>';
+        
+        // Tampilkan pesan error yang jelas
+        const errorBanner = document.getElementById('predictionBanner');
+        if (errorBanner) {
+          errorBanner.style.display = 'block';
+          errorBanner.style.background = '#dc3545';
+          errorBanner.innerHTML = `
+            <i class="fa-solid fa-exclamation-triangle"></i>
+            <div>
+              <h5>Error Memuat Data</h5>
+              <p>Gagal terhubung ke ML Service. Pastikan:</p>
+              <ul style="margin:0.5rem 0; padding-left:1.5rem; font-size:0.9rem;">
+                <li>ML Service berjalan di http://localhost:5000</li>
+                <li>Service dapat diakses (test: curl http://localhost:5000/health)</li>
+                <li>Refresh halaman ini setelah service running</li>
+              </ul>
+            </div>
         `;
-        summary6.innerHTML = data.forecast_summary_6h.map(f=>`<div>• ${f.summary}</div>`).join('');
-        summary24.innerHTML = data.forecast_summary_24h.map(f=>`<div>• ${f.summary}</div>`).join('');
-        jsonDump.textContent = JSON.stringify(data, null, 2);
-        dataPreview.style.display = 'block';
+        }
+        
+        // Jangan tampilkan data preview jika error
       }
     }
 

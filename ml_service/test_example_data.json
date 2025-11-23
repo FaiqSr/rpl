@@ -1,0 +1,35 @@
+{
+  "history": [
+    {"time": "2025-11-22 00:00", "ammonia": 22.5, "temperature": 29.5, "humidity": 62.0, "light": 250.0},
+    {"time": "2025-11-22 01:00", "ammonia": 22.3, "temperature": 29.3, "humidity": 61.8, "light": 248.0},
+    {"time": "2025-11-22 02:00", "ammonia": 22.1, "temperature": 29.1, "humidity": 61.6, "light": 246.0},
+    {"time": "2025-11-22 03:00", "ammonia": 21.9, "temperature": 28.9, "humidity": 61.4, "light": 244.0},
+    {"time": "2025-11-22 04:00", "ammonia": 21.7, "temperature": 28.7, "humidity": 61.2, "light": 242.0},
+    {"time": "2025-11-22 05:00", "ammonia": 21.5, "temperature": 28.5, "humidity": 61.0, "light": 240.0},
+    {"time": "2025-11-22 06:00", "ammonia": 21.3, "temperature": 28.3, "humidity": 60.8, "light": 238.0},
+    {"time": "2025-11-22 07:00", "ammonia": 21.1, "temperature": 28.1, "humidity": 60.6, "light": 236.0},
+    {"time": "2025-11-22 08:00", "ammonia": 20.9, "temperature": 27.9, "humidity": 60.4, "light": 234.0},
+    {"time": "2025-11-22 09:00", "ammonia": 20.7, "temperature": 27.7, "humidity": 60.2, "light": 232.0},
+    {"time": "2025-11-22 10:00", "ammonia": 20.5, "temperature": 27.5, "humidity": 60.0, "light": 230.0},
+    {"time": "2025-11-22 11:00", "ammonia": 20.3, "temperature": 27.3, "humidity": 59.8, "light": 228.0},
+    {"time": "2025-11-22 12:00", "ammonia": 20.1, "temperature": 27.1, "humidity": 59.6, "light": 226.0},
+    {"time": "2025-11-22 13:00", "ammonia": 19.9, "temperature": 26.9, "humidity": 59.4, "light": 224.0},
+    {"time": "2025-11-22 14:00", "ammonia": 19.7, "temperature": 26.7, "humidity": 59.2, "light": 222.0},
+    {"time": "2025-11-22 15:00", "ammonia": 19.5, "temperature": 26.5, "humidity": 59.0, "light": 220.0},
+    {"time": "2025-11-22 16:00", "ammonia": 19.3, "temperature": 26.3, "humidity": 58.8, "light": 218.0},
+    {"time": "2025-11-22 17:00", "ammonia": 19.1, "temperature": 26.1, "humidity": 58.6, "light": 216.0},
+    {"time": "2025-11-22 18:00", "ammonia": 18.9, "temperature": 25.9, "humidity": 58.4, "light": 214.0},
+    {"time": "2025-11-22 19:00", "ammonia": 18.7, "temperature": 25.7, "humidity": 58.2, "light": 212.0},
+    {"time": "2025-11-22 20:00", "ammonia": 18.5, "temperature": 25.5, "humidity": 58.0, "light": 210.0},
+    {"time": "2025-11-22 21:00", "ammonia": 18.3, "temperature": 25.3, "humidity": 57.8, "light": 208.0},
+    {"time": "2025-11-22 22:00", "ammonia": 18.1, "temperature": 25.1, "humidity": 57.6, "light": 206.0},
+    {"time": "2025-11-22 23:00", "ammonia": 17.9, "temperature": 24.9, "humidity": 57.4, "light": 204.0},
+    {"time": "2025-11-23 00:00", "ammonia": 17.7, "temperature": 24.7, "humidity": 57.2, "light": 202.0},
+    {"time": "2025-11-23 01:00", "ammonia": 17.5, "temperature": 24.5, "humidity": 57.0, "light": 200.0},
+    {"time": "2025-11-23 02:00", "ammonia": 17.3, "temperature": 24.3, "humidity": 56.8, "light": 198.0},
+    {"time": "2025-11-23 03:00", "ammonia": 17.1, "temperature": 24.1, "humidity": 56.6, "light": 196.0},
+    {"time": "2025-11-23 04:00", "ammonia": 16.9, "temperature": 23.9, "humidity": 56.4, "light": 194.0},
+    {"time": "2025-11-23 05:00", "ammonia": 22.5, "temperature": 29.5, "humidity": 62.0, "light": 250.0}
+  ]
+}
+

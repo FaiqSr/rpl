@@ -16,8 +16,8 @@ class ToolsSeeder extends Seeder
         // Untuk setiap tipe alat, buat 5 hingga 15 item detail
         // (Mengasumsikan ada relasi 'details' di model Tool)
         Tools::factory()
-            ->count(20)
-            ->hasDetails(rand(5, 15))
+            ->count(5)
+            ->hasDetails(3)
             ->create();
     }
 }

@@ -1,0 +1,989 @@
+"""
+Flask API Service untuk Machine Learning Monitoring Kandang Ayam
+Menggunakan model LSTM, Random Forest, dan Isolation Forest
+"""
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import numpy as np
+import joblib
+from tensorflow.keras.models import load_model
+import json
+import os
+from datetime import datetime
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS untuk Laravel
+
+# Konstanta
+SEQUENCE_LENGTH = 30  # Sesuaikan dengan model LSTM Anda
+
+# Load Models & Scalers
+MODEL_DIR = os.path.join(os.path.dirname(__file__), 'models')
+
+try:
+    # Load Random Forest untuk klasifikasi status
+    model_rf = joblib.load(os.path.join(MODEL_DIR, 'model_random_forest.pkl'))
+    scaler_rf = joblib.load(os.path.join(MODEL_DIR, 'scaler_rf.pkl'))
+    
+    # Load LSTM untuk prediksi tren
+    model_lstm = load_model(os.path.join(MODEL_DIR, 'model_lstm_kandang.h5'))
+    scaler_lstm = joblib.load(os.path.join(MODEL_DIR, 'scaler_lstm.pkl'))
+    
+    # Load Isolation Forest untuk deteksi anomali
+    model_if = joblib.load(os.path.join(MODEL_DIR, 'model_isolation_forest.pkl'))
+    scaler_if = joblib.load(os.path.join(MODEL_DIR, 'scaler_if.pkl'))
+    
+    # Load metadata
+    with open(os.path.join(MODEL_DIR, 'model_metadata.json'), 'r') as f:
+        model_metadata = json.load(f)
+    
+    # Extract model info from metadata
+    lstm_info = model_metadata.get('models', {}).get('lstm', {})
+    rf_info = model_metadata.get('models', {}).get('random_forest', {})
+    
+    # Load sensor statistics (jika ada) untuk deteksi anomali yang lebih akurat
+    SENSOR_STATS_FILE = os.path.join(MODEL_DIR, 'sensor_stats.json')
+    SENSOR_STATS = None
+    if os.path.exists(SENSOR_STATS_FILE):
+        try:
+            with open(SENSOR_STATS_FILE, 'r') as f:
+                SENSOR_STATS = json.load(f)
+            print("✅ Statistik sensor berhasil dimuat!")
+        except Exception as e:
+            print(f"⚠️  Gagal memuat statistik sensor: {e}")
+            SENSOR_STATS = None
+    else:
+        # Generate default stats dari metadata thresholds
+        SENSOR_STATS = {
+            'ammonia': {'mean': 15, 'std': 5, 'min': 0, 'max': 35},
+            'temperature': {'mean': 28, 'std': 3, 'min': 20, 'max': 35},
+            'humidity': {'mean': 60, 'std': 8, 'min': 50, 'max': 80},
+            'light': {'mean': 300, 'std': 100, 'min': 100, 'max': 600}  # Data ratusan
+        }
+        print("⚠️  Statistik sensor tidak ditemukan, menggunakan default dari metadata")
+    
+    MODELS_LOADED = True
+    print("✅ Semua model berhasil dimuat!")
+    print(f"📊 LSTM: {lstm_info.get('architecture', 'N/A')}")
+    print(f"🌲 Random Forest: Accuracy {rf_info.get('accuracy', 'N/A')}")
+    print(f"🔍 Isolation Forest: Contamination {model_metadata.get('models', {}).get('isolation_forest', {}).get('contamination', 'N/A')}")
+except Exception as e:
+    MODELS_LOADED = False
+    print(f"❌ Error loading models: {e}")
+    model_metadata = {
+        'model_name': 'Error Loading Models',
+        'model_version': '1.0',
+        'accuracy': None
+    }
+
+
+def predict_sensor_classification(amonia, suhu, kelembaban, cahaya):
+    """
+    Klasifikasi status kandang dari data sensor (model v2)
+    Input & model sekarang dalam skala ASLI (lux, ppm, °C, %)
+    """
+    X = np.array([[amonia, suhu, kelembaban, cahaya]])
+    X_scaled = scaler_rf.transform(X)
+    status = model_rf.predict(X_scaled)[0]
+    proba = model_rf.predict_proba(X_scaled)[0]
+    
+    # Mapping sesuai metadata: classes_trained = [1, 2] -> PERHATIAN, BURUK
+    # Jika prediksi bukan 1 atau 2, berarti BAIK (kelas 0 tidak dilatih)
+    status_labels_map = {1: 'PERHATIAN', 2: 'BURUK'}
+    colors = {0: '#2ecc71', 1: '#f39c12', 2: '#e74c3c'}
+    
+    # Jika status tidak ada di classes yang dilatih, berarti BAIK
+    if status not in status_labels_map:
+        status = 0  # BAIK
+        status_label = 'BAIK'
+    else:
+        status_label = status_labels_map[status]
+    
+    probability_dict = {}
+    for idx, class_label in enumerate(model_rf.classes_):
+        if class_label in status_labels_map:
+            probability_dict[status_labels_map[class_label]] = float(proba[idx])
+    
+    # Hitung probabilitas BAIK (1 - sum probabilitas lainnya)
+    # Karena model hanya dilatih untuk PERHATIAN dan BURUK
+    other_probs = sum(probability_dict.values())
+    probability_dict['BAIK'] = max(0.0, 1.0 - other_probs)
+    
+    # Pastikan semua label ada
+    for label in ['BAIK', 'PERHATIAN', 'BURUK']:
+        if label not in probability_dict:
+            probability_dict[label] = 0.0
+    
+    # Confidence adalah max dari probabilitas yang ada
+    confidence = max(proba) if len(proba) > 0 else probability_dict.get(status_label, 0.0)
+    
+    return {
+        'status': status_label,
+        'status_code': int(status),
+        'color': colors.get(status, '#555'),
+        'probability': probability_dict,
+        'confidence': float(confidence)
+    }
+
+
+def detect_anomaly(amonia, suhu, kelembaban, cahaya):
+    """
+    Deteksi anomali pada data sensor dengan identifikasi sensor spesifik (skala ASLI)
+    Menggunakan statistik dataset untuk identifikasi yang lebih akurat
+    """
+    X = np.array([[amonia, suhu, kelembaban, cahaya]])
+    X_scaled = scaler_if.transform(X)
+    prediction = model_if.predict(X_scaled)[0]
+    score = model_if.score_samples(X_scaled)[0]
+    
+    is_anomaly = prediction == -1
+    
+    # Identifikasi sensor mana yang anomali berdasarkan threshold dan statistik dataset
+    anomaly_sensors = []
+    anomaly_details = []
+    
+    # Threshold dari model_metadata.json (sesuai aturan boiler)
+    # Menggunakan nilai dari model_metadata.json untuk konsistensi
+    rf_thresholds = model_metadata.get('models', {}).get('random_forest', {}).get('thresholds', {})
+    thresholds = {
+        'amonia_ppm': rf_thresholds.get('amonia_ppm', {'ideal_max': 20, 'warn_max': 35, 'danger_max': 35}),
+        'suhu_c': rf_thresholds.get('suhu_c', {'ideal_min': 23, 'ideal_max': 34, 'danger_low': 23, 'danger_high': 34}),
+        'kelembaban_rh': rf_thresholds.get('kelembaban_rh', {'ideal_min': 50, 'ideal_max': 70, 'warn_high': 80, 'danger_high': 80}),
+        # Threshold cahaya: sesuai aturan boiler (10-60 lux), bukan disesuaikan dataset
+        'cahaya_lux': rf_thresholds.get('cahaya_lux', {'ideal_low': 20, 'ideal_high': 40, 'warn_low': 10, 'warn_high': 60})
+    }
+    
+    # Gunakan statistik dataset jika tersedia untuk identifikasi yang lebih akurat
+    use_stats = SENSOR_STATS is not None
+    
+    # Cek setiap sensor
+    if amonia > thresholds['amonia_ppm']['danger_max']:
+        anomaly_sensors.append('ammonia')
+        anomaly_details.append({
+            'sensor': 'ammonia',
+            'value': amonia,
+            'message': f'Amoniak berbahaya (nilai: {amonia:.1f} ppm)'
+        })
+    elif amonia > thresholds['amonia_ppm']['warn_max']:
+        anomaly_sensors.append('ammonia')
+        anomaly_details.append({
+            'sensor': 'ammonia',
+            'value': amonia,
+            'message': f'Amoniak tinggi (nilai: {amonia:.1f} ppm)'
+        })
+    
+    if suhu < thresholds['suhu_c']['danger_low'] or suhu > thresholds['suhu_c']['danger_high']:
+        anomaly_sensors.append('temperature')
+        if suhu < thresholds['suhu_c']['danger_low']:
+            anomaly_details.append({
+                'sensor': 'temperature',
+                'value': suhu,
+                'message': f'Suhu terlalu rendah (nilai: {suhu:.1f}°C)',
+                'severity': 'critical'
+            })
+        else:
+            anomaly_details.append({
+                'sensor': 'temperature',
+                'value': suhu,
+                'message': f'Suhu terlalu tinggi (nilai: {suhu:.1f}°C)',
+                'severity': 'critical'
+            })
+    
+    # Kelembaban: Warning untuk <50% atau >70%, Danger untuk >80%
+    if kelembaban < thresholds['kelembaban_rh']['ideal_min']:
+        anomaly_sensors.append('humidity')
+        anomaly_details.append({
+            'sensor': 'humidity',
+            'value': kelembaban,
+            'message': f'Kelembaban terlalu rendah (nilai: {kelembaban:.1f}%, di bawah {thresholds["kelembaban_rh"]["ideal_min"]}%)',
+            'severity': 'warning'
+        })
+    elif kelembaban > thresholds['kelembaban_rh']['ideal_max'] and kelembaban <= thresholds['kelembaban_rh']['warn_high']:
+        anomaly_sensors.append('humidity')
+        anomaly_details.append({
+            'sensor': 'humidity',
+            'value': kelembaban,
+            'message': f'Kelembaban terlalu tinggi (nilai: {kelembaban:.1f}%, di atas {thresholds["kelembaban_rh"]["ideal_max"]}%)',
+            'severity': 'warning'
+        })
+    elif kelembaban > thresholds['kelembaban_rh']['danger_high']:
+        anomaly_sensors.append('humidity')
+        anomaly_details.append({
+            'sensor': 'humidity',
+            'value': kelembaban,
+            'message': f'Kelembaban berbahaya (nilai: {kelembaban:.1f}%, di atas {thresholds["kelembaban_rh"]["danger_high"]}%)',
+            'severity': 'critical'
+        })
+    
+    # Untuk cahaya, TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
+    if cahaya < thresholds['cahaya_lux']['warn_low']:
+        anomaly_sensors.append('light')
+        anomaly_details.append({
+            'sensor': 'light',
+            'value': cahaya,
+            'message': f'Cahaya kurang optimal (nilai: {cahaya:.1f} lux, di bawah {thresholds["cahaya_lux"]["warn_low"]} lux)',
+            'severity': 'warning'
+        })
+    elif cahaya > thresholds['cahaya_lux']['warn_high']:
+        anomaly_sensors.append('light')
+        anomaly_details.append({
+            'sensor': 'light',
+            'value': cahaya,
+            'message': f'Cahaya terlalu tinggi (nilai: {cahaya:.1f} lux, di atas {thresholds["cahaya_lux"]["warn_high"]} lux)',
+            'severity': 'critical'
+        })
+    
+    # Jika Isolation Forest mendeteksi anomali tapi tidak ada sensor spesifik yang terdeteksi
+    # Gunakan statistik dataset atau deviasi untuk menentukan sensor yang paling menyimpang
+    if is_anomaly and len(anomaly_sensors) == 0:
+        # Hitung deviasi dari nilai normal untuk setiap sensor
+        # Gunakan statistik dataset jika tersedia, jika tidak gunakan nilai default
+        if use_stats:
+            # Gunakan statistik dataset untuk menghitung z-score (deviasi standar)
+            deviations = {}
+            sensor_values_map = {
+                'ammonia': amonia,
+                'temperature': suhu,
+                'humidity': kelembaban,
+                'light': cahaya
+            }
+            
+            for sensor_name, value in sensor_values_map.items():
+                stats = SENSOR_STATS.get(sensor_name, {})
+                mean = stats.get('mean', 0)
+                std = stats.get('std', 1)
+                if std > 0:
+                    # Z-score: berapa standar deviasi dari mean
+                    z_score = abs(value - mean) / std
+                    deviations[sensor_name] = z_score
+                else:
+                    deviations[sensor_name] = 999
+            
+            # Identifikasi semua sensor dengan z-score > 1.5 (menyimpang lebih dari 1.5 std)
+            # Atau ambil 2 sensor dengan deviasi terbesar
+            sorted_deviations = sorted(deviations.items(), key=lambda x: x[1], reverse=True)
+            
+            # Ambil sensor dengan deviasi tinggi (z-score > 1.5 atau top 2)
+            for sensor_name, z_score in sorted_deviations:
+                if z_score > 1.5 or len(anomaly_sensors) < 2:
+                    if sensor_name not in anomaly_sensors:
+                        anomaly_sensors.append(sensor_name)
+                        anomaly_details.append({
+                            'sensor': sensor_name,
+                            'value': sensor_values_map[sensor_name],
+                            'message': f'Anomali terdeteksi pada sensor {sensor_name} (nilai: {sensor_values_map[sensor_name]:.1f}, z-score: {z_score:.2f})',
+                            'z_score': float(z_score)
+                        })
+        else:
+            # Fallback: gunakan deviasi relatif dari nilai normal
+            # Untuk cahaya, TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
+            # Normal ~30 lux (aturan boiler), tapi data aktual ratusan, jadi gunakan nilai normal 300 untuk perhitungan deviasi
+            deviations = {
+                'ammonia': abs(amonia - 15) / 15 if amonia > 0 else 999,  # Normal ~15 ppm
+                'temperature': abs(suhu - 28) / 28 if suhu > 0 else 999,  # Normal ~28°C
+                'humidity': abs(kelembaban - 60) / 60 if kelembaban > 0 else 999,  # Normal ~60%
+                'light': abs(cahaya - 300) / 300 if cahaya > 0 else 999  # Normal ~300 lux (data aktual ratusan)
+            }
+            
+            # Sensor dengan deviasi terbesar
+            max_dev_sensor = max(deviations, key=deviations.get)
+            sensor_values_map = {
+                'ammonia': amonia,
+                'temperature': suhu,
+                'humidity': kelembaban,
+                'light': cahaya
+            }
+            anomaly_sensors.append(max_dev_sensor)
+            anomaly_details.append({
+                'sensor': max_dev_sensor,
+                'value': sensor_values_map[max_dev_sensor],
+                'message': f'Anomali terdeteksi pada sensor {max_dev_sensor} (nilai: {sensor_values_map[max_dev_sensor]:.1f})'
+            })
+    
+    return {
+        'is_anomaly': bool(is_anomaly),
+        'anomaly_score': float(score),
+        'status': 'ANOMALI' if is_anomaly else 'NORMAL',
+        'anomaly_sensors': anomaly_sensors,  # List sensor yang anomali
+        'anomaly_details': anomaly_details,  # Detail untuk setiap sensor
+        'sensor_values': {
+            'ammonia': float(amonia),
+            'temperature': float(suhu),
+            'humidity': float(kelembaban),
+            'light': float(cahaya)
+        }
+    }
+
+
+def predict_next_sensor_values(recent_history):
+    """
+    Prediksi nilai sensor berikutnya (skala asli)
+    recent_history: list/array [[amonia, suhu, kelembaban, cahaya], ...] panjang >= SEQUENCE_LENGTH
+    """
+    if len(recent_history) < SEQUENCE_LENGTH:
+        return {'error': f'Need at least {SEQUENCE_LENGTH} historical data points'}
+    
+    seq = np.array(recent_history[-SEQUENCE_LENGTH:]).copy()
+    last_sequence_scaled = scaler_lstm.transform(seq)
+    X_input = last_sequence_scaled.reshape(1, SEQUENCE_LENGTH, 4)
+    
+    prediction_scaled = model_lstm.predict(X_input, verbose=0)
+    prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
+    
+    return {
+        'amonia_ppm': float(prediction[0]),
+        'suhu_c': float(prediction[1]),
+        'kelembaban_rh': float(prediction[2]),
+        'cahaya_lux': float(prediction[3])
+    }
+
+
+def predict_multiple_steps(recent_history, steps=6):
+    """
+    Prediksi beberapa langkah ke depan (untuk 6 jam dan 24 jam)
+    """
+    predictions = []
+    current_seq = np.array(recent_history[-SEQUENCE_LENGTH:]).copy()
+    
+    for step in range(steps):
+        # Scale sequence
+        seq_scaled = scaler_lstm.transform(current_seq)
+        X_input = seq_scaled.reshape(1, SEQUENCE_LENGTH, 4)
+        
+        # Predict
+        pred_scaled = model_lstm.predict(X_input, verbose=0)
+        pred = scaler_lstm.inverse_transform(pred_scaled)[0]
+        
+        predictions.append({
+            'ammonia': float(pred[0]),
+            'temperature': float(pred[1]),
+            'humidity': float(pred[2]),
+            'light': float(pred[3])
+        })
+        
+        # Update sequence (shift and add prediction)
+        current_seq = np.vstack([current_seq[1:], pred])
+    
+    return predictions
+
+
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint - Service info"""
+    return jsonify({
+        'service': 'ML Service for Poultry Farm Monitoring',
+        'status': 'running',
+        'models_loaded': MODELS_LOADED,
+        'endpoints': {
+            'health': '/health',
+            'predict': '/predict (POST)',
+            'classify': '/classify (POST)',
+            'anomaly': '/anomaly (POST)'
+        },
+        'version': '1.0.0',
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'ok' if MODELS_LOADED else 'error',
+        'models_loaded': MODELS_LOADED,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    """
+    Main prediction endpoint
+    Expected format sesuai ML_INTEGRATION.md
+    """
+    if not MODELS_LOADED:
+        return jsonify({
+            'error': 'Models not loaded',
+            'message': 'Please check model files'
+        }), 500
+    
+    try:
+        data = request.json
+        history = data.get('history', [])
+        
+        if len(history) < SEQUENCE_LENGTH:
+            return jsonify({
+                'error': f'Insufficient history data. Need at least {SEQUENCE_LENGTH} data points'
+            }), 400
+        
+        # Get latest sensor reading
+        latest = history[-1]
+        amonia = latest.get('ammonia', latest.get('amonia_ppm', 0))
+        suhu = latest.get('temperature', latest.get('suhu_c', 0))
+        kelembaban = latest.get('humidity', latest.get('kelembaban_rh', 0))
+        cahaya = latest.get('light', latest.get('cahaya_lux', 0))
+        
+        # Convert history to format expected by LSTM
+        # Format: [[amonia, suhu, kelembaban, cahaya], ...]
+        history_array = []
+        for h in history:
+            history_array.append([
+                h.get('ammonia', h.get('amonia_ppm', 0)),
+                h.get('temperature', h.get('suhu_c', 0)),
+                h.get('humidity', h.get('kelembaban_rh', 0)),
+                h.get('light', h.get('cahaya_lux', 0))
+            ])
+        
+        # CRITICAL: Ensure the last entry in history_array matches the latest values
+        # This ensures predictions are based on the actual current state
+        if len(history_array) > 0:
+            history_array[-1] = [amonia, suhu, kelembaban, cahaya]
+        
+        # Predictions
+        import time
+        start_time = time.time()
+        
+        # Predict 6 hours ahead
+        pred_6h = predict_multiple_steps(history_array, steps=6)
+        
+        # Predict 24 hours ahead
+        pred_24h = predict_multiple_steps(history_array, steps=24)
+        
+        # Classify current status
+        status_result = predict_sensor_classification(amonia, suhu, kelembaban, cahaya)
+        
+        # Detect anomalies in history
+        anomalies = []
+        for h in history[-24:]:  # Check last 24 hours
+            amonia_val = h.get('ammonia', h.get('amonia_ppm', 0))
+            suhu_val = h.get('temperature', h.get('suhu_c', 0))
+            kelembaban_val = h.get('humidity', h.get('kelembaban_rh', 0))
+            cahaya_val = h.get('light', h.get('cahaya_lux', 0))
+            
+            anomaly_result = detect_anomaly(amonia_val, suhu_val, kelembaban_val, cahaya_val)
+            
+            if anomaly_result['is_anomaly']:
+                # Gunakan detail dari detect_anomaly yang sudah diperbaiki
+                if anomaly_result.get('anomaly_details') and len(anomaly_result['anomaly_details']) > 0:
+                    # Ambil detail pertama (atau semua jika perlu)
+                    for detail in anomaly_result['anomaly_details']:
+                        anomalies.append({
+                            'type': detail['sensor'],
+                            'value': float(detail['value']),
+                            'time': h.get('time', ''),
+                            'message': detail['message'],
+                            'status': anomaly_result['status'],
+                            'anomaly_score': float(anomaly_result['anomaly_score']),
+                            'severity': 'critical' if anomaly_result['anomaly_score'] < -0.5 else 'warning'
+                        })
+                else:
+                    # Fallback jika tidak ada detail
+                    type_msg = 'unknown'
+                    message = 'Anomali terdeteksi pada sensor'
+                    
+                    if amonia_val > 25:
+                        type_msg = 'ammonia'
+                        message = 'Kadar amoniak tinggi, cek ventilasi'
+                    elif suhu_val > 30 or suhu_val < 20:
+                        type_msg = 'temperature'
+                        message = f'Suhu di luar rentang optimal (20-30°C): {suhu_val:.1f}°C'
+                    elif kelembaban_val < 55 or kelembaban_val > 75:
+                        type_msg = 'humidity'
+                        message = f'Kelembaban di luar rentang optimal (55-75%): {kelembaban_val:.1f}%'
+                    elif cahaya_val < 10 or cahaya_val > 60:
+                        type_msg = 'light'
+                        message = f'Cahaya di luar rentang optimal (10-60 lux): {cahaya_val:.1f} lux'
+                    
+                    anomalies.append({
+                        'type': type_msg,
+                        'value': float(amonia_val if type_msg == 'ammonia' else 
+                                      suhu_val if type_msg == 'temperature' else
+                                      kelembaban_val if type_msg == 'humidity' else cahaya_val),
+                        'time': h.get('time', ''),
+                        'message': message,
+                        'status': anomaly_result['status'],
+                        'anomaly_score': float(anomaly_result['anomaly_score']),
+                        'severity': 'critical' if anomaly_result['anomaly_score'] < -0.5 else 'warning'
+                    })
+        
+        # Check anomaly for latest reading (current data)
+        latest_anomaly_result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
+        if latest_anomaly_result['is_anomaly']:
+            # Gunakan detail dari detect_anomaly yang sudah diperbaiki
+            latest_time = latest.get('time', history[-1].get('time', ''))
+            
+            if latest_anomaly_result.get('anomaly_details') and len(latest_anomaly_result['anomaly_details']) > 0:
+                # Tambahkan semua detail anomali untuk latest reading
+                for detail in latest_anomaly_result['anomaly_details']:
+                    # Check if this anomaly is already in the list
+                    already_exists = any(
+                        a.get('time') == latest_time and a.get('type') == detail['sensor']
+                        for a in anomalies
+                    )
+                    
+                    if not already_exists:
+                        anomalies.append({
+                            'type': detail['sensor'],
+                            'value': float(detail['value']),
+                            'time': latest_time,
+                            'message': detail['message'],
+                            'status': latest_anomaly_result['status'],
+                            'anomaly_score': float(latest_anomaly_result['anomaly_score']),
+                            'severity': 'critical' if latest_anomaly_result['anomaly_score'] < -0.5 else 'warning'
+                        })
+            else:
+                # Fallback jika tidak ada detail
+                type_msg = 'unknown'
+                message = 'Anomali terdeteksi pada sensor saat ini'
+                
+                if amonia > 25:
+                    type_msg = 'ammonia'
+                    message = 'Kadar amoniak tinggi, cek ventilasi'
+                elif suhu > 30 or suhu < 20:
+                    type_msg = 'temperature'
+                    message = f'Suhu di luar rentang optimal (20-30°C): {suhu:.1f}°C'
+                elif kelembaban < 55 or kelembaban > 75:
+                    type_msg = 'humidity'
+                    message = f'Kelembaban di luar rentang optimal (55-75%): {kelembaban:.1f}%'
+                # Untuk cahaya, TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
+                if cahaya < 10 or cahaya > 60:
+                    type_msg = 'light'
+                    message = f'Cahaya di luar rentang optimal (10-60 lux): {cahaya:.1f} lux'
+                
+                # Check if this anomaly is already in the list
+                already_exists = any(
+                    a.get('time') == latest_time and a.get('type') == type_msg
+                    for a in anomalies
+                )
+                
+                if not already_exists:
+                    anomalies.append({
+                        'type': type_msg,
+                        'value': float(amonia if type_msg == 'ammonia' else 
+                                      suhu if type_msg == 'temperature' else
+                                      kelembaban if type_msg == 'humidity' else cahaya),
+                        'time': latest_time,
+                        'message': message,
+                        'status': latest_anomaly_result['status'],
+                        'anomaly_score': float(latest_anomaly_result['anomaly_score']),
+                        'severity': 'critical' if latest_anomaly_result['anomaly_score'] < -0.5 else 'warning'
+                    })
+        
+        prediction_time = int((time.time() - start_time) * 1000)  # in milliseconds
+        
+        # Map status to expected format (hanya: baik, perhatian, buruk)
+        status_map = {
+            'BAIK': {'label': 'baik', 'severity': 'normal'},
+            'PERHATIAN': {'label': 'perhatian', 'severity': 'warning'},
+            'BURUK': {'label': 'buruk', 'severity': 'critical'}
+        }
+        
+        status_info = status_map.get(status_result['status'], {
+            'label': 'tidak diketahui',
+            'severity': 'warning'
+        })
+        
+        # Check for anomaly in latest reading
+        latest_anomaly_result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
+        
+        # Generate forecast summaries
+        def qualitative_forecast(series, metric, unit, safe_low, safe_high):
+            min_val = min(series)
+            max_val = max(series)
+            trend = series[-1] - series[0]
+            dir_str = 'meningkat' if trend > 0.5 else ('menurun' if trend < -0.5 else 'stabil')
+            risk = 'potensi keluar batas aman' if (min_val < safe_low or max_val > safe_high) else 'dalam kisaran aman'
+            return {
+                'metric': metric,
+                'summary': f"{metric} {dir_str} ({min_val:.2f}–{max_val:.2f} {unit}) {risk}",
+                'range': {'min': round(min_val, 2), 'max': round(max_val, 2), 'unit': unit},
+                'trend': dir_str,
+                'risk': risk
+            }
+        
+        # Threshold untuk cahaya: sesuai aturan boiler (10-60 lux)
+        # Catatan: Data aktual mungkin ratusan, tapi threshold tetap 10-60 sesuai aturan boiler
+        # Untuk forecast, konversi nilai cahaya dari ratusan ke puluhan (dibagi 10) untuk pengecekan threshold
+        def check_light_risk(light_values):
+            """Cek apakah nilai cahaya di luar batas aman (threshold 10-60 lux sesuai aturan boiler)"""
+            # TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
+            # Karena nilai aktual ratusan (308.8-369.4) dan threshold 10-60, maka:
+            # Jika nilai > 60, berarti "di luar batas aman" (bukan potensi, tapi memang tidak aman)
+            if not light_values:
+                return 'tidak diketahui'
+            min_val = min(light_values)
+            max_val = max(light_values)
+            # Threshold: 10-60 lux (sesuai aturan boiler)
+            # Nilai aktual ratusan (308.8-369.4) langsung dibandingkan dengan threshold 10-60
+            # Jika ada nilai di luar 10-60, maka "di luar batas aman" (bukan potensi, tapi memang tidak aman)
+            if min_val < 10 or max_val > 60:
+                return 'di luar batas aman'
+            # Jika semua nilai dalam 10-60, tapi ada yang mendekati batas (di luar ideal 20-40), maka "potensi keluar batas aman"
+            if min_val < 20 or max_val > 40:
+                return 'potensi keluar batas aman'
+            return 'dalam kisaran aman'
+        
+        # Forecast 6h
+        # Catatan: Nilai cahaya tetap dalam ratusan untuk display, tapi threshold tetap 10-60 untuk pengecekan
+        light_6h_values = [p['light'] for p in pred_6h]
+        light_6h_risk = check_light_risk(light_6h_values)  # Pengecekan menggunakan threshold 10-60
+        light_6h_min = min(light_6h_values) if light_6h_values else 0  # Display tetap ratusan
+        light_6h_max = max(light_6h_values) if light_6h_values else 0  # Display tetap ratusan
+        light_6h_trend = (light_6h_values[-1] - light_6h_values[0]) if len(light_6h_values) > 1 else 0
+        light_6h_dir = 'meningkat' if light_6h_trend > 5 else ('menurun' if light_6h_trend < -5 else 'stabil')
+        
+        # Thresholds sesuai standar boiler dari model_metadata.json
+        # Suhu: ideal 23-34°C, danger <23 atau >34°C
+        # Kelembaban: ideal 50-70%, warn >80%
+        # Amonia: ideal ≤20 ppm, warn >35 ppm
+        forecast_6h_summary = [
+            qualitative_forecast([p['temperature'] for p in pred_6h], 'Suhu', '°C', 23, 34),  # Sesuai metadata: ideal_min: 23, ideal_max: 34
+            qualitative_forecast([p['humidity'] for p in pred_6h], 'Kelembaban', '%', 50, 70),  # Sesuai metadata: ideal_min: 50, ideal_max: 70
+            qualitative_forecast([p['ammonia'] for p in pred_6h], 'Amoniak', 'ppm', 0, 20),  # Sesuai metadata: ideal_max: 20
+            {
+                'metric': 'Cahaya',
+                'summary': f"Cahaya {light_6h_dir} ({light_6h_min:.1f}–{light_6h_max:.1f} lux) {light_6h_risk}",
+                'range': {'min': round(light_6h_min, 2), 'max': round(light_6h_max, 2), 'unit': 'lux'},
+                'trend': light_6h_dir,
+                'risk': light_6h_risk
+            }
+        ]
+        
+        # Forecast 24h
+        # Catatan: Nilai cahaya tetap dalam ratusan untuk display, tapi threshold tetap 10-60 untuk pengecekan
+        light_24h_values = [p['light'] for p in pred_24h]
+        light_24h_risk = check_light_risk(light_24h_values)  # Pengecekan menggunakan threshold 10-60
+        light_24h_min = min(light_24h_values) if light_24h_values else 0  # Display tetap ratusan
+        light_24h_max = max(light_24h_values) if light_24h_values else 0  # Display tetap ratusan
+        light_24h_trend = (light_24h_values[-1] - light_24h_values[0]) if len(light_24h_values) > 1 else 0
+        light_24h_dir = 'meningkat' if light_24h_trend > 5 else ('menurun' if light_24h_trend < -5 else 'stabil')
+        
+        # Thresholds sesuai standar boiler dari model_metadata.json
+        forecast_24h_summary = [
+            qualitative_forecast([p['temperature'] for p in pred_24h], 'Suhu', '°C', 23, 34),  # Sesuai metadata: ideal_min: 23, ideal_max: 34
+            qualitative_forecast([p['humidity'] for p in pred_24h], 'Kelembaban', '%', 50, 70),  # Sesuai metadata: ideal_min: 50, ideal_max: 70
+            qualitative_forecast([p['ammonia'] for p in pred_24h], 'Amoniak', 'ppm', 0, 20),  # Sesuai metadata: ideal_max: 20
+            {
+                'metric': 'Cahaya',
+                'summary': f"Cahaya {light_24h_dir} ({light_24h_min:.1f}–{light_24h_max:.1f} lux) {light_24h_risk}",
+                'range': {'min': round(light_24h_min, 2), 'max': round(light_24h_max, 2), 'unit': 'lux'},
+                'trend': light_24h_dir,
+                'risk': light_24h_risk
+            }
+        ]
+        
+        # Format response sesuai ML_INTEGRATION.md
+        # Include latest values in response
+        response = {
+            'latest': {
+                'time': latest.get('time', ''),
+                'temperature': float(suhu),
+                'humidity': float(kelembaban),
+                'ammonia': float(amonia),
+                'light': float(cahaya)
+            },
+            'prediction_6h': {
+                'temperature': [p['temperature'] for p in pred_6h],
+                'humidity': [p['humidity'] for p in pred_6h],
+                'ammonia': [p['ammonia'] for p in pred_6h],
+                'light': [p['light'] for p in pred_6h]
+            },
+            'prediction_24h': {
+                'temperature': [p['temperature'] for p in pred_24h],
+                'humidity': [p['humidity'] for p in pred_24h],
+                'ammonia': [p['ammonia'] for p in pred_24h],
+                'light': [p['light'] for p in pred_24h]
+            },
+            'forecast_summary_6h': forecast_6h_summary,
+            'forecast_summary_24h': forecast_24h_summary,
+            'anomalies': anomalies,
+            'status': {
+                'label': status_info['label'],
+                'severity': status_info['severity'],
+                'status': status_result['status'],  # Original status label (BAIK, PERHATIAN, BURUK)
+                'probability': status_result['probability'],  # Include probability dict
+                'confidence': float(status_result['confidence']),
+                'message': f"Status kandang: {status_result['status']} (Keyakinan: {status_result['confidence']*100:.1f}%)"
+            },
+            'anomaly': latest_anomaly_result,  # Include latest anomaly detection
+            'ml_metadata': {
+                'model_name': f"{model_metadata.get('project', 'Monitoring Kandang Ayam')} - {rf_info.get('version', 'v1.0')}",
+                'model_version': rf_info.get('version', '1.0'),
+                'accuracy': rf_info.get('accuracy', None),
+                'prediction_time': prediction_time,
+                'confidence': 'high' if status_result['confidence'] > 0.8 else 'medium' if status_result['confidence'] > 0.6 else 'low',
+                'source': 'ml_service'
+            },
+            'model_name': f"{model_metadata.get('project', 'Monitoring Kandang Ayam')} - {rf_info.get('version', 'v1.0')}",
+            'model_version': rf_info.get('version', '1.0'),
+            'accuracy': rf_info.get('accuracy', None),
+            'prediction_time': prediction_time,
+            'confidence': 'high' if status_result['confidence'] > 0.8 else 'medium' if status_result['confidence'] > 0.6 else 'low'
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Error during prediction'
+        }), 500
+
+
+@app.route('/classify', methods=['POST'])
+def classify():
+    """Endpoint khusus untuk klasifikasi status real-time"""
+    if not MODELS_LOADED:
+        return jsonify({'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        result = predict_sensor_classification(
+            data.get('ammonia', data.get('amonia_ppm', 0)),
+            data.get('temperature', data.get('suhu_c', 0)),
+            data.get('humidity', data.get('kelembaban_rh', 0)),
+            data.get('light', data.get('cahaya_lux', 0))
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/classify', methods=['POST'])
+def api_classify():
+    """Klasifikasi status kandang (BAIK/PERHATIAN/BURUK) - Compatible dengan struktur baru"""
+    if not MODELS_LOADED:
+        return jsonify({'success': False, 'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        amonia = float(data.get('amonia_ppm', data.get('ammonia', 0)))
+        suhu = float(data.get('suhu_c', data.get('temperature', 0)))
+        kelembaban = float(data.get('kelembaban_rh', data.get('humidity', 0)))
+        cahaya = float(data.get('cahaya_lux', data.get('light', 0)))
+        
+        # Prepare input
+        sensor_data = np.array([[amonia, suhu, kelembaban, cahaya]])
+        X_scaled = scaler_rf.transform(sensor_data)
+        
+        # Predict
+        prediction = model_rf.predict(X_scaled)[0]
+        probabilities = model_rf.predict_proba(X_scaled)[0]
+        
+        # Map to status sesuai dengan model yang sudah ada
+        status_labels_map = {1: 'PERHATIAN', 2: 'BURUK'}
+        if prediction not in model_rf.classes_:
+            status = 'BAIK'
+            status_code = 0
+        else:
+            status = status_labels_map.get(prediction, 'UNKNOWN')
+            status_code = int(prediction)
+        
+        # Get probabilities
+        prob_dict = {}
+        for idx, class_label_trained in enumerate(model_rf.classes_):
+            if class_label_trained in status_labels_map:
+                prob_dict[status_labels_map[class_label_trained]] = float(probabilities[idx])
+        
+        # Calculate probability for 'BAIK'
+        other_probs_sum = sum(prob_dict.values())
+        prob_dict['BAIK'] = max(0.0, 1.0 - other_probs_sum)
+        
+        return jsonify({
+            'status': status,
+            'probability': prob_dict,
+            'success': True
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/anomaly', methods=['POST'])
+def anomaly():
+    """Endpoint khusus untuk deteksi anomali"""
+    if not MODELS_LOADED:
+        return jsonify({'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        result = detect_anomaly(
+            data.get('ammonia', data.get('amonia_ppm', 0)),
+            data.get('temperature', data.get('suhu_c', 0)),
+            data.get('humidity', data.get('kelembaban_rh', 0)),
+            data.get('light', data.get('cahaya_lux', 0))
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/detect-anomaly', methods=['POST'])
+def api_detect_anomaly():
+    """Deteksi anomali pada sensor dengan detail sensor spesifik - Compatible dengan struktur baru"""
+    if not MODELS_LOADED:
+        return jsonify({'success': False, 'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        amonia = float(data.get('amonia_ppm', data.get('ammonia', 0)))
+        suhu = float(data.get('suhu_c', data.get('temperature', 0)))
+        kelembaban = float(data.get('kelembaban_rh', data.get('humidity', 0)))
+        cahaya = float(data.get('cahaya_lux', data.get('light', 0)))
+        
+        # Gunakan fungsi detect_anomaly yang sudah diperbaiki
+        result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
+        result['success'] = True
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/predict', methods=['POST'])
+def api_predict():
+    """Prediksi nilai sensor berikutnya (butuh 30 data history) - Compatible dengan struktur baru"""
+    if not MODELS_LOADED:
+        return jsonify({'success': False, 'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        history = data.get('history', [])  # Array of [amonia, suhu, kelembaban, cahaya] atau dict
+        
+        if len(history) < SEQUENCE_LENGTH:
+            return jsonify({
+                'success': False,
+                'error': f'Need at least {SEQUENCE_LENGTH} historical data points'
+            }), 400
+        
+        # Convert history to array format
+        history_array = []
+        for h in history[-SEQUENCE_LENGTH:]:
+            if isinstance(h, dict):
+                # Format: {'ammonia': x, 'temperature': y, ...}
+                history_array.append([
+                    h.get('ammonia', h.get('amonia_ppm', 0)),
+                    h.get('temperature', h.get('suhu_c', 0)),
+                    h.get('humidity', h.get('kelembaban_rh', 0)),
+                    h.get('light', h.get('cahaya_lux', 0))
+                ])
+            else:
+                # Format: [amonia, suhu, kelembaban, cahaya]
+                history_array.append(h)
+        
+        # Prepare sequence
+        seq = np.array(history_array)
+        last_sequence_scaled = scaler_lstm.transform(seq)
+        X_input = last_sequence_scaled.reshape(1, SEQUENCE_LENGTH, 4)
+        
+        # Predict
+        prediction_scaled = model_lstm.predict(X_input, verbose=0)
+        prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
+        
+        return jsonify({
+            'amonia_ppm': float(prediction[0]),
+            'suhu_c': float(prediction[1]),
+            'kelembaban_rh': float(prediction[2]),
+            'cahaya_lux': float(prediction[3]),
+            'success': True
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/analyze', methods=['POST'])
+def api_analyze():
+    """Analisis lengkap: klasifikasi + anomali + prediksi - Compatible dengan struktur baru"""
+    if not MODELS_LOADED:
+        return jsonify({'success': False, 'error': 'Models not loaded'}), 500
+    
+    try:
+        data = request.json
+        current = data.get('current', [])  # [amonia, suhu, kelembaban, cahaya]
+        history = data.get('history', [])  # Optional: untuk prediksi
+        
+        result = {}
+        
+        # Convert current to array if dict
+        if isinstance(current, dict):
+            current_array = [
+                current.get('ammonia', current.get('amonia_ppm', 0)),
+                current.get('temperature', current.get('suhu_c', 0)),
+                current.get('humidity', current.get('kelembaban_rh', 0)),
+                current.get('light', current.get('cahaya_lux', 0))
+            ]
+        else:
+            current_array = current
+        
+        # 1. Klasifikasi
+        sensor_data = np.array([current_array])
+        X_scaled_rf = scaler_rf.transform(sensor_data)
+        prediction_rf = model_rf.predict(X_scaled_rf)[0]
+        probabilities = model_rf.predict_proba(X_scaled_rf)[0]
+        
+        status_labels_map = {1: 'PERHATIAN', 2: 'BURUK'}
+        if prediction_rf not in model_rf.classes_:
+            status = 'BAIK'
+        else:
+            status = status_labels_map.get(prediction_rf, 'UNKNOWN')
+        
+        prob_dict = {}
+        for idx, class_label_trained in enumerate(model_rf.classes_):
+            if class_label_trained in status_labels_map:
+                prob_dict[status_labels_map[class_label_trained]] = float(probabilities[idx])
+        
+        other_probs_sum = sum(prob_dict.values())
+        prob_dict['BAIK'] = max(0.0, 1.0 - other_probs_sum)
+        
+        result['classification'] = {
+            'status': status,
+            'probability': prob_dict
+        }
+        
+        # 2. Anomali
+        X_scaled_if = scaler_if.transform(sensor_data)
+        prediction_if = model_if.predict(X_scaled_if)[0]
+        score = model_if.score_samples(X_scaled_if)[0]
+        result['anomaly'] = {
+            'is_anomaly': bool(prediction_if == -1),
+            'anomaly_score': float(score),
+            'status': 'ANOMALI' if prediction_if == -1 else 'NORMAL'
+        }
+        
+        # 3. Prediksi (jika ada history)
+        if len(history) >= SEQUENCE_LENGTH:
+            # Convert history to array format
+            history_array = []
+            for h in history[-SEQUENCE_LENGTH:]:
+                if isinstance(h, dict):
+                    history_array.append([
+                        h.get('ammonia', h.get('amonia_ppm', 0)),
+                        h.get('temperature', h.get('suhu_c', 0)),
+                        h.get('humidity', h.get('kelembaban_rh', 0)),
+                        h.get('light', h.get('cahaya_lux', 0))
+                    ])
+                else:
+                    history_array.append(h)
+            
+            seq = np.array(history_array)
+            last_sequence_scaled = scaler_lstm.transform(seq)
+            X_input = last_sequence_scaled.reshape(1, SEQUENCE_LENGTH, 4)
+            prediction_scaled = model_lstm.predict(X_input, verbose=0)
+            prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
+            result['prediction'] = {
+                'amonia_ppm': float(prediction[0]),
+                'suhu_c': float(prediction[1]),
+                'kelembaban_rh': float(prediction[2]),
+                'cahaya_lux': float(prediction[3])
+            }
+        else:
+            result['prediction'] = None
+        
+        result['success'] = True
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+if __name__ == '__main__':
+    print("🚀 Starting ML Service for Poultry Farm Monitoring...")
+    print(f"📁 Model directory: {MODEL_DIR}")
+    print(f"✅ Models loaded: {MODELS_LOADED}")
+    app.run(host='0.0.0.0', port=5000, debug=True)
+

@@ -22,15 +22,16 @@ class ArticleSeeder extends Seeder
             return;
         }
 
+        // Smaller article set for faster SQLite demo
         Article::factory()
-            ->count(25)
+            ->count(8)
             ->make()
             ->each(function ($article) use ($users) {
                 $article->author_id = $users->random()->user_id;
                 $article->save();
 
                 Comment::factory()
-                    ->count(rand(3, 10))
+                    ->count(rand(1, 3))
                     ->make()
                     ->each(function ($comment) use ($article, $users) {
                         $comment->article_id = $article->article_id;
@@ -39,7 +40,7 @@ class ArticleSeeder extends Seeder
 
                         if (rand(0, 1)) {
                             Comment::factory()
-                                ->count(rand(1, 3))
+                                ->count(rand(1, 2))
                                 ->make()
                                 ->each(function ($reply) use ($comment, $article, $users) {
                                     $reply->article_id = $article->article_id;

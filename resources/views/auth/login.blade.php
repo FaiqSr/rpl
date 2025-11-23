@@ -3,16 +3,26 @@
 @section('title', 'Masuk - ChickPatrol')
 
 @section('content')
-<div class="auth-wrapper">
-    <div class="green-bg-left"></div>
+<div class="position-relative" style="min-height: 100vh; background: linear-gradient(to bottom right, #69B578 0%, #69B578 60%, #f0f0f0 60%, #ffffff 100%);">
+    <!-- Curved green background element -->
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0;">
+        <svg viewBox="0 0 1440 800" style="position: absolute; width: 100%; height: 100%;" preserveAspectRatio="none">
+            <path d="M 0 0 L 0 800 L 600 800 Q 700 400 600 0 Z" fill="#69B578" opacity="1"/>
+        </svg>
+    </div>
     
-    <div class="auth-card">
-        <a href="{{ route('home') }}" class="brand-logo">ChickPatrol</a>
-        
-        <h2 class="auth-title">Masuk</h2>
-        <p class="auth-subtitle">
-            belum punya akun? <a href="{{ route('register') }}">Daftar</a>
-        </p>
+    <div class="container-fluid p-0" style="position: relative; z-index: 1;">
+        <div class="row g-0" style="min-height: 100vh;">
+            <!-- Form Card -->
+            <div class="col-12 d-flex align-items-center justify-content-center py-5">
+                <div class="w-100 px-4" style="max-width: 500px;">
+                    <div class="auth-card" style="box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);">
+                        <a href="{{ route('home') }}" class="brand-logo">ChickPatrol</a>
+                        
+                        <h2 class="auth-title">Masuk</h2>
+                        <p class="auth-subtitle">
+                            belum punya akun? <a href="{{ route('register') }}">Daftar</a>
+                        </p>
         
         <!-- Login Form -->
         <form id="loginForm" action="{{ route('login.post') }}" method="POST">
@@ -69,6 +79,10 @@
         <div class="text-small mt-3">
             Dengan mendaftar, saya menyetujui
             <a href="#">Syarat & Ketentuan</a> serta <a href="#">Kebijakan Privasi</a>
+        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

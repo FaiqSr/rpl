@@ -18,6 +18,9 @@ class UserSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'password' => bcrypt('password'),
+            'role' => 'admin',
+            'phone' => '081234567890',
+            'address' => 'Jl. Admin No.1, Kota Contoh'
         ]);
 
         // 2. Buat 10 pengguna biasa,
@@ -25,6 +28,7 @@ class UserSeeder extends Seeder
         // (Mengasumsikan ada relasi 'addresses' di model User)
         User::factory()
             ->count(10)
+            ->state(fn(array $attributes) => ['role' => 'visitor'])
             ->hasAddresses(rand(1, 2))
             ->create();
     }

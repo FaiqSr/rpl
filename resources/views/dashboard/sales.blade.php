@@ -264,12 +264,6 @@
       gap: 1rem;
     }
     
-    .order-header-left input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-    
     .order-buyer {
       display: flex;
       align-items: center;
@@ -419,19 +413,6 @@
       gap: 0.5rem;
     }
     
-    .order-footer-left input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-    }
-    
-    .order-footer-left label {
-      font-size: 0.75rem;
-      color: #6c757d;
-      margin: 0;
-      cursor: pointer;
-    }
-    
     .order-footer-right {
       display: flex;
       align-items: center;
@@ -517,6 +498,7 @@
       <div class="sidebar-submenu">
         <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
         <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
+        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
       </div>
       <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item active">
         <i class="fa-solid fa-shopping-cart"></i>
@@ -529,7 +511,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>
@@ -551,131 +533,116 @@
       <!-- Filter Bar -->
       <div class="filter-bar">
         <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all">Semua Pesanan</button>
-          <button class="filter-tab" data-filter="active">Aktif</button>
-          <button class="filter-tab" data-filter="inactive">Tidak Aktif</button>
-          <button class="filter-tab" data-filter="selesai">Pesanan Selesai</button>
-          <button class="filter-tab" data-filter="dibatalkan">Dibatalkan</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'all' ? 'active' : '' }}" data-filter="all" onclick="filterOrders('all')">Semua Pesanan</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'dikirim' ? 'active' : '' }}" data-filter="dikirim" onclick="filterOrders('dikirim')">Pesanan Dikirim</button>
+          <button class="filter-tab {{ ($filter ?? 'all') === 'selesai' ? 'active' : '' }}" data-filter="selesai" onclick="filterOrders('selesai')">Pesanan Selesai</button>
         </div>
       </div>
       
       <!-- Order Items -->
       <div class="order-list">
-        <!-- Order Item 1 -->
+        @forelse($orders as $order)
+        @php
+          $detail = $order->orderDetail->first();
+          $product = $detail?->product;
+          $qtyTotal = $order->orderDetail->sum('qty');
+          $unitPrice = $detail ? ($detail->price) : 0;
+          $productName = $product?->name ?? 'Produk';
+          $image = $product?->images?->first()?->url ?? null;
+        @endphp
         <div class="order-item">
           <div class="order-header">
             <div class="order-header-left">
-              <input type="checkbox">
               <div class="order-buyer">
                 <i class="fa-solid fa-user"></i>
-                <span>Ratna Sulawasti</span>
+                <span>{{ $order->buyer_name }}</span>
               </div>
               <div class="order-date">
                 <i class="fa-regular fa-clock"></i>
-                <span>18 Oktober 2015 12:00 WIB</span>
+                <span>{{ $order->created_at?->format('d M Y H:i') }} WIB</span>
               </div>
             </div>
             <div class="order-header-right">
-              <span class="order-status">Respon sebelum</span>
-              <span class="order-response-time">18 Okt 2015 12:00</span>
+              <span class="order-status">Status</span>
+              <span class="order-response-time">{{ ucfirst($order->status ?? 'pending') }}</span>
             </div>
           </div>
-          
           <div class="order-body">
             <div class="order-product">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="order-product-img">
+              @if($image)
+                <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img">
+              @else
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" class="order-product-img" />
+              @endif
               <div class="order-product-info">
-                <div class="order-product-name">Daging segar</div>
-                <div class="order-product-qty">10 x Rp 40.000</div>
-                <div class="order-product-note">"Jangan langsung di bumbui di rmh msh"</div>
+                <div class="order-product-name">{{ $productName }}</div>
+                <div class="order-product-qty">{{ $qtyTotal }} x Rp {{ number_format($unitPrice,0,',','.') }}</div>
+                @if($order->notes)
+                  <div class="order-product-note">"{{ $order->notes }}"</div>
+                @endif
               </div>
             </div>
-            
             <div class="order-address">
               <div class="order-address-title">Alamat</div>
-              <div class="order-address-name">Sulawasti (0812345678)</div>
-              <div class="order-address-text">Jl. Melon Raya No. 27, Kel. Sukamaju, Kec. Cendana, Kota Nirwana, Jawa Barat 41234</div>
+              <div class="order-address-name">{{ $order->buyer_name }} ({{ $order->buyer_phone }})</div>
+              <div class="order-address-text">{{ $order->buyer_address }}</div>
             </div>
-            
             <div class="order-courier">
               <div class="order-courier-title">Kurir</div>
-              <div class="order-courier-info">Reguler - JNE</div>
-              <a href="#" class="order-courier-link">lihat detail</a>
+              <div class="order-courier-info">{{ $order->shipping_service ?? 'Belum dipilih' }}</div>
+              @if($order->tracking_number)
+                <div class="order-courier-info mt-2">
+                  <strong>Resi:</strong> {{ $order->tracking_number }}
+                </div>
+                <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="order-courier-link">Cek Resi</a>
+              @else
+                <div class="order-courier-info mt-2 text-muted">Resi akan muncul setelah pesanan dikirim</div>
+              @endif
             </div>
           </div>
-          
           <div class="order-footer">
             <div class="order-footer-left">
-              <input type="checkbox" id="chat-pembeli-1">
-              <label for="chat-pembeli-1">Chat Pembeli</label>
+              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm btn-outline-primary" title="Chat Pembeli">
+                <i class="fa-solid fa-comment"></i> Chat Pembeli
+              </a>
             </div>
             <div class="order-footer-right">
               <div class="order-total">
-                Total Harga <strong>(10 Barang)</strong>
-                <span style="margin-left: 2rem; font-weight: 600;">Rp 400.000,00</span>
+                Total Harga <strong>({{ $qtyTotal }} Barang)</strong>
+                <span style="margin-left: 2rem; font-weight: 600;">Rp {{ number_format($order->total_price,0,',','.') }}</span>
               </div>
-              <button class="btn-accept">Terima Pesanan</button>
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                @if($order->payment_method)
+                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-success' : 'bg-info' }}">
+                    <i class="fa-solid fa-{{ $order->payment_method === 'QRIS' ? 'qrcode' : 'building-columns' }} me-1"></i>
+                    {{ $order->payment_method }}
+                  </span>
+                @endif
+                @if($order->payment_status === 'paid')
+                  <span class="badge bg-success">
+                    <i class="fa-solid fa-check-circle me-1"></i>Lunas
+                  </span>
+                @else
+                  <span class="badge bg-warning text-dark">
+                    <i class="fa-solid fa-clock me-1"></i>Menunggu Pembayaran
+                  </span>
+                @endif
+                @if($order->status === 'pending')
+                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" style="{{ $order->payment_status !== 'paid' ? 'opacity: 0.7;' : '' }}">Kirim Pesanan</button>
+                @elseif($order->status === 'dikirim')
+                  <span class="badge bg-info">Pesanan Dikirim</span>
+                @elseif($order->status === 'selesai')
+                  <span class="badge bg-success">Pesanan Selesai</span>
+                @elseif($order->status === 'dibatalkan')
+                  <span class="badge bg-danger">Dibatalkan</span>
+                @endif
+              </div>
             </div>
           </div>
         </div>
-        
-        <!-- Order Item 2 -->
-        <div class="order-item">
-          <div class="order-header">
-            <div class="order-header-left">
-              <input type="checkbox">
-              <div class="order-buyer">
-                <i class="fa-solid fa-user"></i>
-                <span>Ratna Sulawasti</span>
-              </div>
-              <div class="order-date">
-                <i class="fa-regular fa-clock"></i>
-                <span>18 Oktober 2015 12:00 WIB</span>
-              </div>
-            </div>
-            <div class="order-header-right">
-              <span class="order-status">Respon sebelum</span>
-              <span class="order-response-time">18 Okt 2015 12:00</span>
-            </div>
-          </div>
-          
-          <div class="order-body">
-            <div class="order-product">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="order-product-img">
-              <div class="order-product-info">
-                <div class="order-product-name">Daging segar</div>
-                <div class="order-product-qty">10 x Rp 40.000</div>
-                <div class="order-product-note">"Jangan langsung di bumbui di rmh msh"</div>
-              </div>
-            </div>
-            
-            <div class="order-address">
-              <div class="order-address-title">Alamat</div>
-              <div class="order-address-name">Sulawasti (0812345678)</div>
-              <div class="order-address-text">Jl. Melon Raya No. 27, Kel. Sukamaju, Kec. Cendana, Kota Nirwana, Jawa Barat 41234</div>
-            </div>
-            
-            <div class="order-courier">
-              <div class="order-courier-title">Kurir</div>
-              <div class="order-courier-info">Reguler - JNE</div>
-              <a href="#" class="order-courier-link">lihat detail</a>
-            </div>
-          </div>
-          
-          <div class="order-footer">
-            <div class="order-footer-left">
-              <input type="checkbox" id="chat-pembeli-2">
-              <label for="chat-pembeli-2">Chat Pembeli</label>
-            </div>
-            <div class="order-footer-right">
-              <div class="order-total">
-                Total Harga <strong>(10 Barang)</strong>
-                <span style="margin-left: 2rem; font-weight: 600;">Rp 400.000,00</span>
-              </div>
-              <button class="btn-accept">Terima Pesanan</button>
-            </div>
-          </div>
-        </div>
+        @empty
+          <div class="p-4 text-center text-muted">Belum ada pesanan.</div>
+        @endforelse
       </div>
     </div>
   </main>
@@ -714,20 +681,78 @@
         chevron.classList.toggle('rotate');
     }
     
-    // Accept Order
-    document.querySelectorAll('.btn-accept').forEach(btn => {
-        btn.addEventListener('click', function() {
-            showSuccess('Pesanan berhasil diterima!');
+    // Ship Order (Kirim Pesanan)
+    async function shipOrder(orderId, paymentStatus) {
+        // Check if payment is completed
+        if (paymentStatus !== 'paid') {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Pesanan Belum Dibayar!',
+                html: '<p>Pesanan ini belum dibayar oleh pembeli. Anda tidak dapat mengirim pesanan sebelum pembayaran selesai.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> Menunggu Pembayaran</p>',
+                confirmButtonColor: '#ffc107',
+                confirmButtonText: 'Mengerti'
+            });
+            return;
+        }
+        
+        const result = await Swal.fire({
+            title: 'Kirim Pesanan?',
+            text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#69B578',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Kirim Pesanan',
+            cancelButtonText: 'Batal'
         });
-    });
+        
+        if (result.isConfirmed) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/dashboard/orders/${orderId}/ship`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // Check if response is OK and content type is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 200));
+                    showError('Terjadi kesalahan: Server mengembalikan respons yang tidak valid');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    // Reload page to refresh data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Terjadi kesalahan saat mengirim pesanan');
+                }
+            } catch (error) {
+                console.error('Error shipping order:', error);
+                if (error instanceof SyntaxError) {
+                    showError('Terjadi kesalahan: Server mengembalikan respons yang tidak valid');
+                } else {
+                    showError('Terjadi kesalahan saat mengirim pesanan');
+                }
+            }
+        }
+    }
     
-    // Filter tabs
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
+    // Filter Orders
+    function filterOrders(filter) {
+        window.location.href = `{{ route('dashboard.sales') }}?filter=${filter}`;
+    }
     
     // Show success message if redirected with success
     @if(session('success'))

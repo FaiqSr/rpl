@@ -438,6 +438,7 @@
       <div class="sidebar-submenu show">
         <a href="{{ route('dashboard.tools') }}" class="active">Daftar alat</a>
         <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
+        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
       </div>
       <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-shopping-cart"></i>
@@ -450,7 +451,7 @@
     </nav>
     
     <div class="sidebar-footer">
-      <a href="{{ route('login') }}" class="sidebar-menu-item">
+      <a href="{{ route('logout') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span>Logout</span>
       </a>
@@ -489,23 +490,23 @@
         <thead>
           <tr>
             <th class="checkbox-cell">
-              <input type="checkbox">
+              <input type="checkbox" id="selectAll">
             </th>
             <th>Info Alat</th>
             <th>Statistik</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Aksi</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="toolTableBody">
           <!-- Tool Row 1 -->
-          <tr data-status="active">
+          <tr data-tool-id="1" data-status="active">
             <td class="checkbox-cell">
-              <input type="checkbox">
+              <input type="checkbox" class="tool-checkbox">
             </td>
             <td>
               <div class="product-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E%F0%9F%90%94%3C/text%3E%3C/svg%3E" alt="Tool" class="product-img">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E" alt="Tool" class="product-img">
                 <div>
                   <div class="product-name">Kandang Ayam</div>
                   <div class="product-subtitle">ChickPatrol Kamura</div>
@@ -525,7 +526,12 @@
               <span class="status-badge">Aktif</span>
             </td>
             <td>
-              <span class="action-badge">Selected</span>
+              <button class="btn btn-sm btn-outline-primary me-1" onclick="editTool(1)" title="Edit">
+                <i class="fa-solid fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteTool(1)" title="Hapus">
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </td>
           </tr>
         </tbody>
@@ -533,11 +539,101 @@
     </div>
   </main>
   
+  <!-- Add/Edit Tool Modal -->
+  <div class="modal fade" id="toolModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title" id="toolModalTitle">Tambah Alat</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-2">
+          <form id="toolForm">
+            <input type="hidden" id="toolId">
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="toolName" class="form-label">Nama Alat</label>
+                <input type="text" class="form-control" id="toolName" required>
+              </div>
+              <div class="col-md-6">
+                <label for="toolModel" class="form-label">Model/Tipe</label>
+                <input type="text" class="form-control" id="toolModel" required placeholder="Contoh: ChickPatrol Kamura">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="toolCategory" class="form-label">Kategori</label>
+                <select class="form-select" id="toolCategory" required>
+                  <option value="">Pilih Kategori</option>
+                  <option value="Kandang">Kandang</option>
+                  <option value="Sensor">Sensor</option>
+                  <option value="Feeder">Feeder (Tempat Pakan)</option>
+                  <option value="Drinker">Drinker (Tempat Minum)</option>
+                  <option value="Climate Control">Climate Control</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="toolLocation" class="form-label">Lokasi</label>
+                <input type="text" class="form-control" id="toolLocation" placeholder="Contoh: Kandang A">
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="toolDescription" class="form-label">Deskripsi</label>
+              <textarea class="form-control" id="toolDescription" rows="3" placeholder="Deskripsi alat..."></textarea>
+            </div>
+            
+            <div class="mb-3">
+              <label for="toolImage" class="form-label">Gambar Alat</label>
+              <input type="file" class="form-control" id="toolImage" accept="image/*">
+              <div id="toolImagePreview" class="mt-2" style="display: none;">
+                <img id="toolPreviewImg" style="max-width: 200px; border-radius: 8px;">
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="toolStatus" class="form-label">Status</label>
+              <select class="form-select" id="toolStatus" required>
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak Aktif</option>
+                <option value="maintenance">Maintenance</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="saveTool()" style="background: #69B578; border: none;">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
   
   <script>
+    // Tool data storage (in-memory, not persisted)
+    let tools = [
+      {
+        id: 1,
+        name: 'Kandang Ayam',
+        model: 'ChickPatrol Kamura',
+        category: 'Kandang',
+        location: 'Kandang A',
+        status: 'active',
+        rating: 4,
+        description: 'Kandang ayam otomatis dengan sistem monitoring',
+        image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"
+      }
+    ];
+    
+    let nextId = 2;
+    let editingToolId = null;
+    
     // SweetAlert Helper Functions
     window.showSuccess = function(message) {
         Swal.fire({
@@ -561,7 +657,209 @@
     
     // Add Tool Function
     function addTool() {
-        showSuccess('Fitur tambah alat akan segera tersedia!');
+        editingToolId = null;
+        document.getElementById('toolModalTitle').textContent = 'Tambah Alat';
+        document.getElementById('toolForm').reset();
+        document.getElementById('toolId').value = '';
+        document.getElementById('toolImagePreview').style.display = 'none';
+        
+        const modal = new bootstrap.Modal(document.getElementById('toolModal'));
+        modal.show();
+    }
+    
+    // Edit Tool Function
+    function editTool(id) {
+        const tool = tools.find(t => t.id === id);
+        if (!tool) return;
+        
+        editingToolId = id;
+        document.getElementById('toolModalTitle').textContent = 'Edit Alat';
+        document.getElementById('toolId').value = tool.id;
+        document.getElementById('toolName').value = tool.name;
+        document.getElementById('toolModel').value = tool.model;
+        document.getElementById('toolCategory').value = tool.category;
+        document.getElementById('toolLocation').value = tool.location || '';
+        document.getElementById('toolDescription').value = tool.description || '';
+        document.getElementById('toolStatus').value = tool.status;
+        
+        if (tool.image) {
+            document.getElementById('toolImagePreview').style.display = 'block';
+            document.getElementById('toolPreviewImg').src = tool.image;
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('toolModal'));
+        modal.show();
+    }
+    
+    // Save Tool Function
+    function saveTool() {
+        const form = document.getElementById('toolForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const name = document.getElementById('toolName').value;
+        const model = document.getElementById('toolModel').value;
+        const category = document.getElementById('toolCategory').value;
+        const location = document.getElementById('toolLocation').value;
+        const description = document.getElementById('toolDescription').value;
+        const status = document.getElementById('toolStatus').value;
+        const imageFile = document.getElementById('toolImage').files[0];
+        
+        if (editingToolId) {
+            // Update existing tool
+            const toolIndex = tools.findIndex(t => t.id === editingToolId);
+            if (toolIndex !== -1) {
+                tools[toolIndex] = {
+                    ...tools[toolIndex],
+                    name,
+                    model,
+                    category,
+                    location,
+                    description,
+                    status
+                };
+                
+                if (imageFile) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        tools[toolIndex].image = e.target.result;
+                        renderTools();
+                    };
+                    reader.readAsDataURL(imageFile);
+                } else {
+                    renderTools();
+                }
+                
+                showSuccess('Alat berhasil diperbarui!');
+            }
+        } else {
+            // Add new tool
+            const newTool = {
+                id: nextId++,
+                name,
+                model,
+                category,
+                location,
+                description,
+                status,
+                rating: 0,
+                image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"
+            };
+            
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    newTool.image = e.target.result;
+                    tools.push(newTool);
+                    renderTools();
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                tools.push(newTool);
+                renderTools();
+            }
+            
+            showSuccess('Alat berhasil ditambahkan!');
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('toolModal')).hide();
+    }
+    
+    // Delete Tool Function
+    function deleteTool(id) {
+        Swal.fire({
+            title: 'Hapus Alat?',
+            text: 'Alat yang dihapus tidak dapat dikembalikan',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                tools = tools.filter(t => t.id !== id);
+                renderTools();
+                showSuccess('Alat berhasil dihapus!');
+            }
+        });
+    }
+    
+    // Render Tools Function
+    function renderTools() {
+        const tbody = document.getElementById('toolTableBody');
+        const activeTab = document.querySelector('.filter-tab.active');
+        const filterText = activeTab ? activeTab.textContent.trim().toLowerCase() : 'semua';
+        
+        let filteredTools = tools;
+        if (filterText.includes('aktif') && !filterText.includes('tidak')) {
+            filteredTools = tools.filter(t => t.status === 'active');
+        } else if (filterText.includes('tidak aktif')) {
+            filteredTools = tools.filter(t => t.status === 'inactive');
+        }
+        
+        tbody.innerHTML = filteredTools.map(tool => {
+            const stars = Array(5).fill(0).map((_, i) => 
+                i < tool.rating 
+                    ? '<i class="fa-solid fa-star"></i>'
+                    : '<i class="fa-regular fa-star"></i>'
+            ).join('');
+            
+            const statusText = tool.status === 'active' ? 'Aktif' : tool.status === 'inactive' ? 'Tidak Aktif' : 'Maintenance';
+            
+            return `
+                <tr data-tool-id="${tool.id}" data-status="${tool.status}">
+                    <td class="checkbox-cell">
+                        <input type="checkbox" class="tool-checkbox">
+                    </td>
+                    <td>
+                        <div class="product-info">
+                            <img src="${tool.image}" alt="Tool" class="product-img">
+                            <div>
+                                <div class="product-name">${tool.name}</div>
+                                <div class="product-subtitle">${tool.model}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rating-stars">${stars}</div>
+                    </td>
+                    <td>
+                        <span class="status-badge">${statusText}</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editTool(${tool.id})" title="Edit">
+                            <i class="fa-solid fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTool(${tool.id})" title="Hapus">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateTabCounts();
+    }
+    
+    // Update Tab Counts
+    function updateTabCounts() {
+        const allCount = tools.length;
+        const activeCount = tools.filter(t => t.status === 'active').length;
+        const inactiveCount = tools.filter(t => t.status === 'inactive').length;
+        
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            const text = tab.textContent.trim().toLowerCase();
+            if (text.includes('semua')) {
+                tab.textContent = `Semua Alat (${allCount})`;
+            } else if (text.includes('aktif') && !text.includes('tidak')) {
+                tab.textContent = `Aktif (${activeCount})`;
+            } else if (text.includes('tidak')) {
+                tab.textContent = `Tidak Aktif (${inactiveCount})`;
+            }
+        });
     }
     
     // Toggle Submenu
@@ -572,31 +870,48 @@
         chevron.classList.toggle('rotate');
     }
     
-    // Filter tabs with functional filtering
+    // Filter tabs
     document.querySelectorAll('.filter-tab').forEach(tab => {
         tab.addEventListener('click', function() {
-            // Update active tab
             document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            
-            // Get filter text
-            const filterText = this.textContent.trim().toLowerCase();
-            const rows = document.querySelectorAll('.product-table tbody tr');
-            
-            // Filter tools
-            rows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                
-                if (filterText.includes('semua')) {
-                    row.style.display = '';
-                } else if (filterText.includes('aktif') && !filterText.includes('tidak')) {
-                    row.style.display = status === 'active' ? '' : 'none';
-                } else if (filterText.includes('tidak aktif')) {
-                    row.style.display = status === 'inactive' ? '' : 'none';
-                }
-            });
+            renderTools();
         });
     });
+    
+    // Search functionality
+    document.querySelector('.search-box input').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#toolTableBody tr');
+        
+        rows.forEach(row => {
+            const toolName = row.querySelector('.product-name').textContent.toLowerCase();
+            row.style.display = toolName.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Select all checkbox
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.tool-checkbox').forEach(cb => {
+            cb.checked = this.checked;
+        });
+    });
+    
+    // Image preview
+    document.getElementById('toolImage').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('toolImagePreview').style.display = 'block';
+                document.getElementById('toolPreviewImg').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Initialize
+    updateTabCounts();
     
     // Show success message if redirected with success
     @if(session('success'))
