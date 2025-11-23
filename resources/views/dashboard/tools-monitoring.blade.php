@@ -597,17 +597,75 @@
     }
     .chart-card h6 { margin:0 0 .75rem; font-size:.8rem; font-weight:600; color:#6c757d; }
     /* Forecast layout */
-    .forecast-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-    .forecast-col h5{ margin:0 0 .4rem; font-size:.78rem; font-weight:700; color:#2F2F2F; }
-    .metric-item{ display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .6rem; border-radius:8px; background:#f8f9fa; font-size:.72rem; }
-    .metric-icon{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; font-size:.8rem; flex:0 0 26px; }
+    /* Premium Forecast Grid - Compact & Efficient */
+    .forecast-grid{ 
+      display:grid; 
+      grid-template-columns:1fr 1fr; 
+      gap:0.75rem; 
+    }
+    .forecast-col h5{ 
+      margin:0 0 0.5rem; 
+      font-size:0.75rem; 
+      font-weight:700; 
+      color:#2F2F2F; 
+      text-transform:uppercase;
+      letter-spacing:0.05em;
+    }
+    .metric-item{ 
+      display:flex; 
+      align-items:center; 
+      gap:0.5rem; 
+      padding:0.5rem 0.75rem; 
+      border-radius:0.5rem; 
+      background:white;
+      border:1px solid #E5E7EB;
+      font-size:0.75rem;
+      transition:all 0.15s ease;
+    }
+    .metric-item:hover {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    .metric-icon{ 
+      width:24px; 
+      height:24px; 
+      border-radius:50%; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      color:white; 
+      background:#69B578; 
+      font-size:0.75rem; 
+      flex:0 0 24px;
+    }
     /* Warna sesuai kondisi: hijau=aman, kuning=perhatian, merah=bahaya */
-    .metric-item.risk-ok{ border-left:3px solid #22C55E; background:#D1FAE5; }
-    .metric-item.risk-ok .metric-icon{ background:#22C55E; } /* Hijau premium untuk aman */
-    .metric-item.risk-warn{ border-left:3px solid #FACC15; background:#FEF3C7; }
-    .metric-item.risk-warn .metric-icon{ background:#FACC15; color:#000; } /* Kuning premium untuk perhatian */
-    .metric-item.risk-crit{ border-left:3px solid #EF4444; background:#FEE2E2; }
-    .metric-item.risk-crit .metric-icon{ background:#EF4444; } /* Merah premium untuk bahaya */
+    .metric-item.risk-ok{ 
+      border-left:3px solid #22C55E; 
+      background:#F0FDF4; 
+    }
+    .metric-item.risk-ok .metric-icon{ 
+      background:#22C55E; 
+    }
+    .metric-item.risk-warn{ 
+      border-left:3px solid #F59E0B; 
+      background:#FFFBEB; 
+    }
+    .metric-item.risk-warn .metric-icon{ 
+      background:#F59E0B; 
+      color:#000; 
+    }
+    .metric-item.risk-crit{ 
+      border-left:3px solid #EF4444; 
+      background:#FEF2F2; 
+    }
+    .metric-item.risk-crit .metric-icon{ 
+      background:#EF4444; 
+    }
+    .metric-text {
+      flex:1;
+      line-height:1.4;
+      color:#374151;
+      font-weight:500;
+    }
     /* Pagination button styles */
     #anomalyPrevBtn:disabled, #anomalyNextBtn:disabled {
       opacity: 0.5;
@@ -626,31 +684,96 @@
       padding: 1rem 1.25rem;
     }
     .anomaly-card h6 { margin:0 0 .6rem; font-size:.8rem; font-weight:600; color:#6c757d; }
+    /* Premium Anomaly Card Design - Compact & Efficient */
     .anomaly-item {
-      display:flex;
-      align-items:flex-start;
-      gap:.75rem;
-      padding:.6rem .5rem;
-      border-radius:8px;
-      background:#f8f9fa;
-      margin-bottom:.5rem;
-      font-size:.75rem;
+      background: white;
+      border-radius: 0.625rem; /* rounded-lg */
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm lebih halus */
+      padding: 0.75rem 1rem; /* p-3 p-4 - lebih compact */
+      margin-bottom: 0.5rem;
+      border-left: 3px solid #EF4444; /* Border lebih tipis */
+      transition: all 0.15s ease;
     }
-    .anomaly-item:last-child { margin-bottom:0; }
-    .anomaly-item .anomaly-tag {
-      font-size:.6rem;
-      padding:.2rem .4rem;
-      background:#dc3545; /* Default merah untuk bahaya */
-      color:white;
-      border-radius:4px;
-      text-transform:uppercase;
-      letter-spacing:.5px;
-      font-weight:600;
+    .anomaly-item:hover {
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
     }
-    /* Warna anomaly tag berdasarkan severity */
-    .anomaly-item[data-severity="critical"] .anomaly-tag { background:#EF4444; } /* Merah premium untuk bahaya */
-    .anomaly-item[data-severity="warning"] .anomaly-tag { background:#FACC15; color:#000; } /* Kuning premium untuk perhatian */
-    .anomaly-item[data-severity="normal"] .anomaly-tag { background:#22C55E; } /* Hijau premium untuk aman */
+    .anomaly-item:last-child { margin-bottom: 0; }
+    
+    /* Anomaly Card Header - Compact */
+    .anomaly-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Badge Kategori Sensor - Compact */
+    .anomaly-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      font-size: 0.6875rem; /* 11px */
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+    .anomaly-badge.light {
+      background-color: #FEF3C7; /* yellow-100 */
+      color: #A16207; /* yellow-700 */
+    }
+    .anomaly-badge.temperature {
+      background-color: #DBEAFE; /* blue-100 */
+      color: #1E40AF; /* blue-700 */
+    }
+    .anomaly-badge.ammonia {
+      background-color: #E9D5FF; /* purple-100 */
+      color: #6B21A8; /* purple-700 */
+    }
+    .anomaly-badge.humidity {
+      background-color: #CFFAFE; /* cyan-100 */
+      color: #0E7490; /* cyan-700 */
+    }
+    .anomaly-badge.unknown {
+      background-color: #F3F4F6; /* gray-100 */
+      color: #374151; /* gray-700 */
+    }
+    
+    /* Icon dalam badge - Compact */
+    .anomaly-icon {
+      font-size: 0.75rem; /* 12px */
+      line-height: 1;
+    }
+    
+    /* Timestamp - Compact */
+    .anomaly-timestamp {
+      font-size: 0.6875rem; /* 11px */
+      color: #9CA3AF; /* gray-400 */
+      font-weight: 500;
+    }
+    
+    /* Anomaly Content - Compact */
+    .anomaly-content {
+      margin-top: 0.25rem;
+    }
+    .anomaly-title {
+      font-size: 0.8125rem; /* 13px */
+      font-weight: 600; /* font-semibold */
+      color: #111827; /* gray-900 */
+      line-height: 1.4;
+    }
+    
+    /* Border kiri berdasarkan severity */
+    .anomaly-item[data-severity="critical"] {
+      border-left-color: #EF4444; /* red-500 */
+    }
+    .anomaly-item[data-severity="warning"] {
+      border-left-color: #F59E0B; /* amber-500 */
+    }
+    .anomaly-item[data-severity="normal"] {
+      border-left-color: #10B981; /* emerald-500 */
+    }
     .loading-overlay { text-align:center; padding:2rem 0; font-size:.8rem; color:#6c757d; }
 
     /* Data preview */
@@ -779,114 +902,55 @@
       <canvas id="trendChart" height="120"></canvas>
     </div>
 
+    <!-- Premium Forecast Summary - Compact -->
     <div class="chart-card" id="forecastCard" style="display:none;">
-      <h6>Ringkasan Prediksi (6 Jam & 24 Jam)</h6>
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Ringkasan Prediksi</h6>
       <div class="forecast-grid">
         <div class="forecast-col">
           <h5>6 Jam</h5>
-          <div id="forecastList6" style="display:grid; gap:.4rem;"></div>
+          <div id="forecastList6" style="display:grid; gap:0.5rem;"></div>
         </div>
         <div class="forecast-col">
           <h5>24 Jam</h5>
-          <div id="forecastList24" style="display:grid; gap:.4rem;"></div>
+          <div id="forecastList24" style="display:grid; gap:0.5rem;"></div>
         </div>
       </div>
     </div>
 
 
 
-    <!-- Anomaly List -->
+    <!-- Anomaly List - Compact -->
     <div class="anomaly-card" id="anomalyPanel" style="display:none;">
-      <h6>Deteksi Anomali Sensor</h6>
-      <div id="anomalyList"></div>
-      <div id="anomalyPagination" style="display:none; margin-top:.75rem; padding-top:.75rem; border-top:1px solid #e0e0e0;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
-          <div style="font-size:.75rem; color:#6c757d;">
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Deteksi Anomali Sensor</h6>
+      <div id="anomalyList" class="space-y-2"></div>
+      <!-- Premium Pagination - Compact -->
+      <div id="anomalyPagination" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px solid #E5E7EB;">
+        <div class="flex justify-between items-center gap-4">
+          <div class="text-xs text-gray-600">
             <span id="anomalyPageInfo">Halaman 1 dari 1</span>
           </div>
-          <div style="display:flex; gap:.25rem;">
-            <button id="anomalyPrevBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
-              <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+          <div class="flex gap-2">
+            <button id="anomalyPrevBtn" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
             </button>
-            <button id="anomalyNextBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
-              Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+            <button id="anomalyNextBtn" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              Selanjutnya <i class="fa-solid fa-chevron-right ml-1"></i>
             </button>
           </div>
         </div>
       </div>
     </div>
     <div id="noAnomaly" style="display:none;" class="anomaly-card">
-      <h6>Deteksi Anomali Sensor</h6>
-      <p style="font-size:.75rem; color:#6c757d; margin:0;">Tidak ada anomali terdeteksi. Semua sensor dalam batas aman.</p>
-    </div>
-
-    
-    <!-- Content Section -->
-    <div style="padding: 1.5rem 0;">
-      <div class="content-card">
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-          <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="all">Semua Alat (1)</button>
-            <button class="filter-tab" data-filter="active">Aktif</button>
-            <button class="filter-tab" data-filter="inactive">Tidak Aktif</button>
-          </div>
-          <div class="filter-right">
-            <div class="search-box">
-              <i class="fa-solid fa-search"></i>
-              <input type="text" placeholder="Cari Produk">
-            </div>
-          </div>
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Deteksi Anomali Sensor</h6>
+      <div class="flex items-center justify-center py-8 px-4">
+        <div class="text-center">
+          <div class="text-3xl mb-2">✅</div>
+          <p class="text-xs text-gray-600 font-medium">Tidak ada anomali terdeteksi</p>
+          <p class="text-xs text-gray-500 mt-1">Semua sensor dalam batas aman</p>
         </div>
-        
-        <!-- Product Table -->
-        <table class="product-table">
-          <thead>
-            <tr>
-              <th class="checkbox-cell">
-                <input type="checkbox">
-              </th>
-              <th>Info Alat</th>
-              <th>Statistik</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Tool Row 1 -->
-            <tr data-status="active">
-              <td class="checkbox-cell">
-                <input type="checkbox">
-              </td>
-              <td>
-                <div class="product-info">
-                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E" alt="Tool" class="product-img">
-                  <div>
-                    <div class="product-name">Kandang Ayam</div>
-                    <div class="product-subtitle">ChickPatrol Kamura</div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="rating-stars">
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge">Aktif</span>
-              </td>
-              <td>
-                <span class="action-badge">Selected</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
+
   </main>
   
   <!-- Scripts -->
@@ -1438,16 +1502,67 @@
       const displayAnomalies = allAnomalies.slice(startIndex, endIndex);
       
       // Render anomali
-      anomalyList.innerHTML = displayAnomalies.map(a=>{
+      // Helper function untuk mendapatkan icon dan badge class berdasarkan type
+      function getAnomalyTypeInfo(type) {
+        const typeLower = (type || 'unknown').toLowerCase();
+        const typeMap = {
+          'light': { icon: '💡', badgeClass: 'light', label: 'LIGHT' },
+          'temperature': { icon: '🌡️', badgeClass: 'temperature', label: 'TEMPERATURE' },
+          'ammonia': { icon: '🧪', badgeClass: 'ammonia', label: 'AMMONIA' },
+          'humidity': { icon: '💧', badgeClass: 'humidity', label: 'HUMIDITY' }
+        };
+        return typeMap[typeLower] || { icon: '⚠️', badgeClass: 'unknown', label: (type || 'UNKNOWN').toUpperCase() };
+      }
+      
+      // Helper function untuk format deskripsi ringkas
+      function formatAnomalyDescription(message, value) {
+        if (!message) return 'Anomali terdeteksi';
+        
+        // Extract nilai dan batas dari message jika ada
+        const valueMatch = message.match(/nilai:\s*([\d.]+)/i);
+        const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
+        const unitMatch = message.match(/(lux|ppm|°C|%)/i);
+        const unit = unitMatch ? unitMatch[1] : '';
+        
+        if (valueMatch && thresholdMatch) {
+          const val = parseFloat(valueMatch[1]).toFixed(1);
+          const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
+          const direction = message.includes('di atas') ? 'di atas' : message.includes('di bawah') ? 'di bawah' : '';
+          return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+        }
+        
+        // Jika ada z-score, format dengan z-score
+        const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
+        if (zScoreMatch && valueMatch) {
+          const val = parseFloat(valueMatch[1]).toFixed(1);
+          const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
+          return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+        }
+        
+        // Fallback: gunakan message asli tapi ringkas (hapus duplikasi nilai)
+        return message.replace(/\s*\(nilai:.*?\)/g, '').substring(0, 100);
+      }
+      
+      anomalyList.innerHTML = displayAnomalies.map(a => {
         // Tentukan severity berdasarkan type atau severity dari data
         const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
-        return `<div class='anomaly-item' data-severity="${severity}">
-          <span class='anomaly-tag'>${a.type || 'unknown'}</span>
-          <div>
-            <div style='font-size:.7rem; color:#6c757d;'>${a.time}</div>
-            <div>${a.message}${a.value !== undefined ? ` (nilai: ${a.value})` : ''}</div>
+        const typeInfo = getAnomalyTypeInfo(a.type);
+        const description = formatAnomalyDescription(a.message || '', a.value);
+        
+        return `
+          <div class="anomaly-item" data-severity="${severity}">
+            <div class="anomaly-header">
+              <span class="anomaly-badge ${typeInfo.badgeClass}">
+                <span class="anomaly-icon">${typeInfo.icon}</span>
+                <span>${typeInfo.label}</span>
+              </span>
+              <span class="anomaly-timestamp">${a.time || ''}</span>
+            </div>
+            <div class="anomaly-content">
+              <div class="anomaly-title">${description}</div>
+            </div>
           </div>
-        </div>`;
+        `;
       }).join('');
       
       // Update pagination info
@@ -1668,8 +1783,30 @@
         const forecastCard = document.getElementById('forecastCard');
         const list6 = document.getElementById('forecastList6');
         const list24 = document.getElementById('forecastList24');
-        list6.innerHTML = forecast_summary_6h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
-        list24.innerHTML = forecast_summary_24h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
+        // Premium forecast rendering - compact & efficient
+        list6.innerHTML = forecast_summary_6h.map(f => {
+          const risk = riskClass(f.risk);
+          const icon = iconFor(f.metric);
+          // Extract hanya informasi penting dari summary
+          const summaryText = f.summary || '';
+          return `
+            <div class="metric-item ${risk}">
+              <div class="metric-icon"><i class="fa-solid ${icon}"></i></div>
+              <div class="metric-text">${summaryText}</div>
+            </div>
+          `;
+        }).join('');
+        list24.innerHTML = forecast_summary_24h.map(f => {
+          const risk = riskClass(f.risk);
+          const icon = iconFor(f.metric);
+          const summaryText = f.summary || '';
+          return `
+            <div class="metric-item ${risk}">
+              <div class="metric-icon"><i class="fa-solid ${icon}"></i></div>
+              <div class="metric-text">${summaryText}</div>
+            </div>
+          `;
+        }).join('');
         forecastCard.style.display='block';
         
         // ML Info Card - moved to Information Management page
