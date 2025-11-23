@@ -12,6 +12,9 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <!-- Google Fonts - Inter (Premium Typography) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -19,8 +22,8 @@
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" rel="stylesheet">
   
   <style>
-    * { font-family: 'Inter', -apple-system, sans-serif; }
-    body { background: #f8f9fa; margin: 0; }
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { background: #F8F9FB; margin: 0; }
     
     .sidebar {
       width: 220px;
@@ -407,9 +410,15 @@
     /* Monitoring Dashboard */
     .monitoring-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.25rem;
       margin-bottom: 1.5rem;
+    }
+    
+    @media (min-width: 768px) {
+      .monitoring-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
     }
     
     /* Responsive Design */
@@ -498,22 +507,35 @@
     .sensor-card {
       background: white;
       border: 1px solid #e9ecef;
-      border-radius: 10px;
-      padding: 1rem 1rem 0.85rem;
+      border-radius: 16px;
+      padding: 1.5rem;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sensor-card:hover {
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      transform: translateY(-4px);
     }
     .sensor-card h6 {
-      margin: 0 0 0.25rem;
+      margin: 0 0 1rem;
       font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: .5px;
+      letter-spacing: 0.5px;
       font-weight: 600;
-      color: #6c757d;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sensor-card h6 .sensor-icon {
+      font-size: 1.125rem;
     }
     .sensor-value {
-      font-size: 1.7rem;
-      font-weight: 600;
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1.1;
       line-height: 1.1;
       margin: 0;
       color: #2F2F2F;
@@ -533,18 +555,39 @@
     .trend-chip.up { color:#2F2F2F; }
     .trend-chip.down { color:#dc3545; }
     .prediction-banner {
-      background: linear-gradient(90deg,#69B578,#5a9d66);
+      background: linear-gradient(90deg, #FACC15, #FB923C);
       color: white;
-      border-radius: 10px;
-      padding: 1.1rem 1.25rem;
+      border-radius: 16px;
+      padding: 1.5rem 1.75rem;
       display: flex;
       align-items: center;
       gap: 1rem;
       margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(250, 204, 21, 0.2);
     }
-    .prediction-banner i { font-size: 1.4rem; }
-    .prediction-banner h5 { margin:0 0 .35rem; font-size: .95rem; font-weight:600; }
-    .prediction-banner p { margin:0; font-size:.7rem; opacity:.9; line-height:1.2; }
+    .prediction-banner i { 
+      font-size: 2rem; 
+      flex-shrink: 0;
+      opacity: 0.95;
+    }
+    .prediction-banner > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .prediction-banner h5 { 
+      margin:0 0 .5rem; 
+      font-size: 1.25rem; 
+      font-weight:700; 
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+    }
+    .prediction-banner p { 
+      margin:0; 
+      font-size:.875rem; 
+      opacity:.9; 
+      line-height:1.5; 
+      font-weight: 400;
+    }
     .chart-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -720,11 +763,10 @@
   <main class="main-content">
     <!-- Monitoring Summary Banner (dynamic) -->
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
-      <i class="fa-solid fa-chart-line"></i>
+      <span style="font-size: 2rem; opacity: 0.95;">📊</span>
       <div>
-        <h5 id="envStatusTitle">Memuat... <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span></h5>
-        <p id="envStatusDetail">Analisis kondisi lingkungan kandang akan muncul di sini.</p>
-        <p id="envForecastDetail" style="margin-top:.4rem; font-weight:500;"></p>
+        <h5 id="envStatusTitle" style="margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em;">Memuat... <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span></h5>
+        <p id="envStatusDetail" style="margin: 0; font-size: 0.875rem; opacity: 0.9; line-height: 1.5; font-weight: 400;">Analisis kondisi lingkungan kandang akan muncul di sini.</p>
       </div>
     </div>
 
@@ -934,7 +976,7 @@
     const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
-    // Fungsi untuk menentukan status sensor berdasarkan threshold
+    // Fungsi untuk menentukan status sensor berdasarkan threshold (Premium Colors)
     function getSensorStatus(key, value){
       const thresholds = {
         temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
@@ -943,41 +985,46 @@
         light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
       };
       
+      // Premium colors: #22C55E (hijau), #FACC15 (kuning), #EF4444 (merah)
+      const premiumGreen = '#22C55E';
+      const premiumYellow = '#FACC15';
+      const premiumRed = '#EF4444';
+      
       const th = thresholds[key];
       if (!th) return { status: 'tidak diketahui', color: '#6c757d' };
       
       if (key === 'temperature') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value < th.danger_low || value > th.danger_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else {
-          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'humidity') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value > th.danger_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else if (value < th.warn_low || (value > th.ideal_max && value <= th.warn_high)) {
-          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'ammonia') {
         if (value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value > th.danger_max) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else if (value > th.warn_max) {
-          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'light') {
         // Untuk cahaya, nilai aktual ratusan dibandingkan dengan threshold 10-60
         if (value >= th.ideal_low && value <= th.ideal_high) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value < th.warn_low || value > th.warn_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else {
-          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       }
       
@@ -1037,29 +1084,64 @@
         (key === 'ammonia') ? parseFloat(value).toFixed(1) : 
         Math.round(parseFloat(value));
       
-      return `<div class="sensor-card" style="border-left: 4px solid ${sensorStatus.color};">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-          <h6 style="margin: 0; font-size: 0.85rem; font-weight: 600; color: #2F2F2F;">${label}</h6>
-        </div>
-        <p class="sensor-value" style="margin: 0.5rem 0; font-size: 1.5rem; font-weight: 700; color: #2F2F2F;">
-          ${formattedValue}<span class="sensor-unit" style="font-size: 0.9rem; font-weight: 500; color: #6c757d; margin-left: 0.25rem;">${unit}</span>
+      // Tentukan ikon sensor
+      const sensorIcons = {
+        'temperature': '🌡️',
+        'humidity': '💧',
+        'ammonia': '💨',
+        'light': '💡'
+      };
+      const sensorIcon = sensorIcons[key] || '📊';
+      
+      // Tentukan warna premium sesuai status
+      const premiumColors = {
+        safe: { border: '#22C55E', bg: '#D1FAE5', text: '#065F46', icon: '✔' },
+        warning: { border: '#FACC15', bg: '#FEF3C7', text: '#92400E', icon: '⚠' },
+        danger: { border: '#EF4444', bg: '#FEE2E2', text: '#991B1B', icon: '❗' }
+      };
+      
+      let premiumColor;
+      if (sensorStatus.color === '#22C55E' || sensorStatus.status === 'aman') {
+        premiumColor = premiumColors.safe;
+      } else if (sensorStatus.color === '#EF4444' || sensorStatus.status === 'di luar batas aman') {
+        premiumColor = premiumColors.danger;
+      } else {
+        premiumColor = premiumColors.warning;
+      }
+      
+      // Format status text
+      const statusText = sensorStatus.status === 'aman' ? 'Aman' : 
+                        sensorStatus.status === 'di luar batas aman' ? 'Di Luar Batas Aman' :
+                        'Perlu Perhatian';
+      
+      return `<div class="sensor-card" style="border-left: 4px solid ${premiumColor.border};">
+        <h6 style="margin: 0 0 1rem; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="sensor-icon" style="font-size: 1.125rem;">${sensorIcon}</span>
+          ${label}
+        </h6>
+        <p class="sensor-value" style="margin: 0 0 1rem; font-size: 2.25rem; font-weight: 700; color: #111827; line-height: 1.1;">
+          ${formattedValue}<span class="sensor-unit" style="font-size: 1.125rem; font-weight: 500; color: #6B7280; margin-left: 0.25rem;">${unit}</span>
         </p>
-        <div class="trend-chip ${trend}" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 500; background: ${trend === 'up' ? '#d4edda' : trend === 'down' ? '#f8d7da' : '#e9ecef'}; color: ${trend === 'up' ? '#155724' : trend === 'down' ? '#721c24' : '#6c757d'}; margin-top: 0.5rem;">
-          <i class="fa-solid ${trendIcon}" style="font-size: 0.65rem;"></i>
-          <span>${trendText}</span>
-        </div>
-        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
-          <i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i>
-          <span>${sensorStatus.status}</span>
+        <div style="margin-top: 0.75rem;">
+          <span style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; border-radius: 9999px; background: ${premiumColor.bg}; color: ${premiumColor.text}; font-size: 0.875rem; font-weight: 600;">
+            ${premiumColor.icon} ${statusText}
+          </span>
         </div>
       </div>`;
     }
 
     function buildBanner(latest, status, forecast6, meta){
-      const titleEl = document.getElementById('envStatusTitle');
-      const detailEl = document.getElementById('envStatusDetail');
-      const forecastEl = document.getElementById('envForecastDetail');
-      const mlActiveBadge = document.getElementById('mlActiveBadge');
+      try {
+        const titleEl = document.getElementById('envStatusTitle');
+        const detailEl = document.getElementById('envStatusDetail');
+        const forecastEl = document.getElementById('envForecastDetail');
+        const mlActiveBadge = document.getElementById('mlActiveBadge');
+        
+        // Validasi elemen
+        if (!titleEl || !detailEl) {
+          console.error('Banner elements not found', { titleEl: !!titleEl, detailEl: !!detailEl });
+          return;
+        }
       
       // Format status label lebih profesional
       const statusLabels = {
@@ -1072,20 +1154,31 @@
       const statusLabel = status.label || 'tidak diketahui';
       const statusText = statusLabels[statusLabel] || 'Kondisi Kandang ' + statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
       
-      // Format confidence - hanya di title, tidak di detail
+      // Format confidence - hanya di title
       let confidenceText = '';
       if (status.confidence !== undefined && status.confidence !== null) {
         const confidencePercent = Math.round(status.confidence * 100);
         confidenceText = ` (Tingkat Keyakinan: ${confidencePercent}%)`;
       }
       
-      titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+      // Title: hanya status dan confidence
+      if (titleEl) {
+        titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+      }
       
-      // Detail status - HILANGKAN duplikasi keyakinan, hanya tampilkan message dan sumber
-      if (status.message) {
-        detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
-      } else {
-        detailEl.textContent = 'Hasil Analisis Machine Learning';
+      // Detail: hanya message dan sumber (HILANGKAN duplikasi keyakinan dan prediksi)
+      if (detailEl) {
+        if (status.message) {
+          detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
+        } else {
+          detailEl.textContent = 'Hasil Analisis Machine Learning';
+        }
+      }
+      
+      // HILANGKAN prediksi 6 jam dari banner (jika elemen masih ada)
+      if (forecastEl) {
+        forecastEl.textContent = '';
+        forecastEl.style.display = 'none';
       }
       
       // ML Active badge
@@ -1099,26 +1192,23 @@
           if (mlActiveBadge) mlActiveBadge.style.display = 'none';
       }
       
-      // Build quick 6h forecast sentence dengan format lebih profesional
-      const suhuSummary = forecast6.find(f=>f.metric==='Suhu');
-      const lembabSummary = forecast6.find(f=>f.metric==='Kelembaban');
-      if (suhuSummary && lembabSummary){
-        const suhuTrend = suhuSummary.trend === 'meningkat' ? 'meningkat' : (suhuSummary.trend === 'menurun' ? 'menurun' : 'stabil');
-        const lembabTrend = lembabSummary.trend === 'meningkat' ? 'meningkat' : (lembabSummary.trend === 'menurun' ? 'menurun' : 'stabil');
-        forecastEl.textContent = `Prediksi 6 Jam: Suhu ${suhuTrend} (${suhuSummary.range.min}–${suhuSummary.range.max}°C) & Kelembaban ${lembabTrend} (${lembabSummary.range.min}–${lembabSummary.range.max}%).`;
+        // Set warna banner berdasarkan severity dengan gradient premium
+        const predictionBanner = document.getElementById('predictionBanner');
+        if (predictionBanner) {
+          const severity = status.severity || 'normal';
+          if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
+              predictionBanner.style.background = 'linear-gradient(90deg, #EF4444, #DC2626)'; // Merah premium untuk bahaya
+          } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
+              predictionBanner.style.background = 'linear-gradient(90deg, #FACC15, #FB923C)'; // Kuning-orange premium untuk perhatian
+          } else {
+              predictionBanner.style.background = 'linear-gradient(90deg, #22C55E, #16A34A)'; // Hijau premium untuk aman
+          }
+          
+          predictionBanner.style.display = 'flex';
+        }
+      } catch (error) {
+        console.error('Error in buildBanner:', error);
       }
-      
-      // Set warna banner berdasarkan severity: hijau=aman, kuning=perhatian, merah=bahaya
-      const severity = status.severity || 'normal';
-      if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
-          predictionBanner.style.background = 'linear-gradient(90deg, #dc3545, #c82333)'; // Merah untuk bahaya
-      } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
-          predictionBanner.style.background = 'linear-gradient(90deg, #ffc107, #e0a800)'; // Kuning untuk perhatian
-      } else {
-          predictionBanner.style.background = 'linear-gradient(90deg, #28a745, #218838)'; // Hijau untuk aman
-      }
-      
-      predictionBanner.style.display = 'flex';
     }
 
     let trendChart;
