@@ -627,7 +627,7 @@
                   </span>
                 @endif
                 @if($order->status === 'pending')
-                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}')">Kirim Pesanan</button>
+                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" style="{{ $order->payment_status !== 'paid' ? 'opacity: 0.7;' : '' }}">Kirim Pesanan</button>
                 @elseif($order->status === 'dikirim')
                   <span class="badge bg-info">Pesanan Dikirim</span>
                 @elseif($order->status === 'selesai')
@@ -681,7 +681,19 @@
     }
     
     // Ship Order (Kirim Pesanan)
-    async function shipOrder(orderId) {
+    async function shipOrder(orderId, paymentStatus) {
+        // Check if payment is completed
+        if (paymentStatus !== 'paid') {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Pesanan Belum Dibayar!',
+                html: '<p>Pesanan ini belum dibayar oleh pembeli. Anda tidak dapat mengirim pesanan sebelum pembayaran selesai.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> Menunggu Pembayaran</p>',
+                confirmButtonColor: '#ffc107',
+                confirmButtonText: 'Mengerti'
+            });
+            return;
+        }
+        
         const result = await Swal.fire({
             title: 'Kirim Pesanan?',
             text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
@@ -700,9 +712,19 @@
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 });
+                
+                // Check if response is OK and content type is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 200));
+                    showError('Terjadi kesalahan: Server mengembalikan respons yang tidak valid');
+                    return;
+                }
                 
                 const data = await response.json();
                 
@@ -717,7 +739,11 @@
                 }
             } catch (error) {
                 console.error('Error shipping order:', error);
-                showError('Terjadi kesalahan saat mengirim pesanan');
+                if (error instanceof SyntaxError) {
+                    showError('Terjadi kesalahan: Server mengembalikan respons yang tidak valid');
+                } else {
+                    showError('Terjadi kesalahan saat mengirim pesanan');
+                }
             }
         }
     }

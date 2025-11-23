@@ -1,0 +1,102 @@
+{
+    "project": "Monitoring Kandang Ayam",
+    "date_created": "2025-11-20",
+    "classification_version": "broiler_theory_proportional_v2",
+    "preprocessing": {
+        "cahaya_transform": "none",
+        "cahaya_transform_reason": "Log transform dihapus; gunakan skala asli (lux)",
+        "other_features": "standard/minmax scaling"
+    },
+    "dataset": {
+        "filename": "Egg_Production.csv",
+        "total_samples": 481,
+        "features": [
+            "amonia_ppm",
+            "suhu_c",
+            "kelembaban_rh",
+            "cahaya_lux"
+        ]
+    },
+    "models": {
+        "lstm": {
+            "purpose": "Prediksi tren sensor",
+            "architecture": "LSTM 128->64->32 + Dense(32,16,4)",
+            "input_shape": [
+                30,
+                4
+            ],
+            "output_shape": [
+                4
+            ],
+            "test_mse": 0.030156129971146584,
+            "test_mae": 0.13419809937477112,
+            "notes": "Model dilatih pada skala cahaya asli (lux) tanpa log transform",
+            "model_file": "model_lstm_kandang.h5",
+            "scaler_file": "scaler_lstm.pkl"
+        },
+        "random_forest": {
+            "purpose": "Klasifikasi status kandang",
+            "version": "broiler_theory_proportional_v2",
+            "n_estimators": 200,
+            "max_depth": 10,
+            "class_weight": "balanced",
+            "classes_trained": [
+                1,
+                2
+            ],
+            "classes_names": [
+                "PERHATIAN",
+                "BURUK"
+            ],
+            "accuracy": 1.0,
+            "test_samples": 97,
+            "feature_importance": {
+                "amonia": 0.04609361952419849,
+                "suhu": 0.05636662357569652,
+                "kelembaban": 0.8783066767120046,
+                "cahaya": 0.01923308018810047
+            },
+            "thresholds": {
+                "amonia_ppm": {
+                    "ideal_max": 20,
+                    "warn_max": 35,
+                    "danger_max": 35
+                },
+                "suhu_c": {
+                    "ideal_min": 23,
+                    "ideal_max": 34,
+                    "danger_low": 23,
+                    "danger_high": 34
+                },
+                "kelembaban_rh": {
+                    "ideal_min": 50,
+                    "ideal_max": 70,
+                    "warn_high": 80,
+                    "danger_high": 80
+                },
+                "cahaya_lux": {
+                    "ideal_low": 20,
+                    "ideal_high": 40,
+                    "warn_low": 10,
+                    "warn_high": 60
+                }
+            },
+            "model_file": "model_random_forest.pkl",
+            "scaler_file": "scaler_rf.pkl"
+        },
+        "isolation_forest": {
+            "purpose": "Deteksi anomali sensor",
+            "n_estimators": 200,
+            "contamination": 0.1,
+            "anomalies_detected": 47,
+            "anomaly_percentage": 9.771309771309772,
+            "model_file": "model_isolation_forest.pkl",
+            "scaler_file": "scaler_if.pkl"
+        }
+    },
+    "usage_notes": {
+        "cahaya_input": "Input cahaya gunakan satuan lux asli",
+        "cahaya_output": "Prediksi sudah dalam lux (tanpa konversi)",
+        "transform_removed": "Seluruh log transform cahaya telah dihapus"
+    }
+}

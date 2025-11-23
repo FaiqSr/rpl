@@ -237,13 +237,33 @@
       if (result.isConfirmed) {
         try {
           const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+          if (!csrfToken) {
+            throw new Error('CSRF token tidak ditemukan. Silakan refresh halaman.');
+          }
+          
           const response = await fetch(`/order/${orderId}/confirm-payment`, {
             method: 'POST',
             headers: {
               'X-CSRF-TOKEN': csrfToken,
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
             }
           });
+          
+          // Check if response is JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text.substring(0, 200));
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: 'Terjadi kesalahan: Server mengembalikan respons yang tidak valid',
+              confirmButtonColor: '#dc3545',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
           
           const data = await response.json();
           
@@ -272,13 +292,23 @@
           }
         } catch (error) {
           console.error('Error confirming payment:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Terjadi kesalahan saat mengonfirmasi pembayaran',
-            confirmButtonColor: '#dc3545',
-            confirmButtonText: 'OK'
-          });
+          if (error instanceof SyntaxError) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: 'Terjadi kesalahan: Server mengembalikan respons yang tidak valid',
+              confirmButtonColor: '#dc3545',
+              confirmButtonText: 'OK'
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: error.message || 'Terjadi kesalahan saat mengonfirmasi pembayaran',
+              confirmButtonColor: '#dc3545',
+              confirmButtonText: 'OK'
+            });
+          }
         }
       }
     }

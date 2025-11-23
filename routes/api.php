@@ -13,4 +13,9 @@ Route::prefix('article')->name('article.')->group(function () {
 Route::prefix('cart')->name('cart')->group(function () {
     Route::get('/', [CartController::class, 'CartByUserJson'])->name('cartGetAllJson');
 });
+
+// ML Service Routes
+Route::prefix('sensor')->name('sensor.')->group(function () {
+    Route::post('/analyze', [\App\Http\Controllers\SensorController::class, 'analyze'])->name('analyze');
+});
 // });

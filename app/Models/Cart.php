@@ -11,6 +11,7 @@ class Cart extends BaseModel
     use HasFactory;
     protected $table = "carts";
     protected $fillable = [
+        'cart_id',
         'user_id',
         'product_id',
         'qty'

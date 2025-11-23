@@ -89,50 +89,6 @@
             </div>
           </div>
 
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Nama Pembeli</label>
-            <input type="text" name="buyer_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Alamat Pengiriman</label>
-            <textarea name="address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required></textarea>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Nomor Telepon</label>
-            <input type="tel" name="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Jasa Pengiriman</label>
-            <select name="shipping_service" id="shipping_service" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-              <option value="">Pilih Jasa Pengiriman</option>
-              <option value="JNE">JNE - Reguler</option>
-              <option value="JNE">JNE - Express</option>
-              <option value="JNT">JNT - Reguler</option>
-              <option value="JNT">JNT - Express</option>
-              <option value="SiCepat">SiCepat - Reguler</option>
-              <option value="SiCepat">SiCepat - HALU</option>
-              <option value="Gojek">Gojek - Instant</option>
-              <option value="Grab">Grab - Instant</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Metode Pembayaran</label>
-            <select name="payment_method" id="payment_method" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-              <option value="">Pilih Metode Pembayaran</option>
-              <option value="QRIS">QRIS</option>
-              <option value="Transfer Bank">Transfer Bank</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block font-semibold text-gray-900 mb-2">Catatan (Opsional)</label>
-            <textarea name="notes" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Jangan langsung di bumbu di rmh msh"></textarea>
-          </div>
-
           <div class="border-t pt-4">
             <div class="flex justify-between mb-4">
               <span class="font-semibold text-gray-900">Total</span>
@@ -142,7 +98,7 @@
               <button type="button" onclick="addToCart()" class="btn-outline-secondary flex-1" style="padding: 0.75rem 2rem; border: 2px solid var(--primary-green); border-radius: 8px; background: white; color: var(--primary-green); font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                 <i class="fa-solid fa-cart-plus me-2"></i>Tambah ke Keranjang
               </button>
-              <button type="submit" class="btn-primary flex-1">
+              <button type="button" onclick="buyNow()" class="btn-primary flex-1">
                 <i class="fa-solid fa-bolt me-2"></i>Beli Sekarang
               </button>
             </div>
@@ -173,15 +129,25 @@
     const productPrice = {{ $product->price ?? 0 }};
     const maxStock = {{ $product->stock ?? 999 }};
 
-    // Auto-fill form if logged in
-    document.addEventListener('DOMContentLoaded', () => {
-      if(window.isLoggedIn){
-        const f = document.getElementById('orderForm');
-        if(window.userProfile.name) f.querySelector('[name="buyer_name"]').value = window.userProfile.name;
-        if(window.userProfile.phone) f.querySelector('[name="phone"]').value = window.userProfile.phone;
-        if(window.userProfile.address) f.querySelector('[name="address"]').value = window.userProfile.address;
+    // Buy Now - redirect to cart with this product
+    async function buyNow() {
+      if(!window.isLoggedIn){
+        Swal.fire({icon:'warning',title:'Login Diperlukan',text:'Silakan login dahulu untuk membeli produk.'});
+        return;
       }
-    });
+      
+      const qty = parseInt(document.getElementById('qty').value) || 1;
+      
+      // Add to cart first, then redirect to cart page
+      try {
+        await addToCart({silent: true});
+        // After adding to cart, redirect to cart page for checkout
+        window.location.href = '{{ route("cart") }}';
+      } catch (error) {
+        // If add to cart fails, still redirect to cart
+        window.location.href = '{{ route("cart") }}';
+      }
+    }
 
     function changeQty(delta) {
       const input = document.getElementById('qty');
@@ -201,10 +167,10 @@
 
     document.getElementById('qty').addEventListener('change', updateTotal);
 
-    async function addToCart() {
+    async function addToCart(options = {}) {
       if(!window.isLoggedIn){
         Swal.fire({icon:'warning',title:'Login Diperlukan',text:'Silakan login dahulu untuk menambahkan produk ke keranjang.'});
-        return;
+        return Promise.reject('Not logged in');
       }
       
       const qty = parseInt(document.getElementById('qty').value) || 1;
@@ -214,7 +180,8 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
           },
           body: JSON.stringify({
             product_id: '{{ $product->product_id }}',
@@ -222,96 +189,97 @@
           })
         });
         
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Non-JSON response:', text.substring(0, 200));
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Terjadi kesalahan: Server mengembalikan respons yang tidak valid',
+            confirmButtonColor: '#dc3545'
+          });
+          return Promise.reject('Invalid response');
+        }
+        
         const result = await response.json();
         
         if (response.ok && result.success) {
-          await Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: result.message || 'Produk berhasil ditambahkan ke keranjang',
-            confirmButtonColor: '#69B578',
-            showCancelButton: true,
-            confirmButtonText: 'Lihat Keranjang',
-            cancelButtonText: 'Lanjut Belanja'
-          }).then((result) => {
-            if (result.isConfirmed) {
-              window.location.href = '{{ route("cart") }}';
-            }
-          });
           updateCartCount();
+          // Don't show alert if called from buyNow (silent mode)
+          if (!options.silent) {
+            await Swal.fire({
+              icon: 'success',
+              title: 'Berhasil!',
+              text: result.message || 'Produk berhasil ditambahkan ke keranjang',
+              confirmButtonColor: '#69B578',
+              showCancelButton: true,
+              confirmButtonText: 'Lihat Keranjang',
+              cancelButtonText: 'Lanjut Belanja'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                window.location.href = '{{ route("cart") }}';
+              }
+            });
+          }
+          return Promise.resolve();
         } else {
           throw new Error(result.message || 'Gagal menambahkan ke keranjang');
         }
       } catch (error) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: error.message || 'Terjadi kesalahan',
-          confirmButtonColor: '#dc3545'
-        });
+        if (error instanceof SyntaxError) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Terjadi kesalahan: Server mengembalikan respons yang tidak valid',
+            confirmButtonColor: '#dc3545'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || 'Terjadi kesalahan',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+        return Promise.reject(error);
       }
     }
     
     function updateCartCount() {
-      fetch('{{ route("cart.count") }}')
-        .then(res => res.json())
+      fetch('{{ route("cart.count") }}', {
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+        .then(async res => {
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('Non-JSON response in updateCartCount:', text.substring(0, 200));
+            return null;
+          }
+          return res.json();
+        })
         .then(data => {
-          const badge = document.getElementById('cartBadge');
-          if (badge) {
-            if (data.count > 0) {
-              badge.textContent = data.count;
-              badge.style.display = 'inline-block';
-            } else {
-              badge.style.display = 'none';
+          if (data) {
+            const badge = document.getElementById('cartBadge');
+            if (badge) {
+              if (data.count > 0) {
+                badge.textContent = data.count;
+                badge.style.display = 'inline-block';
+              } else {
+                badge.style.display = 'none';
+              }
             }
           }
+        })
+        .catch(error => {
+          console.error('Error updating cart count:', error);
         });
     }
 
-      document.getElementById('orderForm').addEventListener('submit', async function(e){
-      e.preventDefault();
-        if(!window.isLoggedIn){
-          Swal.fire({icon:'warning',title:'Login Diperlukan',text:'Silakan login dahulu untuk membuat pesanan.'});
-          return;
-        }
-      
-      const formData = new FormData(this);
-      const data = Object.fromEntries(formData);
-      data.qty = parseInt(data.qty);
-      data.total_price = data.qty * productPrice;
-
-      try {
-        const response = await fetch('{{ route("order.create") }}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-          },
-          body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-        
-        if (response.ok) {
-          await Swal.fire({
-            icon: 'success',
-            title: 'Pesanan Berhasil!',
-            text: 'Pesanan Anda telah diterima dan sedang diproses.',
-            confirmButtonColor: '#69B578'
-          });
-          window.location.href = '{{ route("home") }}';
-        } else {
-          throw new Error(result.message || 'Gagal membuat pesanan');
-        }
-      } catch (error) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: error.message || 'Terjadi kesalahan saat membuat pesanan',
-          confirmButtonColor: '#dc3545'
-        });
-      }
-    });
   </script>
 </body>
 </html>
