@@ -90,11 +90,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -122,7 +122,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -163,7 +163,7 @@
     }
     
     .btn-add {
-      background: #69B578;
+      background: #22C55E;
       color: white;
       border: none;
       padding: 0.6rem 1.5rem;
@@ -218,8 +218,8 @@
     }
     
     .filter-tab.active {
-      color: #69B578;
-      border-bottom-color: #69B578;
+      color: #22C55E;
+      border-bottom-color: #22C55E;
       font-weight: 500;
     }
     
@@ -249,7 +249,7 @@
     
     .search-box input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -608,7 +608,7 @@
         </div>
         <div class="modal-footer border-0 pt-0">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="button" class="btn btn-primary" onclick="saveTool()" style="background: #69B578; border: none;">Simpan</button>
+          <button type="button" class="btn btn-primary" onclick="saveTool()" style="background: #22C55E; border: none;">Simpan</button>
         </div>
       </div>
     </div>
@@ -643,7 +643,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -653,7 +653,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };
@@ -777,7 +777,7 @@
             text: 'Alat yang dihapus tidak dapat dikembalikan',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Ya, Hapus',
             cancelButtonText: 'Batal'

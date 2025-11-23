@@ -93,7 +93,7 @@
     }
     
     .sidebar-menu-item.active {
-      border-left: 3px solid #69B578;
+      border-left: 3px solid #22C55E;
       padding-left: calc(1rem - 3px);
     }
     
@@ -122,7 +122,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -339,7 +339,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -349,7 +349,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };

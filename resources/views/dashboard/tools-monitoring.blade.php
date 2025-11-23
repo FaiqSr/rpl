@@ -90,11 +90,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -122,7 +122,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -163,7 +163,7 @@
     }
     
     .btn-add {
-      background: #69B578;
+      background: #22C55E;
       color: white;
       border: none;
       padding: 0.6rem 1.5rem;
@@ -218,8 +218,8 @@
     }
     
     .filter-tab.active {
-      color: #69B578;
-      border-bottom-color: #69B578;
+      color: #22C55E;
+      border-bottom-color: #22C55E;
       font-weight: 500;
     }
     
@@ -249,7 +249,7 @@
     
     .search-box input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -553,7 +553,7 @@
       margin-top: .5rem;
     }
     .trend-chip.up { color:#2F2F2F; }
-    .trend-chip.down { color:#dc3545; }
+    .trend-chip.down { color:#EF4444; }
     .prediction-banner {
       background: linear-gradient(90deg, #FACC15, #FB923C);
       color: white;
@@ -602,12 +602,12 @@
     .metric-item{ display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .6rem; border-radius:8px; background:#f8f9fa; font-size:.72rem; }
     .metric-icon{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; font-size:.8rem; flex:0 0 26px; }
     /* Warna sesuai kondisi: hijau=aman, kuning=perhatian, merah=bahaya */
-    .metric-item.risk-ok{ border-left:3px solid #28a745; background:#f0f9f4; }
-    .metric-item.risk-ok .metric-icon{ background:#28a745; } /* Hijau untuk aman */
-    .metric-item.risk-warn{ border-left:3px solid #ffc107; background:#fffbf0; }
-    .metric-item.risk-warn .metric-icon{ background:#ffc107; color:#000; } /* Kuning untuk perhatian */
-    .metric-item.risk-crit{ border-left:3px solid #dc3545; background:#fff0f0; }
-    .metric-item.risk-crit .metric-icon{ background:#dc3545; } /* Merah untuk bahaya */
+    .metric-item.risk-ok{ border-left:3px solid #22C55E; background:#D1FAE5; }
+    .metric-item.risk-ok .metric-icon{ background:#22C55E; } /* Hijau premium untuk aman */
+    .metric-item.risk-warn{ border-left:3px solid #FACC15; background:#FEF3C7; }
+    .metric-item.risk-warn .metric-icon{ background:#FACC15; color:#000; } /* Kuning premium untuk perhatian */
+    .metric-item.risk-crit{ border-left:3px solid #EF4444; background:#FEE2E2; }
+    .metric-item.risk-crit .metric-icon{ background:#EF4444; } /* Merah premium untuk bahaya */
     /* Pagination button styles */
     #anomalyPrevBtn:disabled, #anomalyNextBtn:disabled {
       opacity: 0.5;
@@ -648,9 +648,9 @@
       font-weight:600;
     }
     /* Warna anomaly tag berdasarkan severity */
-    .anomaly-item[data-severity="critical"] .anomaly-tag { background:#dc3545; } /* Merah untuk bahaya */
-    .anomaly-item[data-severity="warning"] .anomaly-tag { background:#ffc107; color:#000; } /* Kuning untuk perhatian */
-    .anomaly-item[data-severity="normal"] .anomaly-tag { background:#28a745; } /* Hijau untuk aman */
+    .anomaly-item[data-severity="critical"] .anomaly-tag { background:#EF4444; } /* Merah premium untuk bahaya */
+    .anomaly-item[data-severity="warning"] .anomaly-tag { background:#FACC15; color:#000; } /* Kuning premium untuk perhatian */
+    .anomaly-item[data-severity="normal"] .anomaly-tag { background:#22C55E; } /* Hijau premium untuk aman */
     .loading-overlay { text-align:center; padding:2rem 0; font-size:.8rem; color:#6c757d; }
 
     /* Data preview */
@@ -901,7 +901,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -911,7 +911,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };
@@ -1683,7 +1683,7 @@
         const errorBanner = document.getElementById('predictionBanner');
         if (errorBanner) {
           errorBanner.style.display = 'block';
-          errorBanner.style.background = '#dc3545';
+          errorBanner.style.background = '#EF4444';
           errorBanner.innerHTML = `
             <i class="fa-solid fa-exclamation-triangle"></i>
             <div>

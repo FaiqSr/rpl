@@ -91,11 +91,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -123,7 +123,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -211,7 +211,7 @@
     
     .chat-search input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -389,7 +389,7 @@
     }
     
     .chat-message.sent .chat-message-bubble {
-      background: #69B578;
+      background: #22C55E;
       color: white;
     }
     
@@ -423,7 +423,7 @@
     
     .chat-input-wrapper input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -432,7 +432,7 @@
       padding: 0.5rem 1.25rem;
       border-radius: 6px;
       background: white;
-      color: #69B578;
+      color: #22C55E;
       border: 1px solid #69B578;
       display: flex;
       align-items: center;
@@ -445,7 +445,7 @@
     }
     
     .chat-send-btn:hover {
-      background: #69B578;
+      background: #22C55E;
       color: white;
     }
     
@@ -681,7 +681,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -691,7 +691,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };

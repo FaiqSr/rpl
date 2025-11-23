@@ -90,11 +90,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -122,7 +122,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -199,8 +199,8 @@
     }
     
     .filter-tab.active {
-      color: #69B578;
-      border-bottom-color: #69B578;
+      color: #22C55E;
+      border-bottom-color: #22C55E;
       font-weight: 500;
     }
     
@@ -230,7 +230,7 @@
     
     .search-box input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -391,7 +391,7 @@
     
     .order-courier-link {
       font-size: 0.75rem;
-      color: #69B578;
+      color: #22C55E;
       text-decoration: none;
       display: inline-block;
       margin-top: 0.25rem;
@@ -432,7 +432,7 @@
     }
     
     .btn-accept {
-      background: #69B578;
+      background: #22C55E;
       color: white;
       border: none;
       padding: 0.6rem 1.75rem;
@@ -661,7 +661,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -671,7 +671,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };
@@ -692,7 +692,7 @@
                 icon: 'warning',
                 title: 'Pesanan Belum Dibayar!',
                 html: '<p>Pesanan ini belum dibayar oleh pembeli. Anda tidak dapat mengirim pesanan sebelum pembayaran selesai.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> Menunggu Pembayaran</p>',
-                confirmButtonColor: '#ffc107',
+                confirmButtonColor: '#FACC15',
                 confirmButtonText: 'Mengerti'
             });
             return;
@@ -703,7 +703,7 @@
             text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Ya, Kirim Pesanan',
             cancelButtonText: 'Batal'
