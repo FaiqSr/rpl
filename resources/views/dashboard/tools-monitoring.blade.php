@@ -937,28 +937,30 @@
     // Fungsi untuk menentukan status sensor berdasarkan threshold
     function getSensorStatus(key, value){
       const thresholds = {
-        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 23, danger_high: 34 },
-        humidity: { ideal_min: 50, ideal_max: 70, warn_high: 80, danger_high: 80 },
+        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
+        humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
         ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
         light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
       };
       
       const th = thresholds[key];
-      if (!th) return { status: 'unknown', color: '#6c757d' };
+      if (!th) return { status: 'tidak diketahui', color: '#6c757d' };
       
       if (key === 'temperature') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
           return { status: 'aman', color: '#28a745' }; // Hijau
         } else if (value < th.danger_low || value > th.danger_high) {
           return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else {
+          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
         }
       } else if (key === 'humidity') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
           return { status: 'aman', color: '#28a745' }; // Hijau
         } else if (value > th.danger_high) {
           return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
-        } else if (value < th.ideal_min || value > th.ideal_max) {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        } else if (value < th.warn_low || (value > th.ideal_max && value <= th.warn_high)) {
+          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning
         }
       } else if (key === 'ammonia') {
         if (value <= th.ideal_max) {
@@ -966,59 +968,125 @@
         } else if (value > th.danger_max) {
           return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
         } else if (value > th.warn_max) {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
         }
       } else if (key === 'light') {
-        // Untuk cahaya, nilai ratusan langsung dibandingkan dengan threshold 10-60
+        // Untuk cahaya, nilai aktual ratusan dibandingkan dengan threshold 10-60
         if (value >= th.ideal_low && value <= th.ideal_high) {
           return { status: 'aman', color: '#28a745' }; // Hijau
         } else if (value < th.warn_low || value > th.warn_high) {
           return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
         } else {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'perlu perhatian', color: '#ffc107' }; // Kuning (warning range)
         }
       }
       
-      return { status: 'unknown', color: '#6c757d' };
+      return { status: 'tidak diketahui', color: '#6c757d' };
     }
     
     function createSensorCard(key, label, value, unit, history, prediction){
-      // Determine trend (compare last two points)
+      // Determine trend (compare last 3 points untuk lebih akurat)
       const len = history.length;
       let trend = 'flat';
-      if (len >= 2){
+      let trendText = 'Stabil';
+      let trendIcon = 'fa-minus';
+      
+      if (len >= 3){
+        // Bandingkan 3 titik terakhir untuk menentukan trend
+        const val1 = history[len-3][key];
+        const val2 = history[len-2][key];
+        const val3 = history[len-1][key];
+        const avgDiff = ((val3 - val2) + (val2 - val1)) / 2;
+        
+        // Threshold untuk menentukan trend (sesuai dengan unit)
+        const threshold = (key === 'temperature') ? 0.3 : (key === 'humidity') ? 1 : (key === 'ammonia') ? 0.5 : 5;
+        
+        if (avgDiff > threshold) {
+          trend = 'up';
+          trendText = 'Naik';
+          trendIcon = 'fa-arrow-up';
+        } else if (avgDiff < -threshold) {
+          trend = 'down';
+          trendText = 'Turun';
+          trendIcon = 'fa-arrow-down';
+        } else {
+          trend = 'flat';
+          trendText = 'Stabil';
+          trendIcon = 'fa-minus';
+        }
+      } else if (len >= 2){
         const diff = history[len-1][key] - history[len-2][key];
-        if (diff > 0.2) trend = 'up'; else if (diff < -0.2) trend = 'down';
+        const threshold = (key === 'temperature') ? 0.3 : (key === 'humidity') ? 1 : (key === 'ammonia') ? 0.5 : 5;
+        if (diff > threshold) {
+          trend = 'up';
+          trendText = 'Naik';
+          trendIcon = 'fa-arrow-up';
+        } else if (diff < -threshold) {
+          trend = 'down';
+          trendText = 'Turun';
+          trendIcon = 'fa-arrow-down';
+        }
       }
       
       // Tentukan status sensor berdasarkan threshold
       const sensorStatus = getSensorStatus(key, value);
       
+      // Format nilai dengan presisi yang sesuai
+      const formattedValue = (key === 'temperature' || key === 'humidity') ? 
+        parseFloat(value).toFixed(1) : 
+        (key === 'ammonia') ? parseFloat(value).toFixed(1) : 
+        Math.round(parseFloat(value));
+      
       return `<div class="sensor-card" style="border-left: 4px solid ${sensorStatus.color};">
-        <h6>${label}</h6>
-        <p class="sensor-value">${value}<span class="sensor-unit">${unit}</span></p>
-        <div class="trend-chip ${trend}">
-          <i class="fa-solid fa-arrow-${trend==='down'?'down':'up'}"></i>
-          ${trend==='flat'?'Stabil': trend==='up'?'Naik':'Turun'}
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+          <h6 style="margin: 0; font-size: 0.85rem; font-weight: 600; color: #2F2F2F;">${label}</h6>
         </div>
-        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600;">
-          <i class="fa-solid fa-circle" style="font-size: 0.5rem; margin-right: 0.25rem;"></i>
-          ${sensorStatus.status}
+        <p class="sensor-value" style="margin: 0.5rem 0; font-size: 1.5rem; font-weight: 700; color: #2F2F2F;">
+          ${formattedValue}<span class="sensor-unit" style="font-size: 0.9rem; font-weight: 500; color: #6c757d; margin-left: 0.25rem;">${unit}</span>
+        </p>
+        <div class="trend-chip ${trend}" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 500; background: ${trend === 'up' ? '#d4edda' : trend === 'down' ? '#f8d7da' : '#e9ecef'}; color: ${trend === 'up' ? '#155724' : trend === 'down' ? '#721c24' : '#6c757d'}; margin-top: 0.5rem;">
+          <i class="fa-solid ${trendIcon}" style="font-size: 0.65rem;"></i>
+          <span>${trendText}</span>
+        </div>
+        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+          <i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i>
+          <span>${sensorStatus.status}</span>
         </div>
       </div>`;
     }
 
     function buildBanner(latest, status, forecast6, meta){
-      // Simple health heuristic
       const titleEl = document.getElementById('envStatusTitle');
       const detailEl = document.getElementById('envStatusDetail');
       const forecastEl = document.getElementById('envForecastDetail');
       const mlActiveBadge = document.getElementById('mlActiveBadge');
       
-      titleEl.textContent = 'Kondisi lingkungan ' + status.label;
+      // Format status label lebih profesional
+      const statusLabels = {
+        'baik': 'Kondisi Kandang Optimal',
+        'perhatian': 'Kondisi Kandang Perlu Perhatian',
+        'buruk': 'Kondisi Kandang Tidak Optimal',
+        'tidak diketahui': 'Status Tidak Dapat Ditentukan'
+      };
       
-      // Update detail dengan info bahwa ini dari ML (bukan simulasi)
-      detailEl.textContent = status.message + ' (Hasil analisis Machine Learning)';
+      const statusLabel = status.label || 'tidak diketahui';
+      const statusText = statusLabels[statusLabel] || 'Kondisi Kandang ' + statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
+      
+      // Format confidence - hanya di title, tidak di detail
+      let confidenceText = '';
+      if (status.confidence !== undefined && status.confidence !== null) {
+        const confidencePercent = Math.round(status.confidence * 100);
+        confidenceText = ` (Tingkat Keyakinan: ${confidencePercent}%)`;
+      }
+      
+      titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+      
+      // Detail status - HILANGKAN duplikasi keyakinan, hanya tampilkan message dan sumber
+      if (status.message) {
+        detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
+      } else {
+        detailEl.textContent = 'Hasil Analisis Machine Learning';
+      }
       
       // ML Active badge
       if (meta && meta.ml_connected) {
@@ -1031,16 +1099,18 @@
           if (mlActiveBadge) mlActiveBadge.style.display = 'none';
       }
       
-      // Build quick 6h forecast sentence from first two summaries (suhu & kelembaban)
+      // Build quick 6h forecast sentence dengan format lebih profesional
       const suhuSummary = forecast6.find(f=>f.metric==='Suhu');
       const lembabSummary = forecast6.find(f=>f.metric==='Kelembaban');
       if (suhuSummary && lembabSummary){
-        forecastEl.textContent = `Prediksi 6 jam: ${suhuSummary.trend} suhu (${suhuSummary.range.min}–${suhuSummary.range.max}°C) & ${lembabSummary.trend} kelembaban (${lembabSummary.range.min}–${lembabSummary.range.max}%).`;
+        const suhuTrend = suhuSummary.trend === 'meningkat' ? 'meningkat' : (suhuSummary.trend === 'menurun' ? 'menurun' : 'stabil');
+        const lembabTrend = lembabSummary.trend === 'meningkat' ? 'meningkat' : (lembabSummary.trend === 'menurun' ? 'menurun' : 'stabil');
+        forecastEl.textContent = `Prediksi 6 Jam: Suhu ${suhuTrend} (${suhuSummary.range.min}–${suhuSummary.range.max}°C) & Kelembaban ${lembabTrend} (${lembabSummary.range.min}–${lembabSummary.range.max}%).`;
       }
       
       // Set warna banner berdasarkan severity: hijau=aman, kuning=perhatian, merah=bahaya
       const severity = status.severity || 'normal';
-      if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('tidak optimal')) {
+      if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
           predictionBanner.style.background = 'linear-gradient(90deg, #dc3545, #c82333)'; // Merah untuk bahaya
       } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
           predictionBanner.style.background = 'linear-gradient(90deg, #ffc107, #e0a800)'; // Kuning untuk perhatian
@@ -1054,31 +1124,184 @@
     let trendChart;
     function buildChart(history, prediction){
       const ctx = document.getElementById('trendChart').getContext('2d');
-      const labels = history.map(p => p.time).concat(prediction.temperature.map((_,i)=>'+'+(i+1)+'h'));
+      
+      // Format labels: show every hour dengan format WIB (realtime)
+      const historyLabels = history.map((p, i) => {
+        // Untuk data terakhir, gunakan waktu realtime saat ini
+        if (i === history.length - 1) {
+          const now = new Date();
+          const nowDay = String(now.getDate()).padStart(2, '0');
+          const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+          const nowHour = String(now.getHours()).padStart(2, '0');
+          const nowMinute = String(now.getMinutes()).padStart(2, '0');
+          return `${nowDay}/${nowMonth} ${nowHour}:${nowMinute}`;
+        }
+        
+        // Untuk data history lainnya, parse dari timestamp
+        const [datePart, timePart] = p.time.split(' ');
+        const [year, month, day] = datePart.split('-');
+        const [hour] = timePart.split(':');
+        
+        // Format: "DD/MM HH:00"
+        return `${day}/${month} ${hour}:00`;
+      });
+      const predictionLabels = prediction.temperature.map((_,i)=>'+'+(i+1)+'h');
+      const labels = [...historyLabels, ...predictionLabels];
+      
       const makeDataset = (label, key, color, predColor) => {
         const histData = history.map(p => p[key]);
         return [
-          { label: label+' (Hist)', data: histData, borderColor: color, backgroundColor: color+'33', tension:.25 },
-          { label: label+' (Pred)', data: Array(history.length).fill(null).concat(prediction[key]), borderColor: predColor, borderDash:[4,4], tension:.25 }
+          { 
+            label: label+' (Hist)', 
+            data: histData, 
+            borderColor: color, 
+            backgroundColor: color+'20', 
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointBackgroundColor: color,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
+            tension: 0.4,
+            fill: false
+          },
+          { 
+            label: label+' (Pred)', 
+            data: Array(history.length).fill(null).concat(prediction[key]), 
+            borderColor: predColor, 
+            borderDash: [5, 5],
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: predColor,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
+            tension: 0.4,
+            fill: false
+          }
         ];
       };
+      
       const datasets = [
-        ...makeDataset('Suhu','temperature','#e63946','#e63946'),
-        ...makeDataset('Kelembaban','humidity','#457b9d','#457b9d'),
-        ...makeDataset('Amoniak','ammonia','#6d597a','#6d597a'),
-        ...makeDataset('Cahaya','light','#2a9d8f','#2a9d8f')
+        ...makeDataset('Suhu','temperature','#e63946','#ff6b6b'),
+        ...makeDataset('Kelembaban','humidity','#457b9d','#6c9bcf'),
+        ...makeDataset('Amoniak','ammonia','#6d597a','#9d7ba8'),
+        ...makeDataset('Cahaya','light','#2a9d8f','#4ecdc4')
       ];
+      
       if (trendChart) trendChart.destroy();
       trendChart = new Chart(ctx, {
-        type:'line',
-        data:{ labels, datasets },
-        options:{
-          responsive:true,
-          scales:{
-            x:{ ticks:{ maxRotation:0, autoSkip:true } },
-            y:{ beginAtZero:false }
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          interaction: {
+            intersect: false,
+            mode: 'index'
           },
-          plugins:{ legend:{ display:false } },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 15,
+                font: {
+                  size: 11,
+                  family: "'Inter', -apple-system, sans-serif",
+                  weight: '500'
+                },
+                color: '#2F2F2F'
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: {
+                size: 13,
+                weight: '600'
+              },
+              bodyFont: {
+                size: 12
+              },
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              displayColors: true,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y.toFixed(1);
+                  if (context.dataset.label.includes('Suhu')) label += '°C';
+                  else if (context.dataset.label.includes('Kelembaban')) label += '%';
+                  else if (context.dataset.label.includes('Amoniak')) label += ' ppm';
+                  else if (context.dataset.label.includes('Cahaya')) label += ' lux';
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: true,
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: true,
+                maxTicksLimit: 12,
+                font: {
+                  size: 10,
+                  family: "'Inter', -apple-system, sans-serif"
+                },
+                color: '#6c757d'
+              },
+              title: {
+                display: true,
+                text: 'Waktu',
+                font: {
+                  size: 12,
+                  weight: '600'
+                },
+                color: '#2F2F2F',
+                padding: { top: 10, bottom: 5 }
+              }
+            },
+            y: {
+              beginAtZero: false,
+              grid: {
+                display: true,
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                font: {
+                  size: 10,
+                  family: "'Inter', -apple-system, sans-serif"
+                },
+                color: '#6c757d',
+                callback: function(value) {
+                  return value.toFixed(0);
+                }
+              },
+              title: {
+                display: true,
+                text: 'Nilai Sensor',
+                font: {
+                  size: 12,
+                  weight: '600'
+                },
+                color: '#2F2F2F',
+                padding: { top: 5, bottom: 10 }
+              }
+            }
+          }
         }
       });
     }

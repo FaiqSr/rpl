@@ -818,7 +818,9 @@ Route::middleware('auth.session')->group(function(){
 Route::get('/api/monitoring/tools', function () {
     try {
         $mlService = new \App\Services\MachineLearningService();
-    $now = now();
+    
+    // Gunakan waktu realtime dengan timezone WIB
+    $now = now()->setTimezone('Asia/Jakarta');
     
     // Ambil data real dari database sensor (ToolsDetail)
     // Jika tidak ada data, gunakan data terakhir yang ada atau data default yang masuk akal
@@ -826,8 +828,10 @@ Route::get('/api/monitoring/tools', function () {
     
     // Generate history data dengan nilai default yang konsisten (bukan random)
     // ML Service membutuhkan minimal 30 data points, jadi kita generate 30 data
+    // Data setiap 1 jam sekali - menggunakan waktu realtime
     // TODO: Ganti dengan data real dari database sensor jika tersedia
     for ($i = 29; $i >= 0; $i--) {
+        // Format timestamp dengan WIB (Waktu Indonesia Barat) - waktu realtime
         $timestamp = $now->copy()->subHours($i)->format('Y-m-d H:00');
         $hour = (int) $now->copy()->subHours($i)->format('H');
         
@@ -1031,10 +1035,22 @@ Route::get('/api/monitoring/tools', function () {
         \Illuminate\Support\Facades\Log::warning('ML Service tidak terhubung, menggunakan fallback prediction');
     }
 
+    // Kirim notifikasi Telegram (jika dikonfigurasi) - SEBELUM return response
+    try {
+        $telegramService = new \App\Services\TelegramNotificationService();
+        $forecast6SummaryForTelegram = isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary;
+        $telegramService->sendMonitoringNotification($latest, $currentStatus, $pred6, $anomalies, $forecast6SummaryForTelegram);
+    } catch (\Exception $telegramError) {
+        // Log error tapi jangan gagalkan response
+        \Illuminate\Support\Facades\Log::warning('Failed to send Telegram notification: ' . $telegramError->getMessage());
+    }
+    
     return response()->json([
         'meta' => [
-            'generated_at' => $now->toDateTimeString(),
-            'interval' => 'hourly',
+            'generated_at' => $now->format('Y-m-d H:i:s') . ' WIB',
+            'generated_at_timestamp' => $now->timestamp,
+            'timezone' => 'Asia/Jakarta (WIB)',
+            'interval' => '1 hour', // Data setiap 1 jam
             'history_hours' => count($history),
             'history_count' => count($history),
             'ml_source' => $mlSource,
@@ -1057,6 +1073,7 @@ Route::get('/api/monitoring/tools', function () {
         'anomalies' => $anomalies,
         'ml_metadata' => $mlMetadata
     ]);
+    
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Error in monitoring API: ' . $e->getMessage());
         \Illuminate\Support\Facades\Log::error('Stack trace: ' . $e->getTraceAsString());
