@@ -438,6 +438,7 @@
       <div class="sidebar-submenu show">
         <a href="{{ route('dashboard.tools') }}" class="active">Daftar alat</a>
         <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
+        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
       </div>
       <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-shopping-cart"></i>

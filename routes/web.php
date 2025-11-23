@@ -284,6 +284,7 @@ Route::middleware(['auth.session','admin'])->group(function() {
     })->name('dashboard.products');
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
     Route::get('/dashboard/tools/monitoring', function () { return view('dashboard.tools-monitoring'); })->name('dashboard.tools.monitoring');
+    Route::get('/dashboard/tools/information', function () { return view('dashboard.tools-information'); })->name('dashboard.tools.information');
     Route::get('/dashboard/sales', function (\Illuminate\Http\Request $request) {
         $filter = $request->get('filter', 'all');
         $query = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at');

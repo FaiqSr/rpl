@@ -411,6 +411,90 @@
       gap: 1rem;
       margin-bottom: 1.5rem;
     }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        min-height: auto;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+      }
+      
+      .monitoring-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .sensor-card {
+        min-width: 100%;
+      }
+      
+      .chart-card, .anomaly-card {
+        margin-bottom: 1rem;
+      }
+      
+      .forecast-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .prediction-banner {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        gap: .5rem;
+      }
+      
+      .chart-card form {
+        display: grid;
+        gap: .75rem;
+      }
+      
+      .chart-card form > div {
+        width: 100%;
+      }
+      
+      .chart-card form button {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .sensor-card h6 {
+        font-size: .7rem;
+      }
+      
+      .sensor-value {
+        font-size: 1.5rem !important;
+      }
+      
+      .trend-chip {
+        font-size: .65rem !important;
+        padding: .2rem .4rem !important;
+      }
+      
+      .chart-card h6, .anomaly-card h6 {
+        font-size: .75rem;
+      }
+      
+      .prediction-banner {
+        padding: .75rem 1rem !important;
+      }
+      
+      .prediction-banner h5 {
+        font-size: .85rem !important;
+      }
+      
+      .prediction-banner p {
+        font-size: .65rem !important;
+      }
+    }
     .sensor-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -585,8 +669,8 @@
     <div class="sidebar-profile">
       <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
       <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
+        <h6>Fantastic F</h6>
+        <p>Founder</p>
       </div>
     </div>
     
@@ -612,6 +696,7 @@
       <div class="sidebar-submenu show">
         <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
         <a href="{{ route('dashboard.tools.monitoring') }}" class="active">Monitoring Alat</a>
+        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
       </div>
       <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
         <i class="fa-solid fa-shopping-cart"></i>
@@ -666,24 +751,7 @@
       </div>
     </div>
 
-    <!-- ML Model Information Card -->
-    <div class="chart-card" id="mlInfoCard" style="display:none;">
-      <h6>
-        <i class="fa-solid fa-brain me-2"></i>
-        Informasi Model Machine Learning
-      </h6>
-      <div id="mlInfoContent" style="display:grid; gap:.75rem; margin-top:.5rem;"></div>
-    </div>
 
-    <!-- Data & Results Preview (for UI) -->
-    <div class="data-card" id="dataPreview" style="display:none;">
-      <h6>Data & Hasil</h6>
-      <div id="latestGrid" class="data-grid"></div>
-      <details style="margin-top:.75rem;">
-        <summary style="cursor:pointer; font-size:.75rem;">Lihat JSON</summary>
-        <pre id="jsonDump" style="white-space:pre-wrap; background:#0f172a; color:#e2e8f0; padding:.75rem; border-radius:8px; overflow:auto; max-height:240px; font-size:.72rem;"></pre>
-      </details>
-    </div>
 
     <!-- Anomaly List -->
     <div class="anomaly-card" id="anomalyPanel" style="display:none;">
@@ -709,6 +777,7 @@
       <h6>Deteksi Anomali Sensor</h6>
       <p style="font-size:.75rem; color:#6c757d; margin:0;">Tidak ada anomali terdeteksi. Semua sensor dalam batas aman.</p>
     </div>
+
     
     <!-- Content Section -->
     <div style="padding: 1.5rem 0;">
@@ -865,6 +934,54 @@
     const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
+    // Fungsi untuk menentukan status sensor berdasarkan threshold
+    function getSensorStatus(key, value){
+      const thresholds = {
+        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 23, danger_high: 34 },
+        humidity: { ideal_min: 50, ideal_max: 70, warn_high: 80, danger_high: 80 },
+        ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
+        light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
+      };
+      
+      const th = thresholds[key];
+      if (!th) return { status: 'unknown', color: '#6c757d' };
+      
+      if (key === 'temperature') {
+        if (value >= th.ideal_min && value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value < th.danger_low || value > th.danger_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        }
+      } else if (key === 'humidity') {
+        if (value >= th.ideal_min && value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value > th.danger_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else if (value < th.ideal_min || value > th.ideal_max) {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      } else if (key === 'ammonia') {
+        if (value <= th.ideal_max) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value > th.danger_max) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else if (value > th.warn_max) {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      } else if (key === 'light') {
+        // Untuk cahaya, nilai ratusan langsung dibandingkan dengan threshold 10-60
+        if (value >= th.ideal_low && value <= th.ideal_high) {
+          return { status: 'aman', color: '#28a745' }; // Hijau
+        } else if (value < th.warn_low || value > th.warn_high) {
+          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+        } else {
+          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+        }
+      }
+      
+      return { status: 'unknown', color: '#6c757d' };
+    }
+    
     function createSensorCard(key, label, value, unit, history, prediction){
       // Determine trend (compare last two points)
       const len = history.length;
@@ -873,12 +990,20 @@
         const diff = history[len-1][key] - history[len-2][key];
         if (diff > 0.2) trend = 'up'; else if (diff < -0.2) trend = 'down';
       }
-      return `<div class="sensor-card">
+      
+      // Tentukan status sensor berdasarkan threshold
+      const sensorStatus = getSensorStatus(key, value);
+      
+      return `<div class="sensor-card" style="border-left: 4px solid ${sensorStatus.color};">
         <h6>${label}</h6>
         <p class="sensor-value">${value}<span class="sensor-unit">${unit}</span></p>
         <div class="trend-chip ${trend}">
           <i class="fa-solid fa-arrow-${trend==='down'?'down':'up'}"></i>
           ${trend==='flat'?'Stabil': trend==='up'?'Naik':'Turun'}
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600;">
+          <i class="fa-solid fa-circle" style="font-size: 0.5rem; margin-right: 0.25rem;"></i>
+          ${sensorStatus.status}
         </div>
       </div>`;
     }
@@ -1037,7 +1162,8 @@
     
     function changeAnomalyPage(direction){
       const totalPages = Math.ceil(allAnomalies.length / ANOMALIES_PER_PAGE);
-      const newPage = currentAnomalyPage + direction;
+      // Pastikan perubahan halaman hanya +1 atau -1, tidak melompat
+      const newPage = currentAnomalyPage + (direction > 0 ? 1 : -1);
       
       if (newPage >= 1 && newPage <= totalPages) {
         currentAnomalyPage = newPage;
@@ -1052,14 +1178,6 @@
     // Attach event listeners untuk tombol pagination setelah elemen tersedia
     if (anomalyPrevBtn && anomalyNextBtn) {
       anomalyPrevBtn.addEventListener('click', () => changeAnomalyPage(-1));
-      anomalyNextBtn.addEventListener('click', () => changeAnomalyPage(1));
-    }
-    
-    // Attach event listeners untuk tombol pagination
-    if (anomalyPrevBtn) {
-      anomalyPrevBtn.addEventListener('click', () => changeAnomalyPage(-1));
-    }
-    if (anomalyNextBtn) {
       anomalyNextBtn.addEventListener('click', () => changeAnomalyPage(1));
     }
 
@@ -1241,75 +1359,9 @@
         list24.innerHTML = forecast_summary_24h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
         forecastCard.style.display='block';
         
-        // ML Info Card
-        renderMLInfo(ml_metadata, meta);
+        // ML Info Card - moved to Information Management page
 
         // Data Preview panel
-        const dataPreview = document.getElementById('dataPreview');
-        const latestGrid = document.getElementById('latestGrid');
-        const summary6 = document.getElementById('summary6');
-        const summary24 = document.getElementById('summary24');
-        const jsonDump = document.getElementById('jsonDump');
-        
-        // Thresholds sesuai standar boiler dari model_metadata.json
-        const thresholds = {
-          temperature: { ideal_min: 23, ideal_max: 34, danger_low: 23, danger_high: 34, unit: '°C' },
-          humidity: { ideal_min: 50, ideal_max: 70, warn_high: 80, danger_high: 80, unit: '%' },
-          ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35, unit: 'ppm' },
-          light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60, unit: 'lux' }
-        };
-        
-        // Tampilkan threshold dan rentang untuk setiap parameter
-        latestGrid.innerHTML = `
-          <div class="data-tile">
-            <div class="kpi-icon"><i class="fa-solid fa-temperature-half"></i></div>
-            <div style="flex:1;">
-              <div class="label">Suhu</div>
-              <div class="val">${latest.temperature} ${thresholds.temperature.unit}</div>
-              <div style="font-size:.65rem; color:#6c757d; margin-top:.25rem;">
-                Ideal: ${thresholds.temperature.ideal_min}-${thresholds.temperature.ideal_max}${thresholds.temperature.unit} | 
-                Danger: &lt;${thresholds.temperature.danger_low} atau &gt;${thresholds.temperature.danger_high}${thresholds.temperature.unit}
-              </div>
-            </div>
-          </div>
-          <div class="data-tile">
-            <div class="kpi-icon"><i class="fa-solid fa-droplet"></i></div>
-            <div style="flex:1;">
-              <div class="label">Kelembaban</div>
-              <div class="val">${latest.humidity} ${thresholds.humidity.unit}</div>
-              <div style="font-size:.65rem; color:#6c757d; margin-top:.25rem;">
-                Ideal: ${thresholds.humidity.ideal_min}-${thresholds.humidity.ideal_max}${thresholds.humidity.unit} | 
-                Warning: &lt;${thresholds.humidity.ideal_min} atau &gt;${thresholds.humidity.ideal_max}${thresholds.humidity.unit} | 
-                Danger: &gt;${thresholds.humidity.danger_high}${thresholds.humidity.unit}
-              </div>
-            </div>
-          </div>
-          <div class="data-tile">
-            <div class="kpi-icon"><i class="fa-solid fa-flask"></i></div>
-            <div style="flex:1;">
-              <div class="label">Amoniak</div>
-              <div class="val">${latest.ammonia} ${thresholds.ammonia.unit}</div>
-              <div style="font-size:.65rem; color:#6c757d; margin-top:.25rem;">
-                Ideal: ≤${thresholds.ammonia.ideal_max}${thresholds.ammonia.unit} | 
-                Warning: &gt;${thresholds.ammonia.warn_max}${thresholds.ammonia.unit} | 
-                Danger: &gt;${thresholds.ammonia.danger_max}${thresholds.ammonia.unit}
-              </div>
-            </div>
-          </div>
-          <div class="data-tile">
-            <div class="kpi-icon"><i class="fa-solid fa-sun"></i></div>
-            <div style="flex:1;">
-              <div class="label">Cahaya</div>
-              <div class="val">${latest.light} ${thresholds.light.unit}</div>
-              <div style="font-size:.65rem; color:#6c757d; margin-top:.25rem;">
-                Ideal: ${thresholds.light.ideal_low}-${thresholds.light.ideal_high}${thresholds.light.unit} | 
-                Warning: &lt;${thresholds.light.warn_low} atau &gt;${thresholds.light.warn_high}${thresholds.light.unit}
-              </div>
-            </div>
-          </div>
-        `;
-        jsonDump.textContent = JSON.stringify(data, null, 2);
-        dataPreview.style.display = 'block';
       } catch (e){
         console.error('Error loading monitoring data:', e);
         sensorGrid.innerHTML = '<div class="alert alert-danger">Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</div>';
@@ -1334,10 +1386,6 @@
         }
         
         // Jangan tampilkan data preview jika error
-        const dataPreview = document.getElementById('dataPreview');
-        if (dataPreview) {
-          dataPreview.style.display = 'none';
-        }
       }
     }
 
