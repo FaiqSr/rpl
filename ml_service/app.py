@@ -20,14 +20,62 @@ SEQUENCE_LENGTH = 30  # Sesuaikan dengan model LSTM Anda
 
 # Load Models & Scalers
 MODEL_DIR = os.path.join(os.path.dirname(__file__), 'models')
+ENSEMBLE_DIR = os.path.join(MODEL_DIR, 'models_ensemble')
 
 try:
-    # Load Random Forest untuk klasifikasi status
-    model_rf = joblib.load(os.path.join(MODEL_DIR, 'model_random_forest.pkl'))
+    # Load Random Forest SMOTE sebagai primary, dengan fallback ke model biasa
+    rf_smote_path = os.path.join(MODEL_DIR, 'model_random_forest_smote.pkl')
+    rf_fallback_path = os.path.join(MODEL_DIR, 'model_random_forest.pkl')
+    
+    if os.path.exists(rf_smote_path):
+        model_rf = joblib.load(rf_smote_path)
+        print("✅ Random Forest SMOTE loaded (primary)")
+    else:
+        model_rf = joblib.load(rf_fallback_path)
+        print("⚠️  Random Forest SMOTE not found, using fallback model")
+    
     scaler_rf = joblib.load(os.path.join(MODEL_DIR, 'scaler_rf.pkl'))
     
-    # Load LSTM untuk prediksi tren
-    model_lstm = load_model(os.path.join(MODEL_DIR, 'model_lstm_kandang.h5'))
+    # Load Ensemble LSTM sebagai primary, dengan fallback ke model single
+    ensemble_config_path = os.path.join(ENSEMBLE_DIR, 'ensemble_config.json')
+    lstm_fallback_path = os.path.join(MODEL_DIR, 'model_lstm_kandang.h5')
+    
+    model_lstm = None
+    model_lstm_ensemble = None
+    use_ensemble = False
+    
+    if os.path.exists(ensemble_config_path):
+        try:
+            with open(ensemble_config_path, 'r') as f:
+                ensemble_config = json.load(f)
+            
+            n_models = ensemble_config.get('n_models', 3)
+            model_files = ensemble_config.get('model_files', [])
+            ensemble_method = ensemble_config.get('method', 'average')
+            
+            # Load semua model ensemble
+            ensemble_models = []
+            for model_file in model_files:
+                model_path = os.path.join(ENSEMBLE_DIR, model_file)
+                if os.path.exists(model_path):
+                    ensemble_models.append(load_model(model_path))
+                else:
+                    print(f"⚠️  Ensemble model {model_file} not found")
+            
+            if len(ensemble_models) == n_models:
+                model_lstm_ensemble = ensemble_models
+                use_ensemble = True
+                print(f"✅ Ensemble LSTM loaded ({n_models} models, method: {ensemble_method})")
+            else:
+                print(f"⚠️  Not all ensemble models found ({len(ensemble_models)}/{n_models}), using fallback")
+                model_lstm = load_model(lstm_fallback_path)
+        except Exception as e:
+            print(f"⚠️  Error loading ensemble: {e}, using fallback")
+            model_lstm = load_model(lstm_fallback_path)
+    else:
+        model_lstm = load_model(lstm_fallback_path)
+        print("✅ Single LSTM loaded (fallback)")
+    
     scaler_lstm = joblib.load(os.path.join(MODEL_DIR, 'scaler_lstm.pkl'))
     
     # Load Isolation Forest untuk deteksi anomali
@@ -37,6 +85,19 @@ try:
     # Load metadata
     with open(os.path.join(MODEL_DIR, 'model_metadata.json'), 'r') as f:
         model_metadata = json.load(f)
+    
+    # Load threshold_config.json untuk threshold optimal
+    threshold_config_path = os.path.join(MODEL_DIR, 'threshold_config.json')
+    threshold_config = None
+    if os.path.exists(threshold_config_path):
+        try:
+            with open(threshold_config_path, 'r') as f:
+                threshold_config = json.load(f)
+            print(f"✅ Threshold config loaded: best_threshold={threshold_config.get('best_threshold', 'N/A')}")
+        except Exception as e:
+            print(f"⚠️  Error loading threshold config: {e}")
+    else:
+        print("⚠️  Threshold config not found, using default")
     
     # Extract model info from metadata
     lstm_info = model_metadata.get('models', {}).get('lstm', {})
@@ -65,40 +126,79 @@ try:
     
     MODELS_LOADED = True
     print("✅ Semua model berhasil dimuat!")
-    print(f"📊 LSTM: {lstm_info.get('architecture', 'N/A')}")
-    print(f"🌲 Random Forest: Accuracy {rf_info.get('accuracy', 'N/A')}")
+    if use_ensemble:
+        print(f"📊 LSTM: Ensemble ({len(model_lstm_ensemble)} models)")
+    else:
+        print(f"📊 LSTM: Single model ({lstm_info.get('architecture', 'N/A')})")
+    print(f"🌲 Random Forest: {'SMOTE' if os.path.exists(rf_smote_path) else 'Standard'} - Accuracy {rf_info.get('accuracy', 'N/A')}")
     print(f"🔍 Isolation Forest: Contamination {model_metadata.get('models', {}).get('isolation_forest', {}).get('contamination', 'N/A')}")
 except Exception as e:
     MODELS_LOADED = False
     print(f"❌ Error loading models: {e}")
+    import traceback
+    traceback.print_exc()
     model_metadata = {
         'model_name': 'Error Loading Models',
         'model_version': '1.0',
         'accuracy': None
     }
+    threshold_config = None
+    use_ensemble = False
+    model_lstm_ensemble = None
+    model_lstm = None
+    model_rf = None
+    scaler_rf = None
+    scaler_lstm = None
+    model_if = None
+    scaler_if = None
+    SENSOR_STATS = None
 
 
 def predict_sensor_classification(amonia, suhu, kelembaban, cahaya):
     """
     Klasifikasi status kandang dari data sensor (model v2)
     Input & model sekarang dalam skala ASLI (lux, ppm, °C, %)
+    Menggunakan threshold optimal dari threshold_config.json jika tersedia
     """
     X = np.array([[amonia, suhu, kelembaban, cahaya]])
     X_scaled = scaler_rf.transform(X)
-    status = model_rf.predict(X_scaled)[0]
     proba = model_rf.predict_proba(X_scaled)[0]
     
     # Mapping sesuai metadata: classes_trained = [1, 2] -> PERHATIAN, BURUK
-    # Jika prediksi bukan 1 atau 2, berarti BAIK (kelas 0 tidak dilatih)
     status_labels_map = {1: 'PERHATIAN', 2: 'BURUK'}
     colors = {0: '#2ecc71', 1: '#f39c12', 2: '#e74c3c'}
     
-    # Jika status tidak ada di classes yang dilatih, berarti BAIK
-    if status not in status_labels_map:
-        status = 0  # BAIK
-        status_label = 'BAIK'
+    # Gunakan threshold optimal dari threshold_config.json jika tersedia
+    if threshold_config and 'best_threshold' in threshold_config:
+        best_threshold = threshold_config['best_threshold']
+        class_index = threshold_config.get('class_index', 2)  # Default untuk kelas BURUK (index 2)
+        
+        # Cari probabilitas untuk kelas yang sesuai dengan class_index
+        proba_dict = {}
+        for idx, class_label in enumerate(model_rf.classes_):
+            proba_dict[class_label] = float(proba[idx])
+        
+        # Jika probabilitas kelas BURUK >= threshold, klasifikasikan sebagai BURUK
+        if class_index in proba_dict and proba_dict[class_index] >= best_threshold:
+            status = class_index
+            status_label = status_labels_map.get(status, 'BURUK')
+        else:
+            # Cari kelas dengan probabilitas tertinggi
+            max_class = max(proba_dict.items(), key=lambda x: x[1])[0]
+            if max_class in status_labels_map:
+                status = max_class
+                status_label = status_labels_map[status]
+            else:
+                status = 0  # BAIK
+                status_label = 'BAIK'
     else:
-        status_label = status_labels_map[status]
+        # Fallback: gunakan prediksi standar
+        status = model_rf.predict(X_scaled)[0]
+        if status not in status_labels_map:
+            status = 0  # BAIK
+            status_label = 'BAIK'
+        else:
+            status_label = status_labels_map[status]
     
     probability_dict = {}
     for idx, class_label in enumerate(model_rf.classes_):
@@ -472,6 +572,7 @@ def predict_next_sensor_values(recent_history):
     """
     Prediksi nilai sensor berikutnya (skala asli)
     recent_history: list/array [[amonia, suhu, kelembaban, cahaya], ...] panjang >= SEQUENCE_LENGTH
+    Menggunakan ensemble LSTM jika tersedia, fallback ke single model
     """
     if len(recent_history) < SEQUENCE_LENGTH:
         return {'error': f'Need at least {SEQUENCE_LENGTH} historical data points'}
@@ -480,7 +581,20 @@ def predict_next_sensor_values(recent_history):
     last_sequence_scaled = scaler_lstm.transform(seq)
     X_input = last_sequence_scaled.reshape(1, SEQUENCE_LENGTH, 4)
     
-    prediction_scaled = model_lstm.predict(X_input, verbose=0)
+    # Gunakan ensemble jika tersedia
+    if use_ensemble and model_lstm_ensemble:
+        # Prediksi dari semua model ensemble
+        ensemble_predictions = []
+        for model in model_lstm_ensemble:
+            pred_scaled = model.predict(X_input, verbose=0)
+            ensemble_predictions.append(pred_scaled)
+        
+        # Average predictions (sesuai ensemble_config.json method: "average")
+        prediction_scaled = np.mean(ensemble_predictions, axis=0)
+    else:
+        # Fallback ke single model
+        prediction_scaled = model_lstm.predict(X_input, verbose=0)
+    
     prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
     
     # Post-process cahaya: jika prediksi masih dalam ratusan (dari model lama), 
@@ -503,6 +617,7 @@ def predict_next_sensor_values(recent_history):
 def predict_multiple_steps(recent_history, steps=6):
     """
     Prediksi beberapa langkah ke depan (untuk 6 jam dan 24 jam)
+    Menggunakan ensemble LSTM jika tersedia, fallback ke single model
     """
     predictions = []
     current_seq = np.array(recent_history[-SEQUENCE_LENGTH:]).copy()
@@ -512,8 +627,20 @@ def predict_multiple_steps(recent_history, steps=6):
         seq_scaled = scaler_lstm.transform(current_seq)
         X_input = seq_scaled.reshape(1, SEQUENCE_LENGTH, 4)
         
-        # Predict
-        pred_scaled = model_lstm.predict(X_input, verbose=0)
+        # Gunakan ensemble jika tersedia
+        if use_ensemble and model_lstm_ensemble:
+            # Prediksi dari semua model ensemble
+            ensemble_predictions = []
+            for model in model_lstm_ensemble:
+                pred_scaled = model.predict(X_input, verbose=0)
+                ensemble_predictions.append(pred_scaled)
+            
+            # Average predictions (sesuai ensemble_config.json method: "average")
+            pred_scaled = np.mean(ensemble_predictions, axis=0)
+        else:
+            # Fallback ke single model
+            pred_scaled = model_lstm.predict(X_input, verbose=0)
+        
         pred = scaler_lstm.inverse_transform(pred_scaled)[0]
         
         # Post-process cahaya: jika prediksi masih dalam ratusan (dari model lama), 
