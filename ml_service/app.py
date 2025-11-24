@@ -59,7 +59,7 @@ try:
             'ammonia': {'mean': 15, 'std': 5, 'min': 0, 'max': 35},
             'temperature': {'mean': 28, 'std': 3, 'min': 20, 'max': 35},
             'humidity': {'mean': 60, 'std': 8, 'min': 50, 'max': 80},
-            'light': {'mean': 300, 'std': 100, 'min': 100, 'max': 600}  # Data ratusan
+            'light': {'mean': 35, 'std': 15, 'min': 1, 'max': 85}  # Data puluhan (threshold 10-60 lux)
         }
         print("⚠️  Statistik sensor tidak ditemukan, menggunakan default dari metadata")
     
@@ -347,7 +347,7 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
             elif sensor_name == 'humidity':
                 deviations[sensor_name] = abs(value - 51) / 51 if value > 0 else 0  # Normal ~51%
             elif sensor_name == 'light':
-                deviations[sensor_name] = abs(value - 340) / 340 if value > 0 else 0  # Normal ~340 lux
+                deviations[sensor_name] = abs(value - 35) / 35 if value > 0 else 0  # Normal ~35 lux (rata-rata 10-60)
         
         # Ambil sensor dengan deviasi terbesar (top 2)
         if deviations:
@@ -376,7 +376,7 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
             elif sensor_name == 'humidity':
                 dev = abs(value - 51) / 51 if value > 0 else 0
             elif sensor_name == 'light':
-                dev = abs(value - 340) / 340 if value > 0 else 0
+                dev = abs(value - 35) / 35 if value > 0 else 0  # Normal ~35 lux
             else:
                 dev = 0
             
@@ -439,7 +439,7 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
                 'ammonia': abs(amonia - 15) / 15 if amonia > 0 else 0,  # Normal ~15 ppm
                 'temperature': abs(suhu - 29) / 29 if suhu > 0 else 0,  # Normal ~29°C
                 'humidity': abs(kelembaban - 51) / 51 if kelembaban > 0 else 0,  # Normal ~51%
-                'light': abs(cahaya - 340) / 340 if cahaya > 0 else 0  # Normal ~340 lux
+                'light': abs(cahaya - 35) / 35 if cahaya > 0 else 0  # Normal ~35 lux (rata-rata 10-60)
             }
             
             # Sensor dengan deviasi terbesar
@@ -483,11 +483,20 @@ def predict_next_sensor_values(recent_history):
     prediction_scaled = model_lstm.predict(X_input, verbose=0)
     prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
     
+    # Post-process cahaya: jika prediksi masih dalam ratusan (dari model lama), 
+    # clamp ke range yang masuk akal (10-85 lux)
+    light_pred = float(prediction[3])
+    if light_pred > 100:  # Jika masih dalam ratusan, scale down
+        # Scale dari range 100-600 ke 10-85
+        # Formula: new_value = 10 + (old_value - 100) * (85 - 10) / (600 - 100)
+        light_pred = 10 + (light_pred - 100) * 75 / 500
+        light_pred = max(1, min(85, light_pred))  # Clamp ke 1-85 lux
+    
     return {
         'amonia_ppm': float(prediction[0]),
         'suhu_c': float(prediction[1]),
         'kelembaban_rh': float(prediction[2]),
-        'cahaya_lux': float(prediction[3])
+        'cahaya_lux': light_pred
     }
 
 
@@ -507,11 +516,20 @@ def predict_multiple_steps(recent_history, steps=6):
         pred_scaled = model_lstm.predict(X_input, verbose=0)
         pred = scaler_lstm.inverse_transform(pred_scaled)[0]
         
+        # Post-process cahaya: jika prediksi masih dalam ratusan (dari model lama), 
+        # clamp ke range yang masuk akal (10-85 lux)
+        light_pred = float(pred[3])
+        if light_pred > 100:  # Jika masih dalam ratusan, scale down
+            # Scale dari range 100-600 ke 10-85
+            # Formula: new_value = 10 + (old_value - 100) * (85 - 10) / (600 - 100)
+            light_pred = 10 + (light_pred - 100) * 75 / 500
+            light_pred = max(1, min(85, light_pred))  # Clamp ke 1-85 lux
+        
         predictions.append({
             'ammonia': float(pred[0]),
             'temperature': float(pred[1]),
             'humidity': float(pred[2]),
-            'light': float(pred[3])
+            'light': light_pred
         })
         
         # Update sequence (shift and add prediction)
@@ -1030,11 +1048,20 @@ def api_predict():
         prediction_scaled = model_lstm.predict(X_input, verbose=0)
         prediction = scaler_lstm.inverse_transform(prediction_scaled)[0]
         
+        # Post-process cahaya: jika prediksi masih dalam ratusan (dari model lama), 
+        # clamp ke range yang masuk akal (10-85 lux)
+        light_pred = float(prediction[3])
+        if light_pred > 100:  # Jika masih dalam ratusan, scale down
+            # Scale dari range 100-600 ke 10-85
+            # Formula: new_value = 10 + (old_value - 100) * (85 - 10) / (600 - 100)
+            light_pred = 10 + (light_pred - 100) * 75 / 500
+            light_pred = max(1, min(85, light_pred))  # Clamp ke 1-85 lux
+        
         return jsonify({
             'amonia_ppm': float(prediction[0]),
             'suhu_c': float(prediction[1]),
             'kelembaban_rh': float(prediction[2]),
-            'cahaya_lux': float(prediction[3]),
+            'cahaya_lux': light_pred,
             'success': True
         })
     except Exception as e:

@@ -990,6 +990,33 @@
       </div>
     </div>
 
+    <!-- Ekspor Data -->
+    <div class="chart-card">
+      <h6>
+        <i class="fas fa-download me-2"></i>
+        Ekspor Data
+      </h6>
+      <div style="margin-top:.75rem;">
+        <p style="font-size:.8rem; color:#6c757d; margin-bottom:.75rem;">
+          Ekspor data sensor untuk laporan atau analisis lebih lanjut.
+        </p>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <a href="{{ route('export.pdf') }}" class="btn btn-danger" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
+            <i class="fas fa-file-pdf me-2"></i>Ekspor PDF (Laporan)
+          </a>
+          <a href="{{ route('export.csv') }}" class="btn btn-success" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
+            <i class="fas fa-file-csv me-2"></i>Ekspor CSV (Dataset)
+          </a>
+        </div>
+        <div style="margin-top:.75rem;">
+          <small style="font-size:.7rem; color:#6c757d; display:block; line-height:1.5;">
+            <strong>PDF:</strong> Laporan lengkap dengan statistik dan ringkasan harian<br>
+            <strong>CSV:</strong> Dataset mentah (hanya nilai parameter, tanpa timestamp)
+          </small>
+        </div>
+      </div>
+    </div>
+
     <!-- Pengaturan Telegram -->
     <div class="chart-card">
       <h6>

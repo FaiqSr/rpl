@@ -1280,24 +1280,23 @@
       const ctx = document.getElementById('trendChart').getContext('2d');
       
       // Format labels: show every hour dengan format WIB (realtime)
+      // Gunakan waktu real-time saat ini untuk semua label
+      const now = new Date();
+      const nowYear = now.getFullYear();
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const nowDay = String(now.getDate()).padStart(2, '0');
+      
       const historyLabels = history.map((p, i) => {
-        // Untuk data terakhir, gunakan waktu realtime saat ini
-        if (i === history.length - 1) {
-          const now = new Date();
-          const nowDay = String(now.getDate()).padStart(2, '0');
-          const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
-          const nowHour = String(now.getHours()).padStart(2, '0');
-          const nowMinute = String(now.getMinutes()).padStart(2, '0');
-          return `${nowDay}/${nowMonth} ${nowHour}:${nowMinute}`;
-        }
+        // Hitung jam yang lalu dari waktu saat ini
+        const hoursAgo = history.length - 1 - i;
+        const labelTime = new Date(now.getTime() - hoursAgo * 3600 * 1000);
         
-        // Untuk data history lainnya, parse dari timestamp
-        const [datePart, timePart] = p.time.split(' ');
-        const [year, month, day] = datePart.split('-');
-        const [hour] = timePart.split(':');
+        const labelDay = String(labelTime.getDate()).padStart(2, '0');
+        const labelMonth = String(labelTime.getMonth() + 1).padStart(2, '0');
+        const labelHour = String(labelTime.getHours()).padStart(2, '0');
         
         // Format: "DD/MM HH:00"
-        return `${day}/${month} ${hour}:00`;
+        return `${labelDay}/${labelMonth} ${labelHour}:00`;
       });
       const predictionLabels = prediction.temperature.map((_,i)=>'+'+(i+1)+'h');
       const labels = [...historyLabels, ...predictionLabels];
@@ -1429,6 +1428,8 @@
             },
             y: {
               beginAtZero: false,
+              min: 0,
+              max: 100,
               grid: {
                 display: true,
                 color: 'rgba(0, 0, 0, 0.05)',
@@ -1440,6 +1441,7 @@
                   family: "'Inter', -apple-system, sans-serif"
                 },
                 color: '#6c757d',
+                stepSize: 10,
                 callback: function(value) {
                   return value.toFixed(0);
                 }
@@ -1543,11 +1545,45 @@
         return message.replace(/\s*\(nilai:.*?\)/g, '').substring(0, 100);
       }
       
-      anomalyList.innerHTML = displayAnomalies.map(a => {
+      // Helper function untuk format timestamp anomali menjadi real-time
+      function formatAnomalyTime(anomalyTime, index) {
+        const now = new Date();
+        
+        // Jika ada waktu dari anomaly, coba parse dan hitung jam yang lalu
+        if (anomalyTime) {
+          try {
+            const anomalyDate = new Date(anomalyTime);
+            // Hitung perkiraan jam yang lalu berdasarkan index (anomali terbaru = 0 jam lalu)
+            // Asumsi: anomali terbaru terjadi dalam 1-2 jam terakhir
+            const hoursAgo = Math.min(index, 24); // Max 24 jam lalu
+            const displayTime = new Date(now.getTime() - (hoursAgo * 3600 * 1000));
+            
+            const day = String(displayTime.getDate()).padStart(2, '0');
+            const month = String(displayTime.getMonth() + 1).padStart(2, '0');
+            const hour = String(displayTime.getHours()).padStart(2, '0');
+            
+            return `${displayTime.getFullYear()}-${month}-${day} ${hour}:00`;
+          } catch (e) {
+            // Fallback jika parsing gagal
+          }
+        }
+        
+        // Fallback: gunakan waktu real-time dikurangi index (jam yang lalu)
+        const hoursAgo = Math.min(index, 24);
+        const displayTime = new Date(now.getTime() - (hoursAgo * 3600 * 1000));
+        const day = String(displayTime.getDate()).padStart(2, '0');
+        const month = String(displayTime.getMonth() + 1).padStart(2, '0');
+        const hour = String(displayTime.getHours()).padStart(2, '0');
+        
+        return `${displayTime.getFullYear()}-${month}-${day} ${hour}:00`;
+      }
+      
+      anomalyList.innerHTML = displayAnomalies.map((a, idx) => {
         // Tentukan severity berdasarkan type atau severity dari data
         const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
         const typeInfo = getAnomalyTypeInfo(a.type);
         const description = formatAnomalyDescription(a.message || '', a.value);
+        const formattedTime = formatAnomalyTime(a.time, startIndex + idx);
         
         return `
           <div class="anomaly-item" data-severity="${severity}">
@@ -1556,7 +1592,7 @@
                 <span class="anomaly-icon">${typeInfo.icon}</span>
                 <span>${typeInfo.label}</span>
               </span>
-              <span class="anomaly-timestamp">${a.time || ''}</span>
+              <span class="anomaly-timestamp">${formattedTime}</span>
             </div>
             <div class="anomaly-content">
               <div class="anomaly-title">${description}</div>

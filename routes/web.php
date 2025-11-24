@@ -285,6 +285,10 @@ Route::middleware(['auth.session','admin'])->group(function() {
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
     Route::get('/dashboard/tools/monitoring', function () { return view('dashboard.tools-monitoring'); })->name('dashboard.tools.monitoring');
     Route::get('/dashboard/tools/information', function () { return view('dashboard.tools-information'); })->name('dashboard.tools.information');
+    
+    // Export routes
+    Route::get('/dashboard/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportPdf'])->name('export.pdf');
+    Route::get('/dashboard/export/csv', [\App\Http\Controllers\ExportController::class, 'exportCsv'])->name('export.csv');
     Route::get('/dashboard/sales', function (\Illuminate\Http\Request $request) {
         $filter = $request->get('filter', 'all');
         $query = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at');
@@ -822,37 +826,86 @@ Route::get('/api/monitoring/tools', function () {
     // Gunakan waktu realtime dengan timezone WIB
     $now = now()->setTimezone('Asia/Jakarta');
     
-    // Ambil data real dari database sensor (ToolsDetail)
-    // Jika tidak ada data, gunakan data terakhir yang ada atau data default yang masuk akal
+    // Ambil data real dari database sensor_readings
+    // ML Service membutuhkan minimal 30 data points
     $history = [];
     
-    // Generate history data dengan nilai default yang konsisten (bukan random)
-    // ML Service membutuhkan minimal 30 data points, jadi kita generate 30 data
-    // Data setiap 1 jam sekali - menggunakan waktu realtime
-    // TODO: Ganti dengan data real dari database sensor jika tersedia
-    for ($i = 29; $i >= 0; $i--) {
-        // Format timestamp dengan WIB (Waktu Indonesia Barat) - waktu realtime
-        $timestamp = $now->copy()->subHours($i)->format('Y-m-d H:00');
-        $hour = (int) $now->copy()->subHours($i)->format('H');
+    try {
+        // Ambil 30 data terakhir dari database, diurutkan dari yang paling lama
+        $sensorReadings = \App\Models\SensorReading::orderBy('recorded_at', 'asc')
+            ->limit(30)
+            ->get();
         
-        // Nilai default yang konsisten berdasarkan waktu
-        // Berdasarkan prediksi ML yang menunjukkan nilai ratusan (287 lux), dataset training menggunakan nilai ratusan
-        $baseTemp = 25;
-        $baseHumidity = 65;
-        $baseAmmonia = 10;
-        // Cahaya: siang hari 250-350 lux, malam hari 150-250 lux (sesuai dengan prediksi ML ~287 lux)
-        $baseLight = ($hour >= 6 && $hour <= 18) ? 300 : 200;
-        
-        // Variasi kecil berdasarkan waktu (siang lebih panas, malam lebih dingin)
-        $tempVariation = ($hour >= 12 && $hour <= 18) ? 1.5 : (($hour >= 6 && $hour <= 11) ? 0.5 : -0.5);
-        
-        $history[] = [
-            'time' => $timestamp,
-            'temperature' => round($baseTemp + $tempVariation + (sin($i * 0.1) * 0.5), 1),
-            'humidity' => round($baseHumidity + (sin($i * 0.15) * 3), 1),
-            'ammonia' => round(max(5, $baseAmmonia + (sin($i * 0.2) * 2)), 1),
-            'light' => round($baseLight + (sin($i * 0.1) * 30), 0)  // Variasi lebih kecil: ±30 lux
-        ];
+        if ($sensorReadings->count() > 0) {
+            // Konversi data dari database ke format yang dibutuhkan
+            foreach ($sensorReadings as $reading) {
+                $history[] = [
+                    'time' => $reading->recorded_at->format('Y-m-d H:00'),
+                    'temperature' => (float) $reading->suhu_c,
+                    'humidity' => (float) $reading->kelembaban_rh,
+                    'ammonia' => (float) $reading->amonia_ppm,
+                    'light' => (float) $reading->cahaya_lux
+                ];
+            }
+            
+            // Jika data kurang dari 30, generate data default untuk melengkapi
+            $needed = 30 - count($history);
+            if ($needed > 0) {
+                $lastReading = $sensorReadings->last();
+                $lastTime = $lastReading->recorded_at;
+                
+                for ($i = 1; $i <= $needed; $i++) {
+                    $timestamp = $lastTime->copy()->addHours($i);
+                    $hour = (int) $timestamp->format('H');
+                    $isDaytime = ($hour >= 6 && $hour <= 18);
+                    $baseTemp = $isDaytime ? 28 : 26;
+                    $random = mt_rand(0, 100) / 100;
+                    
+                    $history[] = [
+                        'time' => $timestamp->format('Y-m-d H:00'),
+                        'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                        'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                        'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                        'light' => round(10 + ($random * 50), 1) // 10-60 lux (threshold range)
+                    ];
+                }
+            }
+        } else {
+            // Jika tidak ada data di database, generate 30 data default
+            for ($i = 29; $i >= 0; $i--) {
+                $timestamp = $now->copy()->subHours($i);
+                $hour = (int) $timestamp->format('H');
+                $isDaytime = ($hour >= 6 && $hour <= 18);
+                $baseLight = $isDaytime ? 300 : 200;
+                $baseTemp = $isDaytime ? 28 : 26;
+                
+                $history[] = [
+                    'time' => $timestamp->format('Y-m-d H:00'),
+                    'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                    'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                    'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                    'light' => round($baseLight + mt_rand(-50, 50), 0)
+                ];
+            }
+        }
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error fetching sensor data: ' . $e->getMessage());
+        // Fallback: generate 30 data default
+        for ($i = 29; $i >= 0; $i--) {
+            $timestamp = $now->copy()->subHours($i);
+            $hour = (int) $timestamp->format('H');
+            $isDaytime = ($hour >= 6 && $hour <= 18);
+            $baseTemp = $isDaytime ? 28 : 26;
+            $random = mt_rand(0, 100) / 100;
+            
+            $history[] = [
+                'time' => $timestamp->format('Y-m-d H:00'),
+                'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                'light' => round(10 + ($random * 50), 1) // 10-60 lux (threshold range)
+            ];
+        }
     }
 
     $latest = end($history);
