@@ -12,6 +12,9 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <!-- Google Fonts - Inter (Premium Typography) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -19,8 +22,8 @@
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" rel="stylesheet">
   
   <style>
-    * { font-family: 'Inter', -apple-system, sans-serif; }
-    body { background: #f8f9fa; margin: 0; }
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { background: #F8F9FB; margin: 0; }
     
     .sidebar {
       width: 220px;
@@ -87,11 +90,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -119,7 +122,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -160,7 +163,7 @@
     }
     
     .btn-add {
-      background: #69B578;
+      background: #22C55E;
       color: white;
       border: none;
       padding: 0.6rem 1.5rem;
@@ -215,8 +218,8 @@
     }
     
     .filter-tab.active {
-      color: #69B578;
-      border-bottom-color: #69B578;
+      color: #22C55E;
+      border-bottom-color: #22C55E;
       font-weight: 500;
     }
     
@@ -246,7 +249,7 @@
     
     .search-box input:focus {
       outline: none;
-      border-color: #69B578;
+      border-color: #22C55E;
       background: white;
     }
     
@@ -407,9 +410,15 @@
     /* Monitoring Dashboard */
     .monitoring-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.25rem;
       margin-bottom: 1.5rem;
+    }
+    
+    @media (min-width: 768px) {
+      .monitoring-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
     }
     
     /* Responsive Design */
@@ -498,22 +507,35 @@
     .sensor-card {
       background: white;
       border: 1px solid #e9ecef;
-      border-radius: 10px;
-      padding: 1rem 1rem 0.85rem;
+      border-radius: 16px;
+      padding: 1.5rem;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sensor-card:hover {
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      transform: translateY(-4px);
     }
     .sensor-card h6 {
-      margin: 0 0 0.25rem;
+      margin: 0 0 1rem;
       font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: .5px;
+      letter-spacing: 0.5px;
       font-weight: 600;
-      color: #6c757d;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sensor-card h6 .sensor-icon {
+      font-size: 1.125rem;
     }
     .sensor-value {
-      font-size: 1.7rem;
-      font-weight: 600;
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1.1;
       line-height: 1.1;
       margin: 0;
       color: #2F2F2F;
@@ -531,20 +553,41 @@
       margin-top: .5rem;
     }
     .trend-chip.up { color:#2F2F2F; }
-    .trend-chip.down { color:#dc3545; }
+    .trend-chip.down { color:#EF4444; }
     .prediction-banner {
-      background: linear-gradient(90deg,#69B578,#5a9d66);
+      background: linear-gradient(90deg, #FACC15, #FB923C);
       color: white;
-      border-radius: 10px;
-      padding: 1.1rem 1.25rem;
+      border-radius: 16px;
+      padding: 1.5rem 1.75rem;
       display: flex;
       align-items: center;
       gap: 1rem;
       margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(250, 204, 21, 0.2);
     }
-    .prediction-banner i { font-size: 1.4rem; }
-    .prediction-banner h5 { margin:0 0 .35rem; font-size: .95rem; font-weight:600; }
-    .prediction-banner p { margin:0; font-size:.7rem; opacity:.9; line-height:1.2; }
+    .prediction-banner i { 
+      font-size: 2rem; 
+      flex-shrink: 0;
+      opacity: 0.95;
+    }
+    .prediction-banner > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .prediction-banner h5 { 
+      margin:0 0 .5rem; 
+      font-size: 1.25rem; 
+      font-weight:700; 
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+    }
+    .prediction-banner p { 
+      margin:0; 
+      font-size:.875rem; 
+      opacity:.9; 
+      line-height:1.5; 
+      font-weight: 400;
+    }
     .chart-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -554,17 +597,75 @@
     }
     .chart-card h6 { margin:0 0 .75rem; font-size:.8rem; font-weight:600; color:#6c757d; }
     /* Forecast layout */
-    .forecast-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-    .forecast-col h5{ margin:0 0 .4rem; font-size:.78rem; font-weight:700; color:#2F2F2F; }
-    .metric-item{ display:flex; align-items:flex-start; gap:.6rem; padding:.55rem .6rem; border-radius:8px; background:#f8f9fa; font-size:.72rem; }
-    .metric-icon{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; background:#69B578; font-size:.8rem; flex:0 0 26px; }
+    /* Premium Forecast Grid - Compact & Efficient */
+    .forecast-grid{ 
+      display:grid; 
+      grid-template-columns:1fr 1fr; 
+      gap:0.75rem; 
+    }
+    .forecast-col h5{ 
+      margin:0 0 0.5rem; 
+      font-size:0.75rem; 
+      font-weight:700; 
+      color:#2F2F2F; 
+      text-transform:uppercase;
+      letter-spacing:0.05em;
+    }
+    .metric-item{ 
+      display:flex; 
+      align-items:center; 
+      gap:0.5rem; 
+      padding:0.5rem 0.75rem; 
+      border-radius:0.5rem; 
+      background:white;
+      border:1px solid #E5E7EB;
+      font-size:0.75rem;
+      transition:all 0.15s ease;
+    }
+    .metric-item:hover {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    .metric-icon{ 
+      width:24px; 
+      height:24px; 
+      border-radius:50%; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      color:white; 
+      background:#69B578; 
+      font-size:0.75rem; 
+      flex:0 0 24px;
+    }
     /* Warna sesuai kondisi: hijau=aman, kuning=perhatian, merah=bahaya */
-    .metric-item.risk-ok{ border-left:3px solid #28a745; background:#f0f9f4; }
-    .metric-item.risk-ok .metric-icon{ background:#28a745; } /* Hijau untuk aman */
-    .metric-item.risk-warn{ border-left:3px solid #ffc107; background:#fffbf0; }
-    .metric-item.risk-warn .metric-icon{ background:#ffc107; color:#000; } /* Kuning untuk perhatian */
-    .metric-item.risk-crit{ border-left:3px solid #dc3545; background:#fff0f0; }
-    .metric-item.risk-crit .metric-icon{ background:#dc3545; } /* Merah untuk bahaya */
+    .metric-item.risk-ok{ 
+      border-left:3px solid #22C55E; 
+      background:#F0FDF4; 
+    }
+    .metric-item.risk-ok .metric-icon{ 
+      background:#22C55E; 
+    }
+    .metric-item.risk-warn{ 
+      border-left:3px solid #F59E0B; 
+      background:#FFFBEB; 
+    }
+    .metric-item.risk-warn .metric-icon{ 
+      background:#F59E0B; 
+      color:#000; 
+    }
+    .metric-item.risk-crit{ 
+      border-left:3px solid #EF4444; 
+      background:#FEF2F2; 
+    }
+    .metric-item.risk-crit .metric-icon{ 
+      background:#EF4444; 
+    }
+    .metric-text {
+      flex:1;
+      line-height:1.4;
+      color:#374151;
+      font-weight:500;
+    }
     /* Pagination button styles */
     #anomalyPrevBtn:disabled, #anomalyNextBtn:disabled {
       opacity: 0.5;
@@ -583,31 +684,96 @@
       padding: 1rem 1.25rem;
     }
     .anomaly-card h6 { margin:0 0 .6rem; font-size:.8rem; font-weight:600; color:#6c757d; }
+    /* Premium Anomaly Card Design - Compact & Efficient */
     .anomaly-item {
-      display:flex;
-      align-items:flex-start;
-      gap:.75rem;
-      padding:.6rem .5rem;
-      border-radius:8px;
-      background:#f8f9fa;
-      margin-bottom:.5rem;
-      font-size:.75rem;
+      background: white;
+      border-radius: 0.625rem; /* rounded-lg */
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm lebih halus */
+      padding: 0.75rem 1rem; /* p-3 p-4 - lebih compact */
+      margin-bottom: 0.5rem;
+      border-left: 3px solid #EF4444; /* Border lebih tipis */
+      transition: all 0.15s ease;
     }
-    .anomaly-item:last-child { margin-bottom:0; }
-    .anomaly-item .anomaly-tag {
-      font-size:.6rem;
-      padding:.2rem .4rem;
-      background:#dc3545; /* Default merah untuk bahaya */
-      color:white;
-      border-radius:4px;
-      text-transform:uppercase;
-      letter-spacing:.5px;
-      font-weight:600;
+    .anomaly-item:hover {
+      box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
     }
-    /* Warna anomaly tag berdasarkan severity */
-    .anomaly-item[data-severity="critical"] .anomaly-tag { background:#dc3545; } /* Merah untuk bahaya */
-    .anomaly-item[data-severity="warning"] .anomaly-tag { background:#ffc107; color:#000; } /* Kuning untuk perhatian */
-    .anomaly-item[data-severity="normal"] .anomaly-tag { background:#28a745; } /* Hijau untuk aman */
+    .anomaly-item:last-child { margin-bottom: 0; }
+    
+    /* Anomaly Card Header - Compact */
+    .anomaly-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Badge Kategori Sensor - Compact */
+    .anomaly-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      font-size: 0.6875rem; /* 11px */
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+    .anomaly-badge.light {
+      background-color: #FEF3C7; /* yellow-100 */
+      color: #A16207; /* yellow-700 */
+    }
+    .anomaly-badge.temperature {
+      background-color: #DBEAFE; /* blue-100 */
+      color: #1E40AF; /* blue-700 */
+    }
+    .anomaly-badge.ammonia {
+      background-color: #E9D5FF; /* purple-100 */
+      color: #6B21A8; /* purple-700 */
+    }
+    .anomaly-badge.humidity {
+      background-color: #CFFAFE; /* cyan-100 */
+      color: #0E7490; /* cyan-700 */
+    }
+    .anomaly-badge.unknown {
+      background-color: #F3F4F6; /* gray-100 */
+      color: #374151; /* gray-700 */
+    }
+    
+    /* Icon dalam badge - Compact */
+    .anomaly-icon {
+      font-size: 0.75rem; /* 12px */
+      line-height: 1;
+    }
+    
+    /* Timestamp - Compact */
+    .anomaly-timestamp {
+      font-size: 0.6875rem; /* 11px */
+      color: #9CA3AF; /* gray-400 */
+      font-weight: 500;
+    }
+    
+    /* Anomaly Content - Compact */
+    .anomaly-content {
+      margin-top: 0.25rem;
+    }
+    .anomaly-title {
+      font-size: 0.8125rem; /* 13px */
+      font-weight: 600; /* font-semibold */
+      color: #111827; /* gray-900 */
+      line-height: 1.4;
+    }
+    
+    /* Border kiri berdasarkan severity */
+    .anomaly-item[data-severity="critical"] {
+      border-left-color: #EF4444; /* red-500 */
+    }
+    .anomaly-item[data-severity="warning"] {
+      border-left-color: #F59E0B; /* amber-500 */
+    }
+    .anomaly-item[data-severity="normal"] {
+      border-left-color: #10B981; /* emerald-500 */
+    }
     .loading-overlay { text-align:center; padding:2rem 0; font-size:.8rem; color:#6c757d; }
 
     /* Data preview */
@@ -720,11 +886,10 @@
   <main class="main-content">
     <!-- Monitoring Summary Banner (dynamic) -->
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
-      <i class="fa-solid fa-chart-line"></i>
+      <span style="font-size: 2rem; opacity: 0.95;">📊</span>
       <div>
-        <h5 id="envStatusTitle">Memuat... <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span></h5>
-        <p id="envStatusDetail">Analisis kondisi lingkungan kandang akan muncul di sini.</p>
-        <p id="envForecastDetail" style="margin-top:.4rem; font-weight:500;"></p>
+        <h5 id="envStatusTitle" style="margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em;">Memuat... <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span></h5>
+        <p id="envStatusDetail" style="margin: 0; font-size: 0.875rem; opacity: 0.9; line-height: 1.5; font-weight: 400;">Analisis kondisi lingkungan kandang akan muncul di sini.</p>
       </div>
     </div>
 
@@ -737,114 +902,55 @@
       <canvas id="trendChart" height="120"></canvas>
     </div>
 
+    <!-- Premium Forecast Summary - Compact -->
     <div class="chart-card" id="forecastCard" style="display:none;">
-      <h6>Ringkasan Prediksi (6 Jam & 24 Jam)</h6>
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Ringkasan Prediksi</h6>
       <div class="forecast-grid">
         <div class="forecast-col">
           <h5>6 Jam</h5>
-          <div id="forecastList6" style="display:grid; gap:.4rem;"></div>
+          <div id="forecastList6" style="display:grid; gap:0.5rem;"></div>
         </div>
         <div class="forecast-col">
           <h5>24 Jam</h5>
-          <div id="forecastList24" style="display:grid; gap:.4rem;"></div>
+          <div id="forecastList24" style="display:grid; gap:0.5rem;"></div>
         </div>
       </div>
     </div>
 
 
 
-    <!-- Anomaly List -->
+    <!-- Anomaly List - Compact -->
     <div class="anomaly-card" id="anomalyPanel" style="display:none;">
-      <h6>Deteksi Anomali Sensor</h6>
-      <div id="anomalyList"></div>
-      <div id="anomalyPagination" style="display:none; margin-top:.75rem; padding-top:.75rem; border-top:1px solid #e0e0e0;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
-          <div style="font-size:.75rem; color:#6c757d;">
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Deteksi Anomali Sensor</h6>
+      <div id="anomalyList" class="space-y-2"></div>
+      <!-- Premium Pagination - Compact -->
+      <div id="anomalyPagination" style="display:none; margin-top:1rem; padding-top:1rem; border-top:1px solid #E5E7EB;">
+        <div class="flex justify-between items-center gap-4">
+          <div class="text-xs text-gray-600">
             <span id="anomalyPageInfo">Halaman 1 dari 1</span>
           </div>
-          <div style="display:flex; gap:.25rem;">
-            <button id="anomalyPrevBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
-              <i class="fa-solid fa-chevron-left"></i> Sebelumnya
+          <div class="flex gap-2">
+            <button id="anomalyPrevBtn" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              <i class="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
             </button>
-            <button id="anomalyNextBtn" style="padding:.25rem .5rem; font-size:.75rem; border:1px solid #ddd; background:#fff; border-radius:4px; cursor:pointer;" disabled>
-              Selanjutnya <i class="fa-solid fa-chevron-right"></i>
+            <button id="anomalyNextBtn" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              Selanjutnya <i class="fa-solid fa-chevron-right ml-1"></i>
             </button>
           </div>
         </div>
       </div>
     </div>
     <div id="noAnomaly" style="display:none;" class="anomaly-card">
-      <h6>Deteksi Anomali Sensor</h6>
-      <p style="font-size:.75rem; color:#6c757d; margin:0;">Tidak ada anomali terdeteksi. Semua sensor dalam batas aman.</p>
-    </div>
-
-    
-    <!-- Content Section -->
-    <div style="padding: 1.5rem 0;">
-      <div class="content-card">
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-          <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="all">Semua Alat (1)</button>
-            <button class="filter-tab" data-filter="active">Aktif</button>
-            <button class="filter-tab" data-filter="inactive">Tidak Aktif</button>
-          </div>
-          <div class="filter-right">
-            <div class="search-box">
-              <i class="fa-solid fa-search"></i>
-              <input type="text" placeholder="Cari Produk">
-            </div>
-          </div>
+      <h6 class="text-sm font-semibold text-gray-700 mb-3">Deteksi Anomali Sensor</h6>
+      <div class="flex items-center justify-center py-8 px-4">
+        <div class="text-center">
+          <div class="text-3xl mb-2">✅</div>
+          <p class="text-xs text-gray-600 font-medium">Tidak ada anomali terdeteksi</p>
+          <p class="text-xs text-gray-500 mt-1">Semua sensor dalam batas aman</p>
         </div>
-        
-        <!-- Product Table -->
-        <table class="product-table">
-          <thead>
-            <tr>
-              <th class="checkbox-cell">
-                <input type="checkbox">
-              </th>
-              <th>Info Alat</th>
-              <th>Statistik</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Tool Row 1 -->
-            <tr data-status="active">
-              <td class="checkbox-cell">
-                <input type="checkbox">
-              </td>
-              <td>
-                <div class="product-info">
-                  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E" alt="Tool" class="product-img">
-                  <div>
-                    <div class="product-name">Kandang Ayam</div>
-                    <div class="product-subtitle">ChickPatrol Kamura</div>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <div class="rating-stars">
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-solid fa-star"></i>
-                  <i class="fa-regular fa-star"></i>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge">Aktif</span>
-              </td>
-              <td>
-                <span class="action-badge">Selected</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
+
   </main>
   
   <!-- Scripts -->
@@ -859,7 +965,7 @@
             icon: 'success',
             title: 'Berhasil!',
             text: message,
-            confirmButtonColor: '#69B578',
+            confirmButtonColor: '#22C55E',
             confirmButtonText: 'OK'
         });
     };
@@ -869,7 +975,7 @@
             icon: 'error',
             title: 'Oops...',
             text: message,
-            confirmButtonColor: '#dc3545',
+            confirmButtonColor: '#EF4444',
             confirmButtonText: 'OK'
         });
     };
@@ -934,91 +1040,210 @@
     const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
-    // Fungsi untuk menentukan status sensor berdasarkan threshold
+    // Fungsi untuk menentukan status sensor berdasarkan threshold (Premium Colors)
     function getSensorStatus(key, value){
       const thresholds = {
-        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 23, danger_high: 34 },
-        humidity: { ideal_min: 50, ideal_max: 70, warn_high: 80, danger_high: 80 },
+        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
+        humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
         ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
         light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
       };
       
+      // Premium colors: #22C55E (hijau), #FACC15 (kuning), #EF4444 (merah)
+      const premiumGreen = '#22C55E';
+      const premiumYellow = '#FACC15';
+      const premiumRed = '#EF4444';
+      
       const th = thresholds[key];
-      if (!th) return { status: 'unknown', color: '#6c757d' };
+      if (!th) return { status: 'tidak diketahui', color: '#6c757d' };
       
       if (key === 'temperature') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value < th.danger_low || value > th.danger_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
+        } else {
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'humidity') {
         if (value >= th.ideal_min && value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value > th.danger_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
-        } else if (value < th.ideal_min || value > th.ideal_max) {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'di luar batas aman', color: premiumRed };
+        } else if (value < th.warn_low || (value > th.ideal_max && value <= th.warn_high)) {
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'ammonia') {
         if (value <= th.ideal_max) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value > th.danger_max) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else if (value > th.warn_max) {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       } else if (key === 'light') {
-        // Untuk cahaya, nilai ratusan langsung dibandingkan dengan threshold 10-60
+        // Untuk cahaya, nilai aktual ratusan dibandingkan dengan threshold 10-60
         if (value >= th.ideal_low && value <= th.ideal_high) {
-          return { status: 'aman', color: '#28a745' }; // Hijau
+          return { status: 'aman', color: premiumGreen };
         } else if (value < th.warn_low || value > th.warn_high) {
-          return { status: 'di luar batas aman', color: '#dc3545' }; // Merah
+          return { status: 'di luar batas aman', color: premiumRed };
         } else {
-          return { status: 'perhatian', color: '#ffc107' }; // Kuning
+          return { status: 'perlu perhatian', color: premiumYellow };
         }
       }
       
-      return { status: 'unknown', color: '#6c757d' };
+      return { status: 'tidak diketahui', color: '#6c757d' };
     }
     
     function createSensorCard(key, label, value, unit, history, prediction){
-      // Determine trend (compare last two points)
+      // Determine trend (compare last 3 points untuk lebih akurat)
       const len = history.length;
       let trend = 'flat';
-      if (len >= 2){
+      let trendText = 'Stabil';
+      let trendIcon = 'fa-minus';
+      
+      if (len >= 3){
+        // Bandingkan 3 titik terakhir untuk menentukan trend
+        const val1 = history[len-3][key];
+        const val2 = history[len-2][key];
+        const val3 = history[len-1][key];
+        const avgDiff = ((val3 - val2) + (val2 - val1)) / 2;
+        
+        // Threshold untuk menentukan trend (sesuai dengan unit)
+        const threshold = (key === 'temperature') ? 0.3 : (key === 'humidity') ? 1 : (key === 'ammonia') ? 0.5 : 5;
+        
+        if (avgDiff > threshold) {
+          trend = 'up';
+          trendText = 'Naik';
+          trendIcon = 'fa-arrow-up';
+        } else if (avgDiff < -threshold) {
+          trend = 'down';
+          trendText = 'Turun';
+          trendIcon = 'fa-arrow-down';
+        } else {
+          trend = 'flat';
+          trendText = 'Stabil';
+          trendIcon = 'fa-minus';
+        }
+      } else if (len >= 2){
         const diff = history[len-1][key] - history[len-2][key];
-        if (diff > 0.2) trend = 'up'; else if (diff < -0.2) trend = 'down';
+        const threshold = (key === 'temperature') ? 0.3 : (key === 'humidity') ? 1 : (key === 'ammonia') ? 0.5 : 5;
+        if (diff > threshold) {
+          trend = 'up';
+          trendText = 'Naik';
+          trendIcon = 'fa-arrow-up';
+        } else if (diff < -threshold) {
+          trend = 'down';
+          trendText = 'Turun';
+          trendIcon = 'fa-arrow-down';
+        }
       }
       
       // Tentukan status sensor berdasarkan threshold
       const sensorStatus = getSensorStatus(key, value);
       
-      return `<div class="sensor-card" style="border-left: 4px solid ${sensorStatus.color};">
-        <h6>${label}</h6>
-        <p class="sensor-value">${value}<span class="sensor-unit">${unit}</span></p>
-        <div class="trend-chip ${trend}">
-          <i class="fa-solid fa-arrow-${trend==='down'?'down':'up'}"></i>
-          ${trend==='flat'?'Stabil': trend==='up'?'Naik':'Turun'}
-        </div>
-        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: ${sensorStatus.color}; font-weight: 600;">
-          <i class="fa-solid fa-circle" style="font-size: 0.5rem; margin-right: 0.25rem;"></i>
-          ${sensorStatus.status}
+      // Format nilai dengan presisi yang sesuai
+      const formattedValue = (key === 'temperature' || key === 'humidity') ? 
+        parseFloat(value).toFixed(1) : 
+        (key === 'ammonia') ? parseFloat(value).toFixed(1) : 
+        Math.round(parseFloat(value));
+      
+      // Tentukan ikon sensor
+      const sensorIcons = {
+        'temperature': '🌡️',
+        'humidity': '💧',
+        'ammonia': '💨',
+        'light': '💡'
+      };
+      const sensorIcon = sensorIcons[key] || '📊';
+      
+      // Tentukan warna premium sesuai status
+      const premiumColors = {
+        safe: { border: '#22C55E', bg: '#D1FAE5', text: '#065F46', icon: '✔' },
+        warning: { border: '#FACC15', bg: '#FEF3C7', text: '#92400E', icon: '⚠' },
+        danger: { border: '#EF4444', bg: '#FEE2E2', text: '#991B1B', icon: '❗' }
+      };
+      
+      let premiumColor;
+      if (sensorStatus.color === '#22C55E' || sensorStatus.status === 'aman') {
+        premiumColor = premiumColors.safe;
+      } else if (sensorStatus.color === '#EF4444' || sensorStatus.status === 'di luar batas aman') {
+        premiumColor = premiumColors.danger;
+      } else {
+        premiumColor = premiumColors.warning;
+      }
+      
+      // Format status text
+      const statusText = sensorStatus.status === 'aman' ? 'Aman' : 
+                        sensorStatus.status === 'di luar batas aman' ? 'Di Luar Batas Aman' :
+                        'Perlu Perhatian';
+      
+      return `<div class="sensor-card" style="border-left: 4px solid ${premiumColor.border};">
+        <h6 style="margin: 0 0 1rem; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.5rem;">
+          <span class="sensor-icon" style="font-size: 1.125rem;">${sensorIcon}</span>
+          ${label}
+        </h6>
+        <p class="sensor-value" style="margin: 0 0 1rem; font-size: 2.25rem; font-weight: 700; color: #111827; line-height: 1.1;">
+          ${formattedValue}<span class="sensor-unit" style="font-size: 1.125rem; font-weight: 500; color: #6B7280; margin-left: 0.25rem;">${unit}</span>
+        </p>
+        <div style="margin-top: 0.75rem;">
+          <span style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; border-radius: 9999px; background: ${premiumColor.bg}; color: ${premiumColor.text}; font-size: 0.875rem; font-weight: 600;">
+            ${premiumColor.icon} ${statusText}
+          </span>
         </div>
       </div>`;
     }
 
     function buildBanner(latest, status, forecast6, meta){
-      // Simple health heuristic
-      const titleEl = document.getElementById('envStatusTitle');
-      const detailEl = document.getElementById('envStatusDetail');
-      const forecastEl = document.getElementById('envForecastDetail');
-      const mlActiveBadge = document.getElementById('mlActiveBadge');
+      try {
+        const titleEl = document.getElementById('envStatusTitle');
+        const detailEl = document.getElementById('envStatusDetail');
+        const forecastEl = document.getElementById('envForecastDetail');
+        const mlActiveBadge = document.getElementById('mlActiveBadge');
+        
+        // Validasi elemen
+        if (!titleEl || !detailEl) {
+          console.error('Banner elements not found', { titleEl: !!titleEl, detailEl: !!detailEl });
+          return;
+        }
       
-      titleEl.textContent = 'Kondisi lingkungan ' + status.label;
+      // Format status label lebih profesional
+      const statusLabels = {
+        'baik': 'Kondisi Kandang Optimal',
+        'perhatian': 'Kondisi Kandang Perlu Perhatian',
+        'buruk': 'Kondisi Kandang Tidak Optimal',
+        'tidak diketahui': 'Status Tidak Dapat Ditentukan'
+      };
       
-      // Update detail dengan info bahwa ini dari ML (bukan simulasi)
-      detailEl.textContent = status.message + ' (Hasil analisis Machine Learning)';
+      const statusLabel = status.label || 'tidak diketahui';
+      const statusText = statusLabels[statusLabel] || 'Kondisi Kandang ' + statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
+      
+      // Format confidence - hanya di title
+      let confidenceText = '';
+      if (status.confidence !== undefined && status.confidence !== null) {
+        const confidencePercent = Math.round(status.confidence * 100);
+        confidenceText = ` (Tingkat Keyakinan: ${confidencePercent}%)`;
+      }
+      
+      // Title: hanya status dan confidence
+      if (titleEl) {
+        titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+      }
+      
+      // Detail: hanya message dan sumber (HILANGKAN duplikasi keyakinan dan prediksi)
+      if (detailEl) {
+        if (status.message) {
+          detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
+        } else {
+          detailEl.textContent = 'Hasil Analisis Machine Learning';
+        }
+      }
+      
+      // HILANGKAN prediksi 6 jam dari banner (jika elemen masih ada)
+      if (forecastEl) {
+        forecastEl.textContent = '';
+        forecastEl.style.display = 'none';
+      }
       
       // ML Active badge
       if (meta && meta.ml_connected) {
@@ -1031,54 +1256,206 @@
           if (mlActiveBadge) mlActiveBadge.style.display = 'none';
       }
       
-      // Build quick 6h forecast sentence from first two summaries (suhu & kelembaban)
-      const suhuSummary = forecast6.find(f=>f.metric==='Suhu');
-      const lembabSummary = forecast6.find(f=>f.metric==='Kelembaban');
-      if (suhuSummary && lembabSummary){
-        forecastEl.textContent = `Prediksi 6 jam: ${suhuSummary.trend} suhu (${suhuSummary.range.min}–${suhuSummary.range.max}°C) & ${lembabSummary.trend} kelembaban (${lembabSummary.range.min}–${lembabSummary.range.max}%).`;
+        // Set warna banner berdasarkan severity dengan gradient premium
+        const predictionBanner = document.getElementById('predictionBanner');
+        if (predictionBanner) {
+          const severity = status.severity || 'normal';
+          if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
+              predictionBanner.style.background = 'linear-gradient(90deg, #EF4444, #DC2626)'; // Merah premium untuk bahaya
+          } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
+              predictionBanner.style.background = 'linear-gradient(90deg, #FACC15, #FB923C)'; // Kuning-orange premium untuk perhatian
+          } else {
+              predictionBanner.style.background = 'linear-gradient(90deg, #22C55E, #16A34A)'; // Hijau premium untuk aman
+          }
+          
+          predictionBanner.style.display = 'flex';
+        }
+      } catch (error) {
+        console.error('Error in buildBanner:', error);
       }
-      
-      // Set warna banner berdasarkan severity: hijau=aman, kuning=perhatian, merah=bahaya
-      const severity = status.severity || 'normal';
-      if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('tidak optimal')) {
-          predictionBanner.style.background = 'linear-gradient(90deg, #dc3545, #c82333)'; // Merah untuk bahaya
-      } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
-          predictionBanner.style.background = 'linear-gradient(90deg, #ffc107, #e0a800)'; // Kuning untuk perhatian
-      } else {
-          predictionBanner.style.background = 'linear-gradient(90deg, #28a745, #218838)'; // Hijau untuk aman
-      }
-      
-      predictionBanner.style.display = 'flex';
     }
 
     let trendChart;
     function buildChart(history, prediction){
       const ctx = document.getElementById('trendChart').getContext('2d');
-      const labels = history.map(p => p.time).concat(prediction.temperature.map((_,i)=>'+'+(i+1)+'h'));
+      
+      // Format labels: show every hour dengan format WIB (realtime)
+      const historyLabels = history.map((p, i) => {
+        // Untuk data terakhir, gunakan waktu realtime saat ini
+        if (i === history.length - 1) {
+          const now = new Date();
+          const nowDay = String(now.getDate()).padStart(2, '0');
+          const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+          const nowHour = String(now.getHours()).padStart(2, '0');
+          const nowMinute = String(now.getMinutes()).padStart(2, '0');
+          return `${nowDay}/${nowMonth} ${nowHour}:${nowMinute}`;
+        }
+        
+        // Untuk data history lainnya, parse dari timestamp
+        const [datePart, timePart] = p.time.split(' ');
+        const [year, month, day] = datePart.split('-');
+        const [hour] = timePart.split(':');
+        
+        // Format: "DD/MM HH:00"
+        return `${day}/${month} ${hour}:00`;
+      });
+      const predictionLabels = prediction.temperature.map((_,i)=>'+'+(i+1)+'h');
+      const labels = [...historyLabels, ...predictionLabels];
+      
       const makeDataset = (label, key, color, predColor) => {
         const histData = history.map(p => p[key]);
         return [
-          { label: label+' (Hist)', data: histData, borderColor: color, backgroundColor: color+'33', tension:.25 },
-          { label: label+' (Pred)', data: Array(history.length).fill(null).concat(prediction[key]), borderColor: predColor, borderDash:[4,4], tension:.25 }
+          { 
+            label: label+' (Hist)', 
+            data: histData, 
+            borderColor: color, 
+            backgroundColor: color+'20', 
+            borderWidth: 2,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            pointBackgroundColor: color,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
+            tension: 0.4,
+            fill: false
+          },
+          { 
+            label: label+' (Pred)', 
+            data: Array(history.length).fill(null).concat(prediction[key]), 
+            borderColor: predColor, 
+            borderDash: [5, 5],
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: predColor,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
+            tension: 0.4,
+            fill: false
+          }
         ];
       };
+      
       const datasets = [
-        ...makeDataset('Suhu','temperature','#e63946','#e63946'),
-        ...makeDataset('Kelembaban','humidity','#457b9d','#457b9d'),
-        ...makeDataset('Amoniak','ammonia','#6d597a','#6d597a'),
-        ...makeDataset('Cahaya','light','#2a9d8f','#2a9d8f')
+        ...makeDataset('Suhu','temperature','#e63946','#ff6b6b'),
+        ...makeDataset('Kelembaban','humidity','#457b9d','#6c9bcf'),
+        ...makeDataset('Amoniak','ammonia','#6d597a','#9d7ba8'),
+        ...makeDataset('Cahaya','light','#2a9d8f','#4ecdc4')
       ];
+      
       if (trendChart) trendChart.destroy();
       trendChart = new Chart(ctx, {
-        type:'line',
-        data:{ labels, datasets },
-        options:{
-          responsive:true,
-          scales:{
-            x:{ ticks:{ maxRotation:0, autoSkip:true } },
-            y:{ beginAtZero:false }
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          interaction: {
+            intersect: false,
+            mode: 'index'
           },
-          plugins:{ legend:{ display:false } },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 15,
+                font: {
+                  size: 11,
+                  family: "'Inter', -apple-system, sans-serif",
+                  weight: '500'
+                },
+                color: '#2F2F2F'
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: {
+                size: 13,
+                weight: '600'
+              },
+              bodyFont: {
+                size: 12
+              },
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              displayColors: true,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y.toFixed(1);
+                  if (context.dataset.label.includes('Suhu')) label += '°C';
+                  else if (context.dataset.label.includes('Kelembaban')) label += '%';
+                  else if (context.dataset.label.includes('Amoniak')) label += ' ppm';
+                  else if (context.dataset.label.includes('Cahaya')) label += ' lux';
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: true,
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: true,
+                maxTicksLimit: 12,
+                font: {
+                  size: 10,
+                  family: "'Inter', -apple-system, sans-serif"
+                },
+                color: '#6c757d'
+              },
+              title: {
+                display: true,
+                text: 'Waktu',
+                font: {
+                  size: 12,
+                  weight: '600'
+                },
+                color: '#2F2F2F',
+                padding: { top: 10, bottom: 5 }
+              }
+            },
+            y: {
+              beginAtZero: false,
+              grid: {
+                display: true,
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                font: {
+                  size: 10,
+                  family: "'Inter', -apple-system, sans-serif"
+                },
+                color: '#6c757d',
+                callback: function(value) {
+                  return value.toFixed(0);
+                }
+              },
+              title: {
+                display: true,
+                text: 'Nilai Sensor',
+                font: {
+                  size: 12,
+                  weight: '600'
+                },
+                color: '#2F2F2F',
+                padding: { top: 5, bottom: 10 }
+              }
+            }
+          }
         }
       });
     }
@@ -1125,16 +1502,67 @@
       const displayAnomalies = allAnomalies.slice(startIndex, endIndex);
       
       // Render anomali
-      anomalyList.innerHTML = displayAnomalies.map(a=>{
+      // Helper function untuk mendapatkan icon dan badge class berdasarkan type
+      function getAnomalyTypeInfo(type) {
+        const typeLower = (type || 'unknown').toLowerCase();
+        const typeMap = {
+          'light': { icon: '💡', badgeClass: 'light', label: 'LIGHT' },
+          'temperature': { icon: '🌡️', badgeClass: 'temperature', label: 'TEMPERATURE' },
+          'ammonia': { icon: '🧪', badgeClass: 'ammonia', label: 'AMMONIA' },
+          'humidity': { icon: '💧', badgeClass: 'humidity', label: 'HUMIDITY' }
+        };
+        return typeMap[typeLower] || { icon: '⚠️', badgeClass: 'unknown', label: (type || 'UNKNOWN').toUpperCase() };
+      }
+      
+      // Helper function untuk format deskripsi ringkas
+      function formatAnomalyDescription(message, value) {
+        if (!message) return 'Anomali terdeteksi';
+        
+        // Extract nilai dan batas dari message jika ada
+        const valueMatch = message.match(/nilai:\s*([\d.]+)/i);
+        const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
+        const unitMatch = message.match(/(lux|ppm|°C|%)/i);
+        const unit = unitMatch ? unitMatch[1] : '';
+        
+        if (valueMatch && thresholdMatch) {
+          const val = parseFloat(valueMatch[1]).toFixed(1);
+          const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
+          const direction = message.includes('di atas') ? 'di atas' : message.includes('di bawah') ? 'di bawah' : '';
+          return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+        }
+        
+        // Jika ada z-score, format dengan z-score
+        const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
+        if (zScoreMatch && valueMatch) {
+          const val = parseFloat(valueMatch[1]).toFixed(1);
+          const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
+          return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+        }
+        
+        // Fallback: gunakan message asli tapi ringkas (hapus duplikasi nilai)
+        return message.replace(/\s*\(nilai:.*?\)/g, '').substring(0, 100);
+      }
+      
+      anomalyList.innerHTML = displayAnomalies.map(a => {
         // Tentukan severity berdasarkan type atau severity dari data
         const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
-        return `<div class='anomaly-item' data-severity="${severity}">
-          <span class='anomaly-tag'>${a.type || 'unknown'}</span>
-          <div>
-            <div style='font-size:.7rem; color:#6c757d;'>${a.time}</div>
-            <div>${a.message}${a.value !== undefined ? ` (nilai: ${a.value})` : ''}</div>
+        const typeInfo = getAnomalyTypeInfo(a.type);
+        const description = formatAnomalyDescription(a.message || '', a.value);
+        
+        return `
+          <div class="anomaly-item" data-severity="${severity}">
+            <div class="anomaly-header">
+              <span class="anomaly-badge ${typeInfo.badgeClass}">
+                <span class="anomaly-icon">${typeInfo.icon}</span>
+                <span>${typeInfo.label}</span>
+              </span>
+              <span class="anomaly-timestamp">${a.time || ''}</span>
+            </div>
+            <div class="anomaly-content">
+              <div class="anomaly-title">${description}</div>
+            </div>
           </div>
-        </div>`;
+        `;
       }).join('');
       
       // Update pagination info
@@ -1355,8 +1783,30 @@
         const forecastCard = document.getElementById('forecastCard');
         const list6 = document.getElementById('forecastList6');
         const list24 = document.getElementById('forecastList24');
-        list6.innerHTML = forecast_summary_6h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
-        list24.innerHTML = forecast_summary_24h.map(f=>`<div class="metric-item ${riskClass(f.risk)}">\n            <div class="metric-icon"><i class="fa-solid ${iconFor(f.metric)}"></i></div>\n            <div>${f.summary}</div>\n          </div>`).join('');
+        // Premium forecast rendering - compact & efficient
+        list6.innerHTML = forecast_summary_6h.map(f => {
+          const risk = riskClass(f.risk);
+          const icon = iconFor(f.metric);
+          // Extract hanya informasi penting dari summary
+          const summaryText = f.summary || '';
+          return `
+            <div class="metric-item ${risk}">
+              <div class="metric-icon"><i class="fa-solid ${icon}"></i></div>
+              <div class="metric-text">${summaryText}</div>
+            </div>
+          `;
+        }).join('');
+        list24.innerHTML = forecast_summary_24h.map(f => {
+          const risk = riskClass(f.risk);
+          const icon = iconFor(f.metric);
+          const summaryText = f.summary || '';
+          return `
+            <div class="metric-item ${risk}">
+              <div class="metric-icon"><i class="fa-solid ${icon}"></i></div>
+              <div class="metric-text">${summaryText}</div>
+            </div>
+          `;
+        }).join('');
         forecastCard.style.display='block';
         
         // ML Info Card - moved to Information Management page
@@ -1370,7 +1820,7 @@
         const errorBanner = document.getElementById('predictionBanner');
         if (errorBanner) {
           errorBanner.style.display = 'block';
-          errorBanner.style.background = '#dc3545';
+          errorBanner.style.background = '#EF4444';
           errorBanner.innerHTML = `
             <i class="fa-solid fa-exclamation-triangle"></i>
             <div>

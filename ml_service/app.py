@@ -129,22 +129,41 @@ def predict_sensor_classification(amonia, suhu, kelembaban, cahaya):
 
 def detect_anomaly(amonia, suhu, kelembaban, cahaya):
     """
-    Deteksi anomali pada data sensor dengan identifikasi sensor spesifik (skala ASLI)
-    Menggunakan statistik dataset untuk identifikasi yang lebih akurat
+    Deteksi anomali menggunakan Isolation Forest + threshold-based identification
+    - Isolation Forest sebagai penentu utama (prediction == -1)
+    - Early return jika tidak anomali
+    - Identifikasi sensor menggunakan threshold (lebih praktis)
+    - Fallback dengan deviasi/z-score jika threshold tidak mendeteksi sensor spesifik
     """
     X = np.array([[amonia, suhu, kelembaban, cahaya]])
     X_scaled = scaler_if.transform(X)
     prediction = model_if.predict(X_scaled)[0]
     score = model_if.score_samples(X_scaled)[0]
     
+    # HANYA gunakan hasil Isolation Forest untuk menentukan apakah ini anomali
     is_anomaly = prediction == -1
     
-    # Identifikasi sensor mana yang anomali berdasarkan threshold dan statistik dataset
+    # Early return jika tidak anomali
+    if not is_anomaly:
+        return {
+            'is_anomaly': False,
+            'anomaly_score': float(score),
+            'status': 'NORMAL',
+            'anomaly_sensors': [],
+            'anomaly_details': [],
+            'sensor_values': {
+                'ammonia': float(amonia),
+                'temperature': float(suhu),
+                'humidity': float(kelembaban),
+                'light': float(cahaya)
+            }
+        }
+    
+    # Jika Isolation Forest MENDETEKSI anomali, identifikasi sensor spesifik
     anomaly_sensors = []
     anomaly_details = []
     
     # Threshold dari model_metadata.json (sesuai aturan boiler)
-    # Menggunakan nilai dari model_metadata.json untuk konsistensi
     rf_thresholds = model_metadata.get('models', {}).get('random_forest', {}).get('thresholds', {})
     thresholds = {
         'amonia_ppm': rf_thresholds.get('amonia_ppm', {'ideal_max': 20, 'warn_max': 35, 'danger_max': 35}),
@@ -154,41 +173,56 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
         'cahaya_lux': rf_thresholds.get('cahaya_lux', {'ideal_low': 20, 'ideal_high': 40, 'warn_low': 10, 'warn_high': 60})
     }
     
-    # Gunakan statistik dataset jika tersedia untuk identifikasi yang lebih akurat
-    use_stats = SENSOR_STATS is not None
+    # Label dan unit untuk pesan
+    sensor_labels = {
+        'ammonia': 'Amoniak',
+        'temperature': 'Suhu',
+        'humidity': 'Kelembaban',
+        'light': 'Cahaya'
+    }
+    units = {
+        'ammonia': 'ppm',
+        'temperature': '°C',
+        'humidity': '%',
+        'light': 'lux'
+    }
     
-    # Cek setiap sensor
+    # Cek setiap sensor berdasarkan threshold
+    # Amonia
     if amonia > thresholds['amonia_ppm']['danger_max']:
         anomaly_sensors.append('ammonia')
         anomaly_details.append({
             'sensor': 'ammonia',
             'value': amonia,
-            'message': f'Amoniak berbahaya (nilai: {amonia:.1f} ppm)'
+            'message': f'Amoniak berbahaya (nilai: {amonia:.1f} ppm, di atas {thresholds["amonia_ppm"]["danger_max"]} ppm)',
+            'severity': 'critical'
         })
     elif amonia > thresholds['amonia_ppm']['warn_max']:
         anomaly_sensors.append('ammonia')
         anomaly_details.append({
             'sensor': 'ammonia',
             'value': amonia,
-            'message': f'Amoniak tinggi (nilai: {amonia:.1f} ppm)'
+            'message': f'Amoniak tinggi (nilai: {amonia:.1f} ppm, di atas {thresholds["amonia_ppm"]["warn_max"]} ppm)',
+            'severity': 'warning'
         })
     
-    if suhu < thresholds['suhu_c']['danger_low'] or suhu > thresholds['suhu_c']['danger_high']:
+    # Suhu
+    if suhu < thresholds['suhu_c']['danger_low']:
         anomaly_sensors.append('temperature')
-        if suhu < thresholds['suhu_c']['danger_low']:
-            anomaly_details.append({
-                'sensor': 'temperature',
-                'value': suhu,
-                'message': f'Suhu terlalu rendah (nilai: {suhu:.1f}°C)',
-                'severity': 'critical'
-            })
-        else:
-            anomaly_details.append({
-                'sensor': 'temperature',
-                'value': suhu,
-                'message': f'Suhu terlalu tinggi (nilai: {suhu:.1f}°C)',
-                'severity': 'critical'
-            })
+        anomaly_details.append({
+            'sensor': 'temperature',
+            'value': suhu,
+            'message': f'Suhu terlalu rendah (nilai: {suhu:.1f}°C, di bawah {thresholds["suhu_c"]["danger_low"]}°C)',
+            'severity': 'critical'
+        })
+    elif suhu > thresholds['suhu_c']['danger_high']:
+        anomaly_sensors.append('temperature')
+        anomaly_details.append({
+            'sensor': 'temperature',
+            'value': suhu,
+            'message': f'Suhu terlalu tinggi (nilai: {suhu:.1f}°C, di atas {thresholds["suhu_c"]["danger_high"]}°C)',
+            'severity': 'critical'
+        })
     
     # Kelembaban: Warning untuk <50% atau >70%, Danger untuk >80%
     if kelembaban < thresholds['kelembaban_rh']['ideal_min']:
@@ -216,7 +250,8 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
             'severity': 'critical'
         })
     
-    # Untuk cahaya, TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
+    # Cahaya: threshold 10-60 lux (aturan boiler)
+    # Catatan: nilai aktual mungkin ratusan, tapi threshold tetap 10-60
     if cahaya < thresholds['cahaya_lux']['warn_low']:
         anomaly_sensors.append('light')
         anomaly_details.append({
@@ -234,21 +269,140 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
             'severity': 'critical'
         })
     
-    # Jika Isolation Forest mendeteksi anomali tapi tidak ada sensor spesifik yang terdeteksi
-    # Gunakan statistik dataset atau deviasi untuk menentukan sensor yang paling menyimpang
-    if is_anomaly and len(anomaly_sensors) == 0:
-        # Hitung deviasi dari nilai normal untuk setiap sensor
-        # Gunakan statistik dataset jika tersedia, jika tidak gunakan nilai default
-        if use_stats:
-            # Gunakan statistik dataset untuk menghitung z-score (deviasi standar)
-            deviations = {}
-            sensor_values_map = {
-                'ammonia': amonia,
-                'temperature': suhu,
-                'humidity': kelembaban,
-                'light': cahaya
-            }
+    # SELALU jalankan fallback untuk menambahkan sensor lain yang menyimpang
+    # Bahkan jika threshold sudah mendeteksi beberapa sensor, tetap cek sensor lain menggunakan z-score/deviasi
+    # Ini memastikan semua sensor yang menyimpang terdeteksi, bukan hanya yang melanggar threshold
+    sensor_values_map = {
+        'ammonia': amonia,
+        'temperature': suhu,
+        'humidity': kelembaban,
+        'light': cahaya
+    }
+    
+    # Prioritas 1: Gunakan z-score dari statistik dataset jika tersedia
+    use_stats = SENSOR_STATS is not None
+    if use_stats:
+        deviations = {}
+        for sensor_name, value in sensor_values_map.items():
+            # Skip sensor yang sudah terdeteksi oleh threshold
+            if sensor_name in anomaly_sensors:
+                continue
+                
+            stats = SENSOR_STATS.get(sensor_name, {})
+            mean = stats.get('mean', 0)
+            std = stats.get('std', 1)
+            if std > 0:
+                # Z-score: berapa standar deviasi dari mean
+                z_score = abs(value - mean) / std
+                deviations[sensor_name] = z_score
+            else:
+                deviations[sensor_name] = 0
+        
+        # Ambil sensor dengan z-score tinggi (menyimpang dari mean)
+        sorted_deviations = sorted(deviations.items(), key=lambda x: x[1], reverse=True)
+        
+        # Tambahkan sensor dengan z-score > 1.0 (menyimpang signifikan)
+        for sensor_name, z_score in sorted_deviations:
+            if z_score > 1.0 and sensor_name not in anomaly_sensors:
+                anomaly_sensors.append(sensor_name)
+                value = sensor_values_map[sensor_name]
+                severity = 'critical' if z_score > 2.0 else 'warning'
+                
+                anomaly_details.append({
+                    'sensor': sensor_name,
+                    'value': value,
+                    'message': f'{sensor_labels.get(sensor_name, sensor_name)} menyimpang (nilai: {value:.1f} {units.get(sensor_name, "")}, z-score: {z_score:.2f})',
+                    'severity': severity,
+                    'z_score': float(z_score)
+                })
+        
+        # Jika tidak ada sensor dengan z-score > 1.0, ambil top 2 sensor dengan deviasi terbesar
+        if len(anomaly_sensors) == 0:
+            for sensor_name, z_score in sorted_deviations[:2]:
+                if sensor_name not in anomaly_sensors:
+                    anomaly_sensors.append(sensor_name)
+                    value = sensor_values_map[sensor_name]
+                    severity = 'critical' if z_score > 1.5 else 'warning'
+                    
+                    anomaly_details.append({
+                        'sensor': sensor_name,
+                        'value': value,
+                        'message': f'{sensor_labels.get(sensor_name, sensor_name)} menyimpang (nilai: {value:.1f} {units.get(sensor_name, "")}, z-score: {z_score:.2f})',
+                        'severity': severity,
+                        'z_score': float(z_score)
+                    })
+    else:
+        # Prioritas 2: Fallback dengan deviasi relatif dari nilai normal
+        # Nilai normal berdasarkan dataset training (dari histogram)
+        deviations = {}
+        for sensor_name, value in sensor_values_map.items():
+            # Skip sensor yang sudah terdeteksi oleh threshold
+            if sensor_name in anomaly_sensors:
+                continue
+                
+            if sensor_name == 'ammonia':
+                deviations[sensor_name] = abs(value - 15) / 15 if value > 0 else 0  # Normal ~15 ppm
+            elif sensor_name == 'temperature':
+                deviations[sensor_name] = abs(value - 29) / 29 if value > 0 else 0  # Normal ~29°C
+            elif sensor_name == 'humidity':
+                deviations[sensor_name] = abs(value - 51) / 51 if value > 0 else 0  # Normal ~51%
+            elif sensor_name == 'light':
+                deviations[sensor_name] = abs(value - 340) / 340 if value > 0 else 0  # Normal ~340 lux
+        
+        # Ambil sensor dengan deviasi terbesar (top 2)
+        if deviations:
+            sorted_deviations = sorted(deviations.items(), key=lambda x: x[1], reverse=True)
+            for sensor_name, dev in sorted_deviations[:2]:
+                if dev > 0.1 and sensor_name not in anomaly_sensors:  # Hanya jika deviasi signifikan (>10%)
+                    anomaly_sensors.append(sensor_name)
+                    anomaly_details.append({
+                        'sensor': sensor_name,
+                        'value': sensor_values_map[sensor_name],
+                        'message': f'{sensor_labels.get(sensor_name, sensor_name)} menyimpang (nilai: {sensor_values_map[sensor_name]:.1f} {units.get(sensor_name, "")})',
+                        'severity': 'warning'
+                    })
+    
+    # Jika setelah semua pengecekan masih tidak ada sensor yang terdeteksi (sangat jarang)
+    # Gunakan sensor dengan deviasi terbesar sebagai fallback terakhir
+    if len(anomaly_sensors) == 0:
+        # Fallback terakhir: ambil sensor dengan nilai paling ekstrem
+        max_dev_sensor = 'ammonia'  # Default
+        max_dev = 0
+        for sensor_name, value in sensor_values_map.items():
+            if sensor_name == 'ammonia':
+                dev = abs(value - 15) / 15 if value > 0 else 0
+            elif sensor_name == 'temperature':
+                dev = abs(value - 29) / 29 if value > 0 else 0
+            elif sensor_name == 'humidity':
+                dev = abs(value - 51) / 51 if value > 0 else 0
+            elif sensor_name == 'light':
+                dev = abs(value - 340) / 340 if value > 0 else 0
+            else:
+                dev = 0
             
+            if dev > max_dev:
+                max_dev = dev
+                max_dev_sensor = sensor_name
+        
+        if max_dev > 0:
+            anomaly_sensors.append(max_dev_sensor)
+            anomaly_details.append({
+                'sensor': max_dev_sensor,
+                'value': sensor_values_map[max_dev_sensor],
+                'message': f'{sensor_labels.get(max_dev_sensor, max_dev_sensor)} menyimpang (nilai: {sensor_values_map[max_dev_sensor]:.1f} {units.get(max_dev_sensor, "")})',
+                'severity': 'warning'
+            })
+        sensor_values_map = {
+            'ammonia': amonia,
+            'temperature': suhu,
+            'humidity': kelembaban,
+            'light': cahaya
+        }
+        
+        # Prioritas 1: Gunakan z-score dari statistik dataset jika tersedia
+        use_stats = SENSOR_STATS is not None
+        if use_stats:
+            deviations = {}
             for sensor_name, value in sensor_values_map.items():
                 stats = SENSOR_STATS.get(sensor_name, {})
                 mean = stats.get('mean', 0)
@@ -258,48 +412,46 @@ def detect_anomaly(amonia, suhu, kelembaban, cahaya):
                     z_score = abs(value - mean) / std
                     deviations[sensor_name] = z_score
                 else:
-                    deviations[sensor_name] = 999
+                    deviations[sensor_name] = 0
             
-            # Identifikasi semua sensor dengan z-score > 1.5 (menyimpang lebih dari 1.5 std)
-            # Atau ambil 2 sensor dengan deviasi terbesar
+            # Ambil sensor dengan z-score tinggi (menyimpang dari mean)
             sorted_deviations = sorted(deviations.items(), key=lambda x: x[1], reverse=True)
             
-            # Ambil sensor dengan deviasi tinggi (z-score > 1.5 atau top 2)
+            # Ambil semua sensor dengan z-score > 1.0 atau top 2 jika tidak ada yang > 1.0
             for sensor_name, z_score in sorted_deviations:
-                if z_score > 1.5 or len(anomaly_sensors) < 2:
+                if z_score > 1.0 or len(anomaly_sensors) < 2:
                     if sensor_name not in anomaly_sensors:
                         anomaly_sensors.append(sensor_name)
+                        value = sensor_values_map[sensor_name]
+                        severity = 'critical' if z_score > 2.0 else 'warning'
+                        
                         anomaly_details.append({
                             'sensor': sensor_name,
-                            'value': sensor_values_map[sensor_name],
-                            'message': f'Anomali terdeteksi pada sensor {sensor_name} (nilai: {sensor_values_map[sensor_name]:.1f}, z-score: {z_score:.2f})',
+                            'value': value,
+                            'message': f'{sensor_labels.get(sensor_name, sensor_name)} menyimpang (nilai: {value:.1f} {units.get(sensor_name, "")}, z-score: {z_score:.2f})',
+                            'severity': severity,
                             'z_score': float(z_score)
                         })
         else:
-            # Fallback: gunakan deviasi relatif dari nilai normal
-            # Untuk cahaya, TIDAK dikonversi - nilai aktual ratusan langsung dibandingkan dengan threshold 10-60
-            # Normal ~30 lux (aturan boiler), tapi data aktual ratusan, jadi gunakan nilai normal 300 untuk perhitungan deviasi
+            # Prioritas 2: Fallback dengan deviasi relatif dari nilai normal
+            # Nilai normal berdasarkan dataset training (dari histogram)
             deviations = {
-                'ammonia': abs(amonia - 15) / 15 if amonia > 0 else 999,  # Normal ~15 ppm
-                'temperature': abs(suhu - 28) / 28 if suhu > 0 else 999,  # Normal ~28°C
-                'humidity': abs(kelembaban - 60) / 60 if kelembaban > 0 else 999,  # Normal ~60%
-                'light': abs(cahaya - 300) / 300 if cahaya > 0 else 999  # Normal ~300 lux (data aktual ratusan)
+                'ammonia': abs(amonia - 15) / 15 if amonia > 0 else 0,  # Normal ~15 ppm
+                'temperature': abs(suhu - 29) / 29 if suhu > 0 else 0,  # Normal ~29°C
+                'humidity': abs(kelembaban - 51) / 51 if kelembaban > 0 else 0,  # Normal ~51%
+                'light': abs(cahaya - 340) / 340 if cahaya > 0 else 0  # Normal ~340 lux
             }
             
             # Sensor dengan deviasi terbesar
             max_dev_sensor = max(deviations, key=deviations.get)
-            sensor_values_map = {
-                'ammonia': amonia,
-                'temperature': suhu,
-                'humidity': kelembaban,
-                'light': cahaya
-            }
-            anomaly_sensors.append(max_dev_sensor)
-            anomaly_details.append({
-                'sensor': max_dev_sensor,
-                'value': sensor_values_map[max_dev_sensor],
-                'message': f'Anomali terdeteksi pada sensor {max_dev_sensor} (nilai: {sensor_values_map[max_dev_sensor]:.1f})'
-            })
+            if deviations[max_dev_sensor] > 0.1:  # Hanya jika deviasi signifikan (>10%)
+                anomaly_sensors.append(max_dev_sensor)
+                anomaly_details.append({
+                    'sensor': max_dev_sensor,
+                    'value': sensor_values_map[max_dev_sensor],
+                    'message': f'{sensor_labels.get(max_dev_sensor, max_dev_sensor)} menyimpang (nilai: {sensor_values_map[max_dev_sensor]:.1f} {units.get(max_dev_sensor, "")})',
+                    'severity': 'warning'
+                })
     
     return {
         'is_anomaly': bool(is_anomaly),
@@ -453,8 +605,10 @@ def predict():
         status_result = predict_sensor_classification(amonia, suhu, kelembaban, cahaya)
         
         # Detect anomalies in history
+        # Gunakan semua 30 data points yang dikirim (sesuai dengan LSTM sequence length)
+        # Konsisten dengan input model dan memanfaatkan semua data yang tersedia
         anomalies = []
-        for h in history[-24:]:  # Check last 24 hours
+        for h in history:  # Check all history data (30 data points)
             amonia_val = h.get('ammonia', h.get('amonia_ppm', 0))
             suhu_val = h.get('temperature', h.get('suhu_c', 0))
             kelembaban_val = h.get('humidity', h.get('kelembaban_rh', 0))

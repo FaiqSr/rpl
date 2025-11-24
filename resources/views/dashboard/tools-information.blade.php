@@ -9,6 +9,9 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
+  <!-- Google Fonts - Inter (Premium Typography) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -16,8 +19,8 @@
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" rel="stylesheet">
   
   <style>
-    * { font-family: 'Inter', -apple-system, sans-serif; }
-    body { background: #f8f9fa; margin: 0; }
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { background: #F8F9FB; margin: 0; }
     
     .sidebar {
       width: 220px;
@@ -120,11 +123,11 @@
     .sidebar-menu-item:hover,
     .sidebar-menu-item.active {
       background: #f8f9fa;
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .sidebar-menu-item i {
@@ -152,7 +155,7 @@
     
     .sidebar-submenu a:hover,
     .sidebar-submenu a.active {
-      color: #69B578;
+      color: #22C55E;
     }
     
     .chevron-icon {
@@ -262,7 +265,7 @@
       left: 0;
       width: 4px;
       height: 100%;
-      background: linear-gradient(180deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%);
     }
     
     .threshold-card:hover {
@@ -290,7 +293,7 @@
       align-items: center;
       justify-content: center;
       font-size: 1.2rem;
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
       color: white;
     }
     
@@ -385,7 +388,7 @@
     }
     
     .classification-card.baik::before {
-      background: linear-gradient(180deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%);
     }
     
     .classification-card.perhatian {
@@ -394,7 +397,7 @@
     }
     
     .classification-card.perhatian::before {
-      background: linear-gradient(180deg, #ffc107 0%, #ffb300 100%);
+      background: linear-gradient(180deg, #FACC15 0%, #EAB308 100%);
     }
     
     .classification-card.buruk {
@@ -403,7 +406,7 @@
     }
     
     .classification-card.buruk::before {
-      background: linear-gradient(180deg, #dc3545 0%, #c82333 100%);
+      background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
     }
     
     .classification-card:hover {
@@ -429,17 +432,17 @@
     }
     
     .classification-card.baik .classification-icon {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
       color: white;
     }
     
     .classification-card.perhatian .classification-icon {
-      background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+      background: linear-gradient(135deg, #FACC15 0%, #EAB308 100%);
       color: #000;
     }
     
     .classification-card.buruk .classification-icon {
-      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
       color: white;
     }
     
@@ -1037,7 +1040,7 @@
               Tes Kirim Pesan
             </button>
             <button type="submit" id="saveTelegramBtn"
-                    style="padding:.5rem 1rem; background:#28a745; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
+                    style="padding:.5rem 1rem; background:#22C55E; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
               <i class="fa-solid fa-save me-1"></i>
               Simpan
             </button>
@@ -1106,7 +1109,7 @@
           icon: 'warning',
           title: 'Data Belum Lengkap',
           text: 'Silakan isi Token Bot dan Chat ID terlebih dahulu.',
-          confirmButtonColor: '#ffc107'
+          confirmButtonColor: '#FACC15'
         });
         return;
       }
@@ -1137,7 +1140,7 @@
             icon: 'success',
             title: 'Pesan Terkirim!',
             text: 'Pesan test berhasil dikirim ke Telegram Anda.',
-            confirmButtonColor: '#28a745'
+            confirmButtonColor: '#22C55E'
           });
           checkTelegramStatus();
         } else {
@@ -1145,7 +1148,7 @@
             icon: 'error',
             title: 'Gagal Mengirim',
             text: data.message || 'Terjadi kesalahan saat mengirim pesan.',
-            confirmButtonColor: '#dc3545'
+            confirmButtonColor: '#EF4444'
           });
         }
       } catch (error) {
@@ -1172,7 +1175,7 @@
           icon: 'warning',
           title: 'Data Belum Lengkap',
           text: 'Silakan isi Token Bot dan Chat ID terlebih dahulu.',
-          confirmButtonColor: '#ffc107'
+          confirmButtonColor: '#FACC15'
         });
         return;
       }
@@ -1199,7 +1202,7 @@
             icon: 'success',
             title: 'Berhasil Disimpan!',
             text: 'Pengaturan Telegram berhasil disimpan.',
-            confirmButtonColor: '#28a745'
+            confirmButtonColor: '#22C55E'
           });
           checkTelegramStatus();
         } else {
@@ -1207,7 +1210,7 @@
             icon: 'error',
             title: 'Gagal Menyimpan',
             text: data.message || 'Terjadi kesalahan saat menyimpan pengaturan.',
-            confirmButtonColor: '#dc3545'
+            confirmButtonColor: '#EF4444'
           });
         }
       } catch (error) {
