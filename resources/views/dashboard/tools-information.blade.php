@@ -1529,25 +1529,51 @@
     // Load notification status
     async function loadNotificationStatus() {
       const statusEl = document.getElementById('notificationStatus');
+      
+      // Show loading state
+      if (statusEl) {
+        statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...';
+        statusEl.style.color = '#6c757d';
+        statusEl.style.background = '#f8f9fa';
+        statusEl.style.borderColor = '#e9ecef';
+      }
+      
       try {
         const response = await fetch('/api/telegram/notification-status', {
           method: 'GET',
           headers: {
-            'Accept': 'application/json'
-          }
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          cache: 'no-cache'
         });
         
-        const data = await response.json();
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
-        if (data.success) {
+        // Try to parse JSON
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Error parsing JSON:', parseError);
+          throw new Error('Invalid JSON response');
+        }
+        
+        // Handle response
+        if (data && typeof data === 'object') {
+          const enabled = data.enabled === true || data.enabled === 'true' || data.enabled === 1;
+          
           const toggle = document.getElementById('telegramNotificationsEnabled');
           if (toggle) {
-            toggle.checked = data.enabled;
+            toggle.checked = enabled;
           }
           
           // Update status display
           if (statusEl) {
-            if (data.enabled) {
+            if (enabled) {
               statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim setiap 5 menit';
               statusEl.style.color = '#155724';
               statusEl.style.background = '#d4edda';
@@ -1559,15 +1585,22 @@
               statusEl.style.borderColor = '#f5c6cb';
             }
           }
+        } else {
+          throw new Error('Invalid response format');
         }
       } catch (error) {
         console.error('Error loading notification status:', error);
         if (statusEl) {
-          statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i> Error memuat status';
+          statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i> Error memuat status: ' + (error.message || 'Unknown error');
           statusEl.style.color = '#856404';
           statusEl.style.background = '#fff3cd';
           statusEl.style.borderColor = '#ffeaa7';
         }
+        
+        // Retry after 2 seconds
+        setTimeout(() => {
+          loadNotificationStatus();
+        }, 2000);
       }
     }
     

@@ -1125,13 +1125,13 @@ Route::get('/api/monitoring/tools', function () {
             'history_hours' => count($history),
             'history_count' => count($history),
             'ml_source' => $mlSource,
-            'ml_connected' => (bool) $isMLConnected, // Pastikan boolean, bukan string
+            'ml_connected' => (bool) $isMLConnected, 
             'ml_model_name' => $mlMetadata['model_name'] ?? null,
             'ml_model_version' => $mlMetadata['model_version'] ?? null,
             'ml_accuracy' => $mlMetadata['accuracy'] ?? null,
             'ml_confidence' => $mlMetadata['confidence'] ?? null,
             'ml_prediction_time' => $mlMetadata['prediction_time'] ?? null,
-            'data_source' => 'ml_service', // Selalu dari ML service (bukan dummy)
+            'data_source' => 'ml_service', 
             'warning' => !$isMLConnected ? 'ML Service tidak terhubung, menggunakan fallback prediction' : null
         ],
         'latest' => $latest,

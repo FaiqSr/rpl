@@ -17,6 +17,27 @@ class TelegramNotificationService
     }
 
     /**
+     * Helper function untuk membaca nilai dari .env file langsung (bypass config cache)
+     */
+    protected function getEnvValue($key, $default = null)
+    {
+        $envFile = base_path('.env');
+        if (!file_exists($envFile)) {
+            return $default;
+        }
+        $envContent = file_get_contents($envFile);
+        if ($envContent === false) {
+            return $default;
+        }
+        if (preg_match('/^' . preg_quote($key, '/') . '\s*=\s*(.*)$/m', $envContent, $matches)) {
+            $value = trim($matches[1]);
+            $value = trim($value, '"\'');
+            return $value;
+        }
+        return $default;
+    }
+
+    /**
      * Kirim notifikasi kondisi kandang ke Telegram
      * 
      * @param array $latest Nilai sensor terkini
@@ -28,6 +49,16 @@ class TelegramNotificationService
      */
     public function sendMonitoringNotification($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h)
     {
+        // Check if Telegram notifications are enabled
+        // Read directly from .env file to ensure latest value (bypass config cache)
+        $telegramEnabled = $this->getEnvValue('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
+        
+        // Handle string 'true'/'false' and boolean true/false
+        if ($telegramEnabled === 'false' || $telegramEnabled === false || $telegramEnabled === '0' || $telegramEnabled === 0) {
+            Log::info('Telegram notifications disabled - skipping notification', ['enabled' => $telegramEnabled]);
+            return false;
+        }
+
         if (!$this->botToken || !$this->chatId) {
             Log::warning('Telegram credentials not configured');
             return false;
@@ -106,7 +137,7 @@ class TelegramNotificationService
         };
         
         $getTrendIndicator = function($values) {
-            if (count($values) < 2) return 'Stabil';
+            if (!is_array($values) || count($values) < 2) return '➡️ Stabil';
             $first = $values[0];
             $last = $values[count($values) - 1];
             $diff = $last - $first;
@@ -159,28 +190,46 @@ class TelegramNotificationService
         }
         
         // Prediksi 6 Jam
+        // $prediction_6h memiliki struktur: ['temperature' => [...], 'humidity' => [...], 'ammonia' => [...], 'light' => [...]]
         $pred6Text = [];
-        if (!empty($prediction_6h)) {
-            $tempPred = array_column($prediction_6h, 'temperature');
-            $humPred = array_column($prediction_6h, 'humidity');
-            $ammPred = array_column($prediction_6h, 'ammonia');
-            $lightPred = array_column($prediction_6h, 'light');
+        if (!empty($prediction_6h) && is_array($prediction_6h)) {
+            $tempPred = isset($prediction_6h['temperature']) && is_array($prediction_6h['temperature']) ? $prediction_6h['temperature'] : [];
+            $humPred = isset($prediction_6h['humidity']) && is_array($prediction_6h['humidity']) ? $prediction_6h['humidity'] : [];
+            $ammPred = isset($prediction_6h['ammonia']) && is_array($prediction_6h['ammonia']) ? $prediction_6h['ammonia'] : [];
+            $lightPred = isset($prediction_6h['light']) && is_array($prediction_6h['light']) ? $prediction_6h['light'] : [];
             
-            $pred6Text[] = "Suhu: " . round(min($tempPred), 1) . "–" . round(max($tempPred), 1) . "°C";
-            $pred6Text[] = "Kelembaban: " . round(min($humPred), 1) . "–" . round(max($humPred), 1) . "%";
-            $pred6Text[] = "Amoniak: " . round(min($ammPred), 1) . "–" . round(max($ammPred), 1) . " ppm";
-            $pred6Text[] = "Cahaya: " . round(min($lightPred), 1) . "–" . round(max($lightPred), 1) . " lux";
+            if (!empty($tempPred)) {
+                $pred6Text[] = "Suhu: " . round(min($tempPred), 1) . "–" . round(max($tempPred), 1) . "°C";
+            }
+            if (!empty($humPred)) {
+                $pred6Text[] = "Kelembaban: " . round(min($humPred), 1) . "–" . round(max($humPred), 1) . "%";
+            }
+            if (!empty($ammPred)) {
+                $pred6Text[] = "Amoniak: " . round(min($ammPred), 1) . "–" . round(max($ammPred), 1) . " ppm";
+            }
+            if (!empty($lightPred)) {
+                $pred6Text[] = "Cahaya: " . round(min($lightPred), 1) . "–" . round(max($lightPred), 1) . " lux";
+            }
+            
+            if (empty($pred6Text)) {
+                $pred6Text[] = "Data prediksi tidak tersedia";
+            }
         } else {
             $pred6Text[] = "Data prediksi tidak tersedia";
         }
         
         // Indikator Risiko Tren
         $trends = [];
-        if (!empty($prediction_6h)) {
-            $trends['temperature'] = $getTrendIndicator(array_column($prediction_6h, 'temperature'));
-            $trends['humidity'] = $getTrendIndicator(array_column($prediction_6h, 'humidity'));
-            $trends['ammonia'] = $getTrendIndicator(array_column($prediction_6h, 'ammonia'));
-            $trends['light'] = $getTrendIndicator(array_column($prediction_6h, 'light'));
+        if (!empty($prediction_6h) && is_array($prediction_6h)) {
+            $tempPred = isset($prediction_6h['temperature']) && is_array($prediction_6h['temperature']) ? $prediction_6h['temperature'] : [];
+            $humPred = isset($prediction_6h['humidity']) && is_array($prediction_6h['humidity']) ? $prediction_6h['humidity'] : [];
+            $ammPred = isset($prediction_6h['ammonia']) && is_array($prediction_6h['ammonia']) ? $prediction_6h['ammonia'] : [];
+            $lightPred = isset($prediction_6h['light']) && is_array($prediction_6h['light']) ? $prediction_6h['light'] : [];
+            
+            $trends['temperature'] = !empty($tempPred) ? $getTrendIndicator($tempPred) : '➡️ Stabil';
+            $trends['humidity'] = !empty($humPred) ? $getTrendIndicator($humPred) : '➡️ Stabil';
+            $trends['ammonia'] = !empty($ammPred) ? $getTrendIndicator($ammPred) : '➡️ Stabil';
+            $trends['light'] = !empty($lightPred) ? $getTrendIndicator($lightPred) : '➡️ Stabil';
         } else {
             $trends = ['temperature' => '➡️ Stabil', 'humidity' => '➡️ Stabil', 'ammonia' => '➡️ Stabil', 'light' => '➡️ Stabil'];
         }

@@ -313,17 +313,516 @@ Route::prefix('telegram')->name('telegram.')->group(function () {
     
     // Get status notifikasi
     Route::get('/notification-status', function () {
-        $enabled = env('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
-        // Handle string 'true'/'false' and boolean true/false
-        $isEnabled = ($enabled === 'true' || $enabled === true || $enabled === '1' || $enabled === 1);
-        
-        return response()->json([
+        // Default response
+        $defaultResponse = [
             'success' => true,
-            'enabled' => $isEnabled,
-            'bot_token' => env('TELEGRAM_BOT_TOKEN') ? 'configured' : 'not_configured',
-            'chat_id' => env('TELEGRAM_CHAT_ID') ? 'configured' : 'not_configured',
-            'raw_value' => $enabled // For debugging
-        ]);
+            'enabled' => true,
+            'bot_token' => 'not_configured',
+            'chat_id' => 'not_configured',
+            'raw_value' => 'true'
+        ];
+        
+        try {
+            $envFile = base_path('.env');
+            
+            // Check if .env file exists and is readable
+            if (!file_exists($envFile)) {
+                Log::warning('.env file not found', ['file' => $envFile]);
+                return response()->json($defaultResponse);
+            }
+            
+            if (!is_readable($envFile)) {
+                Log::warning('.env file not readable', ['file' => $envFile]);
+                return response()->json($defaultResponse);
+            }
+            
+            // Read .env file with error suppression
+            $envContent = @file_get_contents($envFile);
+            if ($envContent === false || empty($envContent)) {
+                Log::warning('Failed to read .env file content');
+                return response()->json($defaultResponse);
+            }
+            
+            // Helper function untuk extract value dari .env content
+            $getValue = function($key, $content, $default = null) {
+                try {
+                    $pattern = '/^' . preg_quote($key, '/') . '\s*=\s*(.*)$/m';
+                    if (preg_match($pattern, $content, $matches)) {
+                        $value = trim($matches[1]);
+                        $value = trim($value, '"\'');
+                        return $value;
+                    }
+                } catch (\Exception $e) {
+                    // Silently fail and return default
+                }
+                return $default;
+            };
+            
+            // Read values from .env
+            $enabled = $getValue('TELEGRAM_NOTIFICATIONS_ENABLED', $envContent, 'true');
+            $botToken = $getValue('TELEGRAM_BOT_TOKEN', $envContent, '');
+            $chatId = $getValue('TELEGRAM_CHAT_ID', $envContent, '');
+            
+            // Handle string 'true'/'false' and boolean true/false
+            $isEnabled = ($enabled === 'true' || $enabled === true || $enabled === '1' || $enabled === 1);
+            
+            return response()->json([
+                'success' => true,
+                'enabled' => $isEnabled,
+                'bot_token' => !empty($botToken) ? 'configured' : 'not_configured',
+                'chat_id' => !empty($chatId) ? 'configured' : 'not_configured',
+                'raw_value' => $enabled
+            ]);
+            
+        } catch (\Error $e) {
+            // Catch fatal errors
+            Log::error('Fatal error reading notification status', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json($defaultResponse);
+            
+        } catch (\Exception $e) {
+            // Catch exceptions
+            Log::error('Exception reading notification status', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json($defaultResponse);
+            
+        } catch (\Throwable $e) {
+            // Catch any other throwable
+            Log::error('Throwable error reading notification status', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json($defaultResponse);
+        }
     })->name('notification-status');
+});
+
+// Robot Status API Routes
+Route::prefix('robots')->name('robots.')->group(function () {
+    Route::get('/status', function () {
+        try {
+            $robots = \App\Models\Robot::all()->map(function ($robot) {
+                return [
+                    'robot_id' => $robot->robot_id,
+                    'name' => $robot->name,
+                    'model' => $robot->model,
+                    'location' => $robot->location,
+                    'operational_status' => $robot->operational_status,
+                    'status_text' => $robot->getStatusText(),
+                    'status_badge_class' => $robot->getStatusBadgeClass(),
+                    'battery_level' => $robot->battery_level,
+                    'last_activity_at' => $robot->last_activity_at?->toIso8601String(),
+                    'last_activity_text' => $robot->getLastActivityText(),
+                    'current_position' => $robot->current_position,
+                    'total_distance_today' => $robot->total_distance_today,
+                    'operating_hours_today' => $robot->operating_hours_today,
+                    'operating_hours_formatted' => gmdate('H:i', $robot->operating_hours_today * 60),
+                    'uptime_percentage' => $robot->uptime_percentage,
+                    'health_status' => $robot->health_status,
+                    'patrol_count_today' => $robot->patrol_count_today,
+                    'health_summary' => $robot->health_status ? 
+                        (collect($robot->health_status)->every(fn($v) => $v === 'normal' || $v === 'good') ? 
+                            'Semua sistem normal' : 'Perlu perhatian') : 
+                        'Tidak diketahui'
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'robots' => $robots,
+                'timestamp' => now()->toIso8601String()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching robot status: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat status robot',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    })->name('status');
+    
+    // Start Patrol
+    Route::post('/{robotId}/start-patrol', function ($robotId) {
+        try {
+            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            
+            // Validasi: robot harus dalam status yang bisa di-start
+            if (!in_array($robot->operational_status, ['idle', 'offline', 'charging'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Robot tidak dapat memulai patrol saat ini'
+                ], 400);
+            }
+            
+            // Update status
+            $robot->update([
+                'operational_status' => 'operating',
+                'last_activity_at' => now()
+            ]);
+            
+            // Log activity
+            \App\Models\RobotActivity::create([
+                'robot_id' => $robotId,
+                'activity_type' => 'patrol_start',
+                'description' => 'Patrol dimulai secara manual',
+                'occurred_at' => now()
+            ]);
+            
+            // TODO: Kirim command ke robot hardware (via MQTT/HTTP/Serial)
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Patrol berhasil dimulai',
+                'robot' => $robot->fresh()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error starting patrol: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memulai patrol: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('start-patrol');
+    
+    // Stop Patrol
+    Route::post('/{robotId}/stop-patrol', function ($robotId) {
+        try {
+            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            
+            if ($robot->operational_status !== 'operating') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Robot tidak sedang beroperasi'
+                ], 400);
+            }
+            
+            $robot->update([
+                'operational_status' => 'idle',
+                'last_activity_at' => now()
+            ]);
+            
+            \App\Models\RobotActivity::create([
+                'robot_id' => $robotId,
+                'activity_type' => 'patrol_end',
+                'description' => 'Patrol dihentikan secara manual',
+                'occurred_at' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Patrol berhasil dihentikan'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error stopping patrol: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghentikan patrol: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('stop-patrol');
+    
+    // Return to Base
+    Route::post('/{robotId}/return-to-base', function ($robotId) {
+        try {
+            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            
+            $robot->update([
+                'operational_status' => 'charging',
+                'last_activity_at' => now()
+            ]);
+            
+            \App\Models\RobotActivity::create([
+                'robot_id' => $robotId,
+                'activity_type' => 'position_update',
+                'description' => 'Robot kembali ke base station',
+                'position' => 'Base Station',
+                'occurred_at' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Robot sedang kembali ke base station'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error returning to base: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('return-to-base');
+    
+    // Emergency Stop
+    Route::post('/{robotId}/emergency-stop', function ($robotId) {
+        try {
+            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            
+            $robot->update([
+                'operational_status' => 'offline',
+                'last_activity_at' => now()
+            ]);
+            
+            \App\Models\RobotActivity::create([
+                'robot_id' => $robotId,
+                'activity_type' => 'error',
+                'description' => 'EMERGENCY STOP - Dihentikan secara manual',
+                'occurred_at' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'EMERGENCY STOP diaktifkan'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error emergency stop: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('emergency-stop');
+    
+    // Get maintenance schedule untuk robot
+    Route::get('/{robotId}/maintenance', function ($robotId) {
+        try {
+            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            
+            // Get upcoming maintenance
+            $upcoming = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+                ->whereIn('status', ['scheduled', 'in_progress'])
+                ->orderBy('scheduled_date', 'asc')
+                ->get()
+                ->map(function ($m) {
+                    return [
+                        'id' => $m->id,
+                        'type' => $m->maintenance_type,
+                        'type_text' => $m->getMaintenanceTypeText(),
+                        'title' => $m->title,
+                        'scheduled_date' => $m->scheduled_date->format('Y-m-d'),
+                        'scheduled_date_formatted' => $m->scheduled_date->format('d/m/Y'),
+                        'days_until' => $m->getDaysUntilScheduled(),
+                        'is_overdue' => $m->isOverdue(),
+                        'status' => $m->status,
+                        'status_badge_class' => $m->getStatusBadgeClass()
+                    ];
+                });
+            
+            // Get next service date
+            $nextService = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+                ->where('status', 'scheduled')
+                ->orderBy('scheduled_date', 'asc')
+                ->first();
+            
+            // Get maintenance history (last 5)
+            $history = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+                ->where('status', 'completed')
+                ->orderBy('completed_date', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($m) {
+                    return [
+                        'id' => $m->id,
+                        'type_text' => $m->getMaintenanceTypeText(),
+                        'title' => $m->title,
+                        'completed_date' => $m->completed_date->format('d/m/Y'),
+                        'cost' => $m->cost,
+                        'technician' => $m->technician_name
+                    ];
+                });
+            
+            return response()->json([
+                'success' => true,
+                'upcoming' => $upcoming,
+                'next_service' => $nextService ? [
+                    'date' => $nextService->scheduled_date->format('Y-m-d'),
+                    'date_formatted' => $nextService->scheduled_date->format('d/m/Y'),
+                    'days_until' => $nextService->getDaysUntilScheduled(),
+                    'title' => $nextService->title,
+                    'is_overdue' => $nextService->isOverdue()
+                ] : null,
+                'history' => $history
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching maintenance: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('maintenance');
+});
+
+// Tools/Robots CRUD API
+Route::prefix('tools')->name('tools.')->group(function () {
+    // Get all tools (robots)
+    Route::get('/', function () {
+        try {
+            $robots = \App\Models\Robot::all()->map(function ($robot) {
+                return [
+                    'id' => $robot->id,
+                    'robot_id' => $robot->robot_id,
+                    'name' => $robot->name,
+                    'model' => $robot->model,
+                    'location' => $robot->location,
+                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive',
+                    'operational_status' => $robot->operational_status,
+                    'category' => 'Robot', // Default category
+                    'description' => 'Robot monitoring otomatis',
+                    'rating' => 4, // Default rating
+                    'image' => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'tools' => $robots
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching tools: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data tools'
+            ], 500);
+        }
+    })->name('index');
+    
+    // Create new tool (robot)
+    Route::post('/', function (Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'model' => 'required|string|max:255',
+                'location' => 'nullable|string|max:255',
+                'category' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'nullable|string|in:active,inactive'
+            ]);
+            
+            // Generate robot_id
+            $robotId = 'CHICKPATROL-' . str_pad(\App\Models\Robot::count() + 1, 3, '0', STR_PAD_LEFT);
+            
+            $operationalStatus = ($validated['status'] ?? 'active') === 'active' ? 'idle' : 'offline';
+            
+            $robot = \App\Models\Robot::create([
+                'robot_id' => $robotId,
+                'name' => $validated['name'],
+                'model' => $validated['model'],
+                'location' => $validated['location'] ?? null,
+                'operational_status' => $operationalStatus,
+                'battery_level' => 100,
+                'last_activity_at' => now(),
+                'health_status' => [
+                    'motors' => 'normal',
+                    'sensors' => 'normal',
+                    'battery' => 'good',
+                    'navigation' => 'normal'
+                ]
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Alat berhasil ditambahkan',
+                'tool' => [
+                    'id' => $robot->id,
+                    'robot_id' => $robot->robot_id,
+                    'name' => $robot->name,
+                    'model' => $robot->model,
+                    'location' => $robot->location,
+                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive'
+                ]
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error creating tool: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan alat: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('store');
+    
+    // Update tool (robot)
+    Route::put('/{id}', function (Request $request, $id) {
+        try {
+            $robot = \App\Models\Robot::findOrFail($id);
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'model' => 'required|string|max:255',
+                'location' => 'nullable|string|max:255',
+                'category' => 'nullable|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'nullable|string|in:active,inactive'
+            ]);
+            
+            $operationalStatus = ($validated['status'] ?? 'active') === 'active' ? 
+                ($robot->operational_status === 'offline' ? 'idle' : $robot->operational_status) : 
+                'offline';
+            
+            $robot->update([
+                'name' => $validated['name'],
+                'model' => $validated['model'],
+                'location' => $validated['location'] ?? null,
+                'operational_status' => $operationalStatus
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Alat berhasil diperbarui',
+                'tool' => [
+                    'id' => $robot->id,
+                    'robot_id' => $robot->robot_id,
+                    'name' => $robot->name,
+                    'model' => $robot->model,
+                    'location' => $robot->location,
+                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive'
+                ]
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error updating tool: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui alat: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('update');
+    
+    // Delete tool (robot)
+    Route::delete('/{id}', function ($id) {
+        try {
+            $robot = \App\Models\Robot::findOrFail($id);
+            $robot->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Alat berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error deleting tool: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus alat: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('delete');
 });
 // });
