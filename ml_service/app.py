@@ -227,6 +227,33 @@ def predict_sensor_classification(amonia, suhu, kelembaban, cahaya):
     }
 
 
+def generate_status_message(status_label, confidence):
+    """
+    Generate status message yang informatif dan mudah dipahami peternak
+    """
+    confidence_pct = confidence * 100
+    
+    status_messages = {
+        'BAIK': 'Semua parameter lingkungan dalam kondisi optimal. Kandang siap untuk pertumbuhan ayam yang sehat.',
+        'PERHATIAN': 'Beberapa parameter lingkungan perlu diperhatikan. Lakukan pengecekan ventilasi, suhu, dan kelembaban. Periksa juga ketersediaan pakan dan air minum.',
+        'BURUK': 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam. Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan. Jika perlu, hubungi dokter hewan.'
+    }
+    
+    # Confidence level description
+    if confidence_pct >= 80:
+        confidence_desc = 'Sangat yakin'
+    elif confidence_pct >= 60:
+        confidence_desc = 'Cukup yakin'
+    else:
+        confidence_desc = 'Perlu verifikasi manual'
+    
+    # Message yang informatif dengan action items
+    base_message = status_messages.get(status_label, 'Status tidak dapat ditentukan. Silakan refresh halaman.')
+    message = f"{base_message} (Tingkat keyakinan sistem: {confidence_desc})"
+    
+    return message
+
+
 def detect_anomaly(amonia, suhu, kelembaban, cahaya):
     """
     Deteksi anomali menggunakan Isolation Forest + threshold-based identification
@@ -1002,7 +1029,7 @@ def predict():
                 'status': status_result['status'],  # Original status label (BAIK, PERHATIAN, BURUK)
                 'probability': status_result['probability'],  # Include probability dict
                 'confidence': float(status_result['confidence']),
-                'message': f"Status kandang: {status_result['status']} (Keyakinan: {status_result['confidence']*100:.1f}%)"
+                'message': generate_status_message(status_result['status'], status_result['confidence'])
             },
             'anomaly': latest_anomaly_result,  # Include latest anomaly detection
             'ml_metadata': {

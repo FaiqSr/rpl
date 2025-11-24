@@ -1080,8 +1080,26 @@ Route::get('/api/monitoring/tools', function () {
     ];
 
     // Pastikan selalu menggunakan hasil dari ML service
-    $mlSource = $mlMetadata['source'] ?? (($mlResults && isset($mlResults['source'])) ? $mlResults['source'] : 'fallback');
+    // Cek source dari mlResults terlebih dahulu, lalu mlMetadata
+    $mlSource = 'fallback';
+    if (isset($mlResults) && isset($mlResults['source']) && $mlResults['source'] === 'ml_service') {
+        $mlSource = 'ml_service';
+    } elseif (isset($mlMetadata['source']) && $mlMetadata['source'] === 'ml_service') {
+        $mlSource = 'ml_service';
+    }
+    
     $isMLConnected = $mlService->testConnection();
+    
+    // Jika testConnection() true tapi source masih fallback, berarti ada masalah di getPredictions()
+    // Log untuk debugging
+    if ($isMLConnected && $mlSource === 'fallback') {
+        \Illuminate\Support\Facades\Log::warning('ML Service connected but getPredictions returned fallback', [
+            'mlResults_source' => $mlResults['source'] ?? 'not set',
+            'mlMetadata_source' => $mlMetadata['source'] ?? 'not set',
+            'has_mlResults' => isset($mlResults),
+            'has_mlMetadata' => isset($mlMetadata)
+        ]);
+    }
     
     // Jika ML service tidak terhubung, beri warning di meta
     if (!$isMLConnected && $mlSource === 'fallback') {
@@ -1107,7 +1125,7 @@ Route::get('/api/monitoring/tools', function () {
             'history_hours' => count($history),
             'history_count' => count($history),
             'ml_source' => $mlSource,
-            'ml_connected' => $isMLConnected,
+            'ml_connected' => (bool) $isMLConnected, // Pastikan boolean, bukan string
             'ml_model_name' => $mlMetadata['model_name'] ?? null,
             'ml_model_version' => $mlMetadata['model_version'] ?? null,
             'ml_accuracy' => $mlMetadata['accuracy'] ?? null,

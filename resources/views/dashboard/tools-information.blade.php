@@ -471,6 +471,76 @@
       margin: 0;
     }
     
+    /* Toggle Switch Styles - Premium */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 56px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 30px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-slider-button {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider .toggle-slider-button {
+      transform: translateX(26px);
+      box-shadow: 0 3px 8px rgba(34, 197, 94, 0.4), 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .toggle-switch input:focus + .toggle-slider {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
+    }
+    
+    .toggle-switch input:disabled + .toggle-slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background-color: #e2e8f0;
+    }
+    
+    .toggle-switch:hover input:not(:disabled) + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+    }
+    
+    .toggle-switch:hover input:not(:disabled):checked + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
     /* ML Model Information */
     .ml-info-grid {
       display: grid;
@@ -1060,6 +1130,38 @@
             </div>
           </div>
           
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.5rem;">
+              Notifikasi Otomatis
+            </label>
+            <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius:10px; border:1px solid #e9ecef; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:.85rem; font-weight:700; color:#2F2F2F; margin-bottom:.4rem; display:flex; align-items:center; gap:.5rem;">
+                  <i class="fa-solid fa-bell" style="color:#22C55E;"></i>
+                  Kirim Notifikasi Setiap 5 Menit
+                </div>
+                <div style="font-size:.75rem; color:#6c757d; line-height:1.5; margin-bottom:.5rem;">
+                  Notifikasi akan dikirim otomatis ke Telegram setiap 5 menit sekali, bahkan saat membuka halaman dashboard lain.
+                </div>
+                <div id="notificationStatus" style="font-size:.7rem; color:#6c757d; padding:.5rem; background:#fff; border-radius:6px; border:1px solid #e9ecef; margin-top:.5rem;">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...
+                </div>
+              </div>
+              <div style="flex-shrink:0; display:flex; align-items:center; padding-top:.25rem;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="telegramNotificationsEnabled">
+                  <span class="toggle-slider">
+                    <span class="toggle-slider-button"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <small style="font-size:.7rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.75rem; padding:.5rem; background:#fff3cd; border-radius:6px; border-left:3px solid #facc15;">
+              <i class="fa-solid fa-info-circle" style="color:#856404;"></i>
+              <span>Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.15rem .4rem; border-radius:4px; font-size:.65rem;">php artisan schedule:work</code></span>
+            </small>
+          </div>
+          
           <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
             <button type="button" id="testTelegramBtn" 
                     style="padding:.5rem 1rem; background:#17a2b8; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
@@ -1080,6 +1182,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
   
   <script>
     // Telegram Settings Functions
@@ -1328,17 +1431,31 @@
         };
         
         const source = meta?.ml_source || mlData.source || 'fallback';
-        const connected = meta?.ml_connected || false;
+        // Handle boolean dari JSON (bisa true/false atau "True"/"False" dari PHP)
+        const connectedRaw = meta?.ml_connected;
+        const connected = connectedRaw === true || connectedRaw === 'True' || connectedRaw === 1 || (connectedRaw === undefined && source === 'ml_service');
         
         // Status Connection
         const statusEl = document.getElementById('mlConnectionStatus');
         if (statusEl) {
+          // Cek apakah benar-benar terhubung ke ML service
           if (connected && source === 'ml_service') {
             statusEl.innerHTML = '<span class="ml-status-badge connected"><i class="fa-solid fa-check-circle"></i> Terhubung ke ML Service</span>';
+          } else if (source === 'ml_service' && !connected) {
+            statusEl.innerHTML = '<span class="ml-status-badge disconnected"><i class="fa-solid fa-times-circle"></i> ML Service Tidak Tersedia</span>';
           } else {
             statusEl.innerHTML = `<span class="ml-status-badge ${source === 'fallback' ? 'fallback' : 'disconnected'}"><i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i> ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}</span>`;
           }
         }
+        
+        console.log('ML Connection Status:', { 
+          source, 
+          connected, 
+          connectedRaw, 
+          meta_ml_connected: meta?.ml_connected,
+          meta_ml_source: meta?.ml_source,
+          mlData_source: mlData?.source 
+        });
         
         // Accuracy
         const accuracyEl = document.getElementById('mlAccuracy');
@@ -1398,7 +1515,129 @@
       
       // Initial status check
       setTimeout(checkTelegramStatus, 500);
+      
+      // Load notification status
+      loadNotificationStatus();
+      
+      // Toggle notification switch
+      const notificationToggle = document.getElementById('telegramNotificationsEnabled');
+      if (notificationToggle) {
+        notificationToggle.addEventListener('change', toggleNotifications);
+      }
     });
+    
+    // Load notification status
+    async function loadNotificationStatus() {
+      const statusEl = document.getElementById('notificationStatus');
+      try {
+        const response = await fetch('/api/telegram/notification-status', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const toggle = document.getElementById('telegramNotificationsEnabled');
+          if (toggle) {
+            toggle.checked = data.enabled;
+          }
+          
+          // Update status display
+          if (statusEl) {
+            if (data.enabled) {
+              statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim setiap 5 menit';
+              statusEl.style.color = '#155724';
+              statusEl.style.background = '#d4edda';
+              statusEl.style.borderColor = '#c3e6cb';
+            } else {
+              statusEl.innerHTML = '<i class="fa-solid fa-times-circle" style="color:#dc2626;"></i> <strong style="color:#dc2626;">Nonaktif</strong> - Notifikasi tidak akan dikirim';
+              statusEl.style.color = '#721c24';
+              statusEl.style.background = '#f8d7da';
+              statusEl.style.borderColor = '#f5c6cb';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading notification status:', error);
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i> Error memuat status';
+          statusEl.style.color = '#856404';
+          statusEl.style.background = '#fff3cd';
+          statusEl.style.borderColor = '#ffeaa7';
+        }
+      }
+    }
+    
+    // Toggle notifications
+    async function toggleNotifications(event) {
+      const enabled = event.target.checked;
+      const toggle = event.target;
+      const statusEl = document.getElementById('notificationStatus');
+      toggle.disabled = true;
+      
+      // Update status display immediately (optimistic update)
+      if (statusEl) {
+        if (enabled) {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Mengaktifkan...';
+        } else {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menonaktifkan...';
+        }
+      }
+      
+      try {
+        const response = await fetch('/api/telegram/toggle-notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Reload status to get updated value
+          await loadNotificationStatus();
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: data.message,
+            confirmButtonColor: '#22C55E',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          // Revert toggle if failed
+          toggle.checked = !enabled;
+          await loadNotificationStatus(); // Reload to show correct status
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: data.message || 'Gagal mengubah status notifikasi',
+            confirmButtonColor: '#EF4444'
+          });
+        }
+      } catch (error) {
+        // Revert toggle if error
+        toggle.checked = !enabled;
+        await loadNotificationStatus(); // Reload to show correct status
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan saat mengubah status notifikasi',
+          confirmButtonColor: '#EF4444'
+        });
+      } finally {
+        toggle.disabled = false;
+      }
+    }
   </script>
 </body>
 </html>

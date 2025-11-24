@@ -25,5 +25,11 @@ class AppServiceProvider extends ServiceProvider
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
+        
+        // Schedule untuk mengirim notifikasi Telegram setiap 5 menit
+        Schedule::command('telegram:send-monitoring')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 }

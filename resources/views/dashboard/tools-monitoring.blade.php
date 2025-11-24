@@ -503,6 +503,13 @@
       .prediction-banner p {
         font-size: .65rem !important;
       }
+      .prediction-banner .prob-badge {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 0.5rem !important;
+      }
+      .prediction-banner p div {
+        font-size: 0.7rem !important;
+      }
     }
     .sensor-card {
       background: white;
@@ -588,6 +595,41 @@
       line-height:1.5; 
       font-weight: 400;
     }
+    .prediction-banner p div {
+      margin-bottom: 0.5rem;
+    }
+    .prediction-banner p div:last-child {
+      margin-bottom: 0;
+    }
+    /* Styling untuk probabilitas badge di banner */
+    .prediction-banner .prob-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .prediction-banner .prob-badge.badge-baik {
+      background: rgba(34, 197, 94, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+    .prediction-banner .prob-badge.badge-perhatian {
+      background: rgba(250, 204, 21, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(250, 204, 21, 0.4);
+    }
+    .prediction-banner .prob-badge.badge-buruk {
+      background: rgba(239, 68, 68, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Sticky Alert Bar dihapus - hanya pop-up alert yang digunakan */
     .chart-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -1207,36 +1249,98 @@
           return;
         }
       
-      // Format status label lebih profesional
+      // Format status label lebih profesional dan informatif
       const statusLabels = {
-        'baik': 'Kondisi Kandang Optimal',
-        'perhatian': 'Kondisi Kandang Perlu Perhatian',
-        'buruk': 'Kondisi Kandang Tidak Optimal',
+        'baik': 'Kandang dalam Kondisi Optimal',
+        'perhatian': 'Perhatian: Kondisi Kandang Perlu Tindakan',
+        'buruk': 'Peringatan: Kondisi Kandang Membahayakan',
         'tidak diketahui': 'Status Tidak Dapat Ditentukan'
       };
       
       const statusLabel = status.label || 'tidak diketahui';
       const statusText = statusLabels[statusLabel] || 'Kondisi Kandang ' + statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
       
-      // Format confidence - hanya di title
-      let confidenceText = '';
-      if (status.confidence !== undefined && status.confidence !== null) {
-        const confidencePercent = Math.round(status.confidence * 100);
-        confidenceText = ` (Tingkat Keyakinan: ${confidencePercent}%)`;
-      }
-      
-      // Title: hanya status dan confidence
+      // Title: hanya status (hilangkan confidence dari title untuk lebih clean)
       if (titleEl) {
-        titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+        titleEl.innerHTML = statusText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
       }
       
-      // Detail: hanya message dan sumber (HILANGKAN duplikasi keyakinan dan prediksi)
+      // Detail: message yang informatif dengan struktur yang lebih profesional
       if (detailEl) {
+        let htmlContent = '';
+        
+        // 1. Message utama (action items)
+        let mainMessage = '';
         if (status.message) {
-          detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
+          // Gunakan message dari ML service (sudah informatif)
+          mainMessage = status.message;
         } else {
-          detailEl.textContent = 'Hasil Analisis Machine Learning';
+          // Fallback message berdasarkan status
+          const fallbackMessages = {
+            'baik': 'Semua parameter sensor dalam batas aman. Tidak ada tindakan yang diperlukan saat ini.',
+            'perhatian': 'Beberapa parameter sensor di luar batas optimal. Lakukan pengecekan ventilasi, pakan, dan air minum.',
+            'buruk': 'Kondisi lingkungan membahayakan kesehatan ayam. Segera lakukan penyesuaian suhu, kelembaban, atau ventilasi.',
+          };
+          mainMessage = fallbackMessages[statusLabel] || 'Status tidak dapat ditentukan. Silakan refresh halaman.';
         }
+        
+        // Pisahkan message utama dari confidence/probabilitas jika ada
+        // Hapus bagian "(Tingkat keyakinan sistem: ...)" dari message jika ada
+        let cleanMessage = mainMessage;
+        if (cleanMessage.includes('(Tingkat keyakinan sistem:')) {
+          cleanMessage = cleanMessage.split('(Tingkat keyakinan sistem:')[0].trim();
+        }
+        
+        htmlContent += `<div style="margin-bottom: 0.5rem; line-height: 1.6;">${cleanMessage}</div>`;
+        
+        // 2. Informasi teknis (confidence & probabilitas) - dalam container terpisah
+        let techInfo = [];
+        
+        // Confidence level
+        if (status.confidence !== undefined && status.confidence !== null) {
+          const confidencePercent = Math.round(status.confidence * 100);
+          let confidenceLevel = '';
+          let confidenceIcon = '';
+          if (confidencePercent >= 80) {
+            confidenceLevel = 'Sangat yakin';
+            confidenceIcon = '✓';
+          } else if (confidencePercent >= 60) {
+            confidenceLevel = 'Cukup yakin';
+            confidenceIcon = '⚠';
+          } else {
+            confidenceLevel = 'Perlu verifikasi manual';
+            confidenceIcon = '⚠';
+          }
+          techInfo.push(`<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><strong>${confidenceIcon} Keyakinan:</strong> ${confidenceLevel}</span>`);
+        }
+        
+        // Probabilitas detail HANYA jika confidence < 80%
+        if (status.probability && status.confidence !== undefined && status.confidence < 0.8) {
+          const prob = status.probability;
+          const probBAIK = (prob.BAIK * 100).toFixed(1);
+          const probPERHATIAN = (prob.PERHATIAN * 100).toFixed(1);
+          const probBURUK = (prob.BURUK * 100).toFixed(1);
+          
+          // Format probabilitas dengan badge visual yang lebih profesional
+          const probHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+              <strong style="white-space: nowrap;">Probabilitas:</strong>
+              <span style="display: inline-flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="prob-badge badge-baik">BAIK ${probBAIK}%</span>
+                <span class="prob-badge badge-perhatian">PERHATIAN ${probPERHATIAN}%</span>
+                <span class="prob-badge badge-buruk">BURUK ${probBURUK}%</span>
+              </span>
+            </span>
+          `;
+          techInfo.push(probHTML);
+        }
+        
+        // Gabungkan informasi teknis dengan separator yang lebih jelas
+        if (techInfo.length > 0) {
+          htmlContent += `<div style="margin-top: 0.625rem; padding-top: 0.625rem; border-top: 1px solid rgba(255, 255, 255, 0.25); display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8125rem; opacity: 0.95; line-height: 1.5;">${techInfo.join('')}</div>`;
+        }
+        
+        detailEl.innerHTML = htmlContent;
       }
       
       // HILANGKAN prediksi 6 jam dari banner (jika elemen masih ada)
@@ -1799,6 +1903,144 @@
       mlInfoCard.style.display = 'block';
     }
 
+    // ========== URGENT ALERT SYSTEM ==========
+    
+    // Check for urgent alerts
+    function checkUrgentAlerts(data) {
+      const { status, prediction_6h, anomalies, forecast_summary_6h } = data;
+      const alerts = [];
+      
+      // 1. Check status BURUK dengan confidence tinggi
+      if (status.label === 'buruk' && status.confidence >= 0.6) {
+        alerts.push({
+          type: 'critical',
+          title: '🚨 Peringatan: Kondisi Kandang Membahayakan',
+          message: status.message || 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam.',
+          action: 'Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan. Jika perlu, hubungi dokter hewan.',
+          urgency: 'high'
+        });
+      }
+      
+      // 2. Check prediksi 6h menunjukkan BURUK (probability > 0.55 dari threshold optimal)
+      if (status.probability && status.probability.BURUK > 0.55) {
+        alerts.push({
+          type: 'warning',
+          title: '⚠️ Prediksi: Risiko Meningkat dalam 6 Jam',
+          message: `Model ML memprediksi kondisi kandang berpotensi memburuk (${(status.probability.BURUK * 100).toFixed(1)}% kemungkinan BURUK).`,
+          action: 'Lakukan tindakan pencegahan: periksa ventilasi, suhu, dan kelembaban.',
+          urgency: 'medium'
+        });
+      }
+      
+      // 3. Check anomali critical
+      const criticalAnomalies = anomalies.filter(a => a.severity === 'critical');
+      if (criticalAnomalies.length > 0) {
+        alerts.push({
+          type: 'critical',
+          title: `🚨 ${criticalAnomalies.length} Anomali Kritis Terdeteksi`,
+          message: criticalAnomalies.slice(0, 3).map(a => a.message || a.type).join(', '),
+          action: 'Segera periksa sensor dan kondisi kandang.',
+          urgency: 'high'
+        });
+      }
+      
+      // 4. Check forecast menunjukkan threshold akan dilampaui
+      if (forecast_summary_6h && Array.isArray(forecast_summary_6h)) {
+        forecast_summary_6h.forEach(forecast => {
+          if (forecast.risk && (forecast.risk.includes('di luar batas aman') || forecast.risk.includes('bahaya'))) {
+            alerts.push({
+              type: 'warning',
+              title: `⚠️ ${forecast.metric} Diprediksi Keluar Batas Aman`,
+              message: forecast.summary || `${forecast.metric} diprediksi keluar batas aman dalam 6 jam ke depan.`,
+              action: `Periksa dan sesuaikan ${forecast.metric.toLowerCase()} dalam beberapa jam ke depan.`,
+              urgency: 'medium'
+            });
+          }
+        });
+      }
+      
+      return alerts;
+    }
+    
+    // Show urgent alert pop-up
+    function showUrgentAlert(alert) {
+      const icon = alert.type === 'critical' ? 'error' : 'warning';
+      const confirmButtonColor = alert.type === 'critical' ? '#dc2626' : '#facc15';
+      
+      Swal.fire({
+        icon: icon,
+        title: alert.title,
+        html: `
+          <div style="text-align: left; margin-top: 1rem;">
+            <p style="margin-bottom: 0.75rem; font-size: 0.95rem; line-height: 1.6;">${alert.message}</p>
+            <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 8px; border-left: 4px solid ${confirmButtonColor};">
+              <strong style="color: ${confirmButtonColor}; display: block; margin-bottom: 0.5rem;">Tindakan Disarankan:</strong>
+              <p style="margin: 0; font-size: 0.875rem; line-height: 1.5;">${alert.action}</p>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'Saya Mengerti',
+        confirmButtonColor: confirmButtonColor,
+        allowOutsideClick: false,
+        allowEscapeKey: true,
+        showCloseButton: true,
+        width: '600px',
+        customClass: {
+          popup: 'alert-popup',
+          title: 'alert-title',
+          htmlContainer: 'alert-content'
+        }
+      });
+    }
+    
+    // Sticky Bar dihapus - hanya pop-up alert yang digunakan di halaman monitoring
+    
+    // Browser Push Notification
+    let notificationPermission = Notification.permission;
+    
+    async function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          notificationPermission = 'granted';
+          localStorage.setItem('notificationPermission', 'granted');
+        }
+      }
+    }
+    
+    function showBrowserNotification(title, options) {
+      if (!('Notification' in window)) {
+        return;
+      }
+      
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          body: options.body || '',
+          tag: options.tag || 'chickpatrol-alert',
+          requireInteraction: options.requireInteraction || false,
+          ...options
+        });
+      }
+    }
+    
+    function notifyUrgentAlert(alert) {
+      showBrowserNotification(alert.title, {
+        body: alert.message + '\n\n' + alert.action,
+        tag: `alert-${alert.type}-${Date.now()}`,
+        requireInteraction: alert.urgency === 'high'
+      });
+    }
+    
+    // Request notification permission on page load
+    if ('Notification' in window && Notification.permission === 'default') {
+      // Request permission after a short delay
+      setTimeout(() => {
+        requestNotificationPermission();
+      }, 2000);
+    }
+    
     async function loadMonitoring(){
       sensorGrid.innerHTML = '<div class="loading-overlay">Memuat data sensor...</div>';
       try {
@@ -1815,6 +2057,38 @@
         ].join('');
         buildChart(history, prediction_6h);
         renderAnomalies(anomalies);
+        
+        // ========== URGENT ALERT SYSTEM ==========
+        // Check for urgent alerts
+        const alerts = checkUrgentAlerts(data);
+        if (alerts.length > 0) {
+          // Show most urgent first
+          alerts.sort((a, b) => {
+            const urgencyOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+            return urgencyOrder[b.urgency] - urgencyOrder[a.urgency];
+          });
+          
+          // Show first alert immediately (pop-up)
+          setTimeout(() => {
+            showUrgentAlert(alerts[0]);
+            
+            // Send browser notification
+            notifyUrgentAlert(alerts[0]);
+            
+            // Queue other alerts (show after user closes first)
+            if (alerts.length > 1) {
+              setTimeout(() => {
+                alerts.slice(1).forEach((alert, index) => {
+                  setTimeout(() => {
+                    showUrgentAlert(alert);
+                    notifyUrgentAlert(alert);
+                  }, index * 3000);
+                });
+              }, 3000);
+            }
+          }, 1000);
+        }
+        
         // Forecast card
         const forecastCard = document.getElementById('forecastCard');
         const list6 = document.getElementById('forecastList6');

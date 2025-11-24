@@ -248,5 +248,82 @@ Route::prefix('telegram')->name('telegram.')->group(function () {
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     })->name('save');
+    
+    // Toggle notifikasi Telegram (enable/disable)
+    Route::post('/toggle-notifications', function (Request $request) {
+        try {
+            $request->validate([
+                'enabled' => 'required|boolean'
+            ]);
+            
+            $envFile = base_path('.env');
+            
+            if (!file_exists($envFile)) {
+                return response()->json(['success' => false, 'message' => 'File .env tidak ditemukan'], 404);
+            }
+            
+            if (!is_writable($envFile)) {
+                return response()->json(['success' => false, 'message' => 'File .env tidak dapat ditulis. Periksa permission file.'], 500);
+            }
+            
+            $envContent = file_get_contents($envFile);
+            
+            if ($envContent === false) {
+                return response()->json(['success' => false, 'message' => 'Gagal membaca file .env'], 500);
+            }
+            
+            $enabled = $request->enabled ? 'true' : 'false';
+            
+            // Update or add TELEGRAM_NOTIFICATIONS_ENABLED
+            // Handle both with and without quotes
+            if (preg_match('/^TELEGRAM_NOTIFICATIONS_ENABLED\s*=\s*.*/m', $envContent)) {
+                $envContent = preg_replace('/^TELEGRAM_NOTIFICATIONS_ENABLED\s*=\s*.*/m', "TELEGRAM_NOTIFICATIONS_ENABLED={$enabled}", $envContent);
+            } else {
+                // Add new line if file doesn't end with newline
+                if (substr($envContent, -1) !== "\n") {
+                    $envContent .= "\n";
+                }
+                $envContent .= "TELEGRAM_NOTIFICATIONS_ENABLED={$enabled}\n";
+            }
+            
+            $result = file_put_contents($envFile, $envContent);
+            
+            if ($result === false) {
+                return response()->json(['success' => false, 'message' => 'Gagal menulis ke file .env'], 500);
+            }
+            
+            // Update config cache
+            try {
+                \Artisan::call('config:clear');
+            } catch (\Exception $e) {
+                Log::warning('Failed to clear config cache', ['error' => $e->getMessage()]);
+            }
+            
+            $status = $request->enabled ? 'diaktifkan' : 'dinonaktifkan';
+            return response()->json([
+                'success' => true, 
+                'message' => "Notifikasi Telegram berhasil {$status}",
+                'enabled' => $request->enabled
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Telegram Toggle Error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    })->name('toggle-notifications');
+    
+    // Get status notifikasi
+    Route::get('/notification-status', function () {
+        $enabled = env('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
+        // Handle string 'true'/'false' and boolean true/false
+        $isEnabled = ($enabled === 'true' || $enabled === true || $enabled === '1' || $enabled === 1);
+        
+        return response()->json([
+            'success' => true,
+            'enabled' => $isEnabled,
+            'bot_token' => env('TELEGRAM_BOT_TOKEN') ? 'configured' : 'not_configured',
+            'chat_id' => env('TELEGRAM_CHAT_ID') ? 'configured' : 'not_configured',
+            'raw_value' => $enabled // For debugging
+        ]);
+    })->name('notification-status');
 });
 // });
