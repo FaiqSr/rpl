@@ -31,7 +31,9 @@ class SendTelegramNotification extends Command
     public function handle()
     {
         // Check if Telegram notifications are enabled
-        $telegramEnabled = env('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
+        // Read directly from .env file to ensure latest value (bypass config cache)
+        $telegramEnabled = $this->getEnvValue('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
+        
         // Handle string 'true'/'false' and boolean true/false
         if ($telegramEnabled === 'false' || $telegramEnabled === false || $telegramEnabled === '0' || $telegramEnabled === 0) {
             $this->info('Telegram notifications are disabled');
@@ -130,6 +132,37 @@ class SendTelegramNotification extends Command
             $this->error('Error: ' . $e->getMessage());
             return 1;
         }
+    }
+
+    /**
+     * Read value directly from .env file (bypass config cache)
+     * 
+     * @param string $key
+     * @param mixed $default
+     * @return string|null
+     */
+    protected function getEnvValue($key, $default = null)
+    {
+        $envFile = base_path('.env');
+        
+        if (!file_exists($envFile)) {
+            return $default;
+        }
+        
+        $envContent = file_get_contents($envFile);
+        if ($envContent === false) {
+            return $default;
+        }
+        
+        // Match the key=value pattern
+        if (preg_match('/^' . preg_quote($key, '/') . '\s*=\s*(.*)$/m', $envContent, $matches)) {
+            $value = trim($matches[1]);
+            // Remove quotes if present
+            $value = trim($value, '"\'');
+            return $value;
+        }
+        
+        return $default;
     }
 }
 
