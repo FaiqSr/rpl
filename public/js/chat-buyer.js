@@ -2,6 +2,26 @@
 let buyerChatId = null;
 let buyerChatPollInterval = null;
 
+// Get current user ID (set from Laravel)
+// Priority: window.currentUserId (explicit) > window.currentUser?.user_id (fallback)
+let currentUserId = window.currentUserId || window.currentUser?.user_id || null;
+
+// Debug: Log currentUserId saat inisialisasi
+console.log('Buyer currentUserId initialized:', currentUserId, 'Type:', typeof currentUserId);
+console.log('window.currentUserId:', window.currentUserId);
+console.log('window.currentUser:', window.currentUser);
+
+// Update currentUserId jika window.currentUserId berubah (setelah DOM ready)
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.currentUserId) {
+        currentUserId = window.currentUserId;
+        console.log('Buyer currentUserId updated from DOM:', currentUserId);
+    } else if (window.currentUser?.user_id) {
+        currentUserId = window.currentUser.user_id;
+        console.log('Buyer currentUserId updated from currentUser:', currentUserId);
+    }
+});
+
 // Open chat modal (general chat or for specific order)
 async function openChatModal(orderId = null) {
   const modalElement = document.getElementById('chatModal');
@@ -20,8 +40,11 @@ async function openChatModal(orderId = null) {
   }
   
   // Get or create chat
+  // CATATAN: Selalu gunakan general chat (tanpa orderId) untuk memastikan semua chat terhubung
+  // Bahkan jika dipanggil dari halaman orders, tetap gunakan general chat
   try {
-    const url = orderId ? `/api/chat/get-or-create/${orderId}` : '/api/chat/get-or-create';
+    // Selalu gunakan general chat endpoint (tanpa orderId)
+    const url = '/api/chat/get-or-create';
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
     
     const response = await fetch(url, {
@@ -64,14 +87,24 @@ async function openChatModal(orderId = null) {
   } catch (error) {
     console.error('Error opening chat:', error);
     if (chatMessages) {
-      chatMessages.innerHTML = '<div class="text-center p-4 text-danger">Gagal memuat chat</div>';
+      chatMessages.innerHTML = '<div class="text-center p-4 text-danger">Gagal memuat chat: ' + error.message + '</div>';
+    }
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: 'Gagal membuat chat: ' + error.message
+      });
     }
   }
 }
 
 // Open chat for specific order (from orders page)
-async function openChatForOrder(orderId) {
-  await openChatModal(orderId);
+// CATATAN: Meskipun dipanggil dengan orderId, tetap menggunakan general chat
+// untuk memastikan semua chat terhubung ke admin yang sama
+function openChatForOrder(orderId) {
+  // Tetap gunakan general chat (tanpa orderId) untuk konsistensi
+  openChatModal(null);
 }
 
 // Load buyer messages
@@ -82,52 +115,92 @@ async function loadBuyerMessages() {
   if (!chatMessages) return;
   
   try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+      console.error('CSRF token not found');
+      return;
+    }
+    
     const response = await fetch(`/api/chat/${buyerChatId}/messages`, {
       headers: {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-      }
+        'X-CSRF-TOKEN': csrfToken.content,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
     });
     
-    if (!response.ok) throw new Error('Failed to load messages');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to load messages:', response.status, errorText);
+      throw new Error('Failed to load messages: ' + response.status);
+    }
     
-    const messages = await response.json();
-    const currentUser = window.currentUser || {};
+    const responseData = await response.json();
+    
+    // Format: { chat_id, messages: [...] }
+    const messages = responseData.messages || [];
     
     if (messages.length === 0) {
       chatMessages.innerHTML = '<div class="text-center p-4 text-gray-400">Belum ada pesan. Mulai percakapan dengan penjual!</div>';
       return;
     }
     
-    chatMessages.innerHTML = messages.map(msg => {
-      // For buyer: sent = message from buyer (right side), received = message from seller/admin (left side)
-      const isSent = msg.sender_id === currentUser.user_id;
+    // Debug: Log currentUserId dan messages
+    console.log('=== BUYER CHAT DEBUG ===');
+    console.log('currentUserId:', currentUserId, 'Type:', typeof currentUserId);
+    console.log('Messages count:', messages.length);
+    console.log('First message:', messages[0]);
+    
+    chatMessages.innerHTML = messages.map((msg, index) => {
+      // Buyer: pesan dari buyer = kanan, pesan dari admin/seller = kiri
+      // Logic WhatsApp: isMine = msg.sender_id === currentUserId
+      // Convert to string untuk memastikan perbandingan benar
+      const msgSenderId = String(msg.sender_id || '');
+      const currentUserIdStr = String(currentUserId || '');
+      const isMine = msgSenderId === currentUserIdStr;
+      
+      // Deklarasi sender HARUS sebelum digunakan
       const sender = msg.sender || {};
       const senderName = sender.name || sender.email || 'User';
+      
+      // Debug log untuk 3 pesan pertama
+      if (index < 3) {
+        console.log(`Message ${index}:`, {
+          msg_sender_id: msgSenderId,
+          currentUserId: currentUserIdStr,
+          isMine: isMine,
+          message: msg.message?.substring(0, 20),
+          sender_name: senderName
+        });
+      }
       const senderInitials = senderName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
       const time = new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const messageText = msg.message || '';
+      
+      // Pastikan class diterapkan dengan benar
+      const messageClass = isMine ? 'message-right' : 'message-left';
       
       return `
-        <div class="d-flex mb-3 ${isSent ? 'justify-content-end' : 'justify-content-start'}">
-          <div class="d-flex ${isSent ? 'flex-row-reverse' : 'flex-row'}" style="max-width: 70%;">
-            <div class="rounded-circle ${isSent ? 'bg-success' : 'bg-primary'} text-white d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.75rem; ${isSent ? 'margin-left: 0.5rem;' : 'margin-right: 0.5rem;'}">
-              ${senderInitials}
-            </div>
-            <div>
-              ${!isSent ? `<div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.25rem; font-weight: 500;">${escapeHtml(senderName)}</div>` : ''}
-              <div class="rounded p-2 ${isSent ? 'bg-success text-white' : 'bg-white border'}" style="word-wrap: break-word;">
-                ${escapeHtml(msg.message)}
-              </div>
-              <small class="text-muted d-block ${isSent ? 'text-end' : 'text-start'}" style="font-size: 0.7rem; margin-top: 0.25rem;">${time}</small>
-            </div>
+        <div class="chat-message ${messageClass}">
+          ${!isMine ? `<div class="message-sender-name">${escapeHtml(senderName)}</div>` : ''}
+          <div class="message-bubble">
+            ${escapeHtml(messageText)}
           </div>
+          <div class="message-time">${time}</div>
         </div>
       `;
     }).join('');
     
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Force scroll to bottom after rendering
+    setTimeout(() => {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 100);
   } catch (error) {
     console.error('Error loading messages:', error);
+    if (chatMessages) {
+      chatMessages.innerHTML = '<div class="text-center p-4 text-danger">Gagal memuat pesan</div>';
+    }
   }
 }
 
@@ -145,17 +218,28 @@ async function sendBuyerMessage() {
   if (!message) return;
   
   try {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (!csrfToken) {
+      console.error('CSRF token not found for sending message');
+      return;
+    }
+    
     const response = await fetch(`/api/chat/${buyerChatId}/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        'X-CSRF-TOKEN': csrfToken.content,
+        'X-Requested-With': 'XMLHttpRequest'
       },
+      credentials: 'same-origin',
       body: JSON.stringify({ message })
     });
     
-    if (!response.ok) throw new Error('Failed to send message');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
+      throw new Error(errorData.error || 'Failed to send message');
+    }
     
     input.value = '';
     await loadBuyerMessages();
@@ -170,28 +254,16 @@ async function sendBuyerMessage() {
       Swal.fire({
         icon: 'error',
         title: 'Gagal',
-        text: 'Gagal mengirim pesan'
+        text: error.message || 'Gagal mengirim pesan'
       });
     }
   }
 }
 
+// Helper functions
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
-
-// Cleanup on modal close
-document.addEventListener('DOMContentLoaded', function() {
-  const chatModal = document.getElementById('chatModal');
-  if (chatModal) {
-    chatModal.addEventListener('hidden.bs.modal', function() {
-      if (buyerChatPollInterval) {
-        clearInterval(buyerChatPollInterval);
-        buyerChatPollInterval = null;
-      }
-    });
-  }
-});
-

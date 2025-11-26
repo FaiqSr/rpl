@@ -27,7 +27,6 @@
         <!-- Login Form -->
         <form id="loginForm" action="{{ route('login.post') }}" method="POST" autocomplete="off">
             @csrf
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
             
             <div class="mb-3">
                 <label for="email" class="form-label">Alamat Email atau No. Telepon</label>
@@ -90,16 +89,6 @@
 
 @push('scripts')
 <script>
-    // Ensure CSRF token is fresh on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Refresh CSRF token if page is loaded
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        const formToken = document.querySelector('input[name="_token"]');
-        if (csrfToken && formToken) {
-            formToken.value = csrfToken.content;
-        }
-    });
-    
     // Form validation and submission
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         const email = document.getElementById('email').value;
@@ -112,14 +101,7 @@
             return false;
         }
         
-        // Ensure CSRF token is up to date before submit
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        const formToken = document.querySelector('input[name="_token"]');
-        if (csrfToken && formToken) {
-            formToken.value = csrfToken.content;
-        }
-        
-        // Let form submit normally with CSRF token
+        // Let form submit normally with CSRF token from @csrf directive
         return true;
     });
     

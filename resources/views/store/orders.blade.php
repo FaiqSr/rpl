@@ -160,6 +160,89 @@
     .btn-confirm:hover {
       background: #5a9d66;
     }
+    
+    /* WhatsApp-style chat messages - Buyer Chat (Orders Page) */
+    #buyerChatMessages {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      width: 100% !important;
+      min-height: 0 !important;
+    }
+    
+    #buyerChatMessages .chat-message {
+      display: flex !important;
+      flex-direction: column !important;
+      margin-bottom: 0.5rem !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+    
+    /* Message Left (Received from Admin) - White background, LEFT aligned */
+    #buyerChatMessages .chat-message.message-left {
+      align-self: flex-start !important;
+      max-width: 70% !important;
+      align-items: flex-start !important;
+      margin-right: auto !important;
+      margin-left: 0 !important;
+    }
+    
+    /* Message Right (Sent by Buyer) - Green background, RIGHT aligned */
+    #buyerChatMessages .chat-message.message-right {
+      align-self: flex-end !important;
+      max-width: 70% !important;
+      align-items: flex-end !important;
+      margin-left: auto !important;
+      margin-right: 0 !important;
+    }
+    
+    .message-sender-name {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      padding: 0 0.5rem;
+    }
+    
+    .message-bubble {
+      padding: 0.625rem 0.875rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      line-height: 1.4;
+      word-wrap: break-word;
+      max-width: 100%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+    
+    /* Left message (received from admin) - white background */
+    #buyerChatMessages .message-left .message-bubble {
+      background: #ffffff !important;
+      color: #2F2F2F !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    /* Right message (sent by buyer) - green background like WhatsApp */
+    #buyerChatMessages .message-right .message-bubble {
+      background: #dcf8c6 !important;
+      color: #2F2F2F !important;
+      border: none !important;
+    }
+    
+    .message-time {
+      font-size: 0.6875rem;
+      color: #6c757d;
+      margin-top: 0.25rem;
+      padding: 0 0.5rem;
+    }
+    
+    .message-left .message-time {
+      text-align: left;
+    }
+    
+    .message-right .message-time {
+      text-align: right;
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -325,7 +408,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-0" style="flex: 1; display: flex; flex-direction: column;">
-          <div id="buyerChatMessages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa;">
+          <div id="buyerChatMessages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0;">
             <div class="text-center p-4 text-gray-500">
               <i class="fa-solid fa-spinner fa-spin"></i> Memuat pesan...
             </div>
@@ -350,7 +433,9 @@
   @if(Auth::check())
   <script>
     // Set current user for chat
-    window.currentUser = {!! json_encode(Auth::user()) !!};
+    window.currentUser = @json(Auth::user());
+    // Set currentUserId for WhatsApp-style positioning
+    window.currentUserId = @json(Auth::user()?->user_id);
   </script>
   <script src="{{ asset('js/chat-buyer.js') }}"></script>
   @endif

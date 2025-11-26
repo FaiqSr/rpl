@@ -349,88 +349,78 @@
       padding: 1.5rem;
       overflow-y: auto;
       background: #f8f9fa;
-    }
-    
-    .chat-message {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      justify-content: flex-start;
-    }
-    
-    .chat-message.sent {
-      flex-direction: row-reverse;
-      justify-content: flex-end;
-    }
-    
-    .chat-message:not(.sent) {
-      flex-direction: row;
-      justify-content: flex-start;
-    }
-    
-    .chat-message-avatar {
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      background: #e9ecef;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.875rem;
-      color: #6c757d;
-      font-weight: 500;
-    }
-    
-    .chat-message.sent .chat-message-avatar {
-      background: #22C55E;
-      color: white;
-    }
-    
-    .chat-message-content {
-      max-width: 60%;
       display: flex;
       flex-direction: column;
     }
     
-    .chat-message-sender-name {
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+    
+    /* WhatsApp Style: Message Left (Received) */
+    .message-left {
+      align-self: flex-start;
+      max-width: 70%;
+      align-items: flex-start;
+    }
+    
+    /* WhatsApp Style: Message Right (Sent) */
+    .message-right {
+      align-self: flex-end;
+      max-width: 70%;
+      align-items: flex-end;
+    }
+    
+    .message-sender-name {
       font-size: 0.75rem;
       color: #6c757d;
       margin-bottom: 0.25rem;
       font-weight: 500;
+      padding: 0 0.5rem;
     }
     
-    .chat-message-bubble {
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      background: white;
+    .message-bubble {
+      padding: 0.625rem 0.875rem;
+      border-radius: 12px;
       font-size: 0.875rem;
-      color: #2F2F2F;
-      line-height: 1.5;
+      line-height: 1.4;
       word-wrap: break-word;
-      border: 1px solid #e9ecef;
+      max-width: 100%;
+      display: inline-block;
     }
     
-    .chat-message.sent .chat-message-bubble {
-      background: #22C55E;
-      color: white;
+    /* Left message (received) - white background */
+    .message-left .message-bubble {
+      background: #ffffff;
+      color: #2F2F2F;
+      border: 1px solid #e5e7eb;
+    }
+    
+    /* Right message (sent) - green background like WhatsApp */
+    .message-right .message-bubble {
+      background: #dcf8c6;
+      color: #2F2F2F;
       border: none;
     }
     
-    .chat-message-time {
-      font-size: 0.75rem;
+    .message-time {
+      font-size: 0.6875rem;
       color: #6c757d;
       margin-top: 0.25rem;
       padding: 0 0.5rem;
     }
     
-    .chat-message.sent .chat-message-time {
+    .message-left .message-time {
+      text-align: left;
+    }
+    
+    .message-right .message-time {
       text-align: right;
     }
     
-    .chat-message:not(.sent) .chat-message-time {
-      text-align: left;
-    }
     
     .chat-input-area {
       padding: 1rem 1.5rem;
@@ -564,6 +554,10 @@
         <i class="fa-solid fa-comment"></i>
         <span>Chat</span>
       </a>
+      <a href="/dashboard/customers" class="sidebar-menu-item">
+        <i class="fa-solid fa-users"></i>
+        <span>Pelanggan</span>
+      </a>
     </nav>
     
     <div class="sidebar-footer">
@@ -582,13 +576,13 @@
         <div class="chat-header">
           <h2>Chat</h2>
           <div class="chat-header-icons">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
-            <i class="fa-solid fa-pen-to-square"></i>
+            <i class="fa-solid fa-ellipsis-vertical" onclick="showChatMenu()" title="Menu"></i>
+            <i class="fa-solid fa-pen-to-square" onclick="startNewChat()" title="Chat Baru"></i>
           </div>
         </div>
         
         <div class="chat-search">
-          <input type="text" placeholder="🔍">
+          <input type="text" id="chatSearchInput" placeholder="🔍 Cari pembeli..." onkeyup="filterBuyerList(this.value)">
         </div>
         
         <div class="chat-list" id="chatList">
@@ -626,7 +620,7 @@
         <div class="chat-input-area">
           <div class="chat-input-wrapper">
             <input type="text" id="chatInput" placeholder="Ketik pesan disini..." onkeypress="handleEnter(event)">
-            <button class="chat-send-btn" onclick="sendMessage()">
+            <button class="chat-send-btn" onclick="sendAdminMessage()">
               Kirim
             </button>
           </div>
@@ -639,6 +633,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
   <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
+  <script src="{{ asset('js/chat-admin.js') }}"></script>
   
   <script>
     // SweetAlert Helper Functions
@@ -669,6 +664,11 @@
         submenu.classList.toggle('show');
         chevron.classList.toggle('rotate');
     }
+    
+    // Set current admin user for chat-admin.js (must be set before chat-admin.js loads)
+    window.currentAdminUser = @json(Auth::user());
+    // Set currentUserId for WhatsApp-style positioning
+    window.currentUserId = @json(Auth::user()?->user_id);
     
     let currentChatId = null;
     let currentChat = null;
@@ -729,8 +729,8 @@
         }
     }
     
-    // Select Chat
-    async function selectChat(chatId) {
+    // Select Chat (Admin: select by chatId and buyerId)
+    async function selectChat(chatId, buyerId = null) {
         currentChatId = chatId;
         
         // Update active state
@@ -785,18 +785,26 @@
     // Load messages
     async function loadMessages(chatId) {
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
+            
             const response = await fetch(`/api/chat/${chatId}/messages`, {
                 headers: {
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
+                    'X-CSRF-TOKEN': csrfToken.content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
             });
             
             if (!response.ok) throw new Error('Failed to load messages');
             
             const messages = await response.json();
             const chatMessages = document.getElementById('chatMessages');
-            const currentUser = {!! json_encode(Auth::user()) !!};
+            const currentUser = @json(Auth::user());
             
             if (messages.length === 0) {
                 chatMessages.innerHTML = '<div class="text-center p-8 text-gray-400"><i class="fa-solid fa-comments" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-4">Belum ada pesan</p></div>';
@@ -804,7 +812,15 @@
             }
             
             chatMessages.innerHTML = messages.map(msg => {
-                const isSent = msg.sender_id === currentUser.user_id;
+                // Di dashboard admin: pesan dari admin/seller (currentUser) = sent (kanan)
+                // Pesan dari buyer = received (kiri)
+                // Pastikan msg.message tidak null
+                const messageText = msg.message || '';
+                
+                // Admin: pesan dari admin = sent (kanan), pesan dari buyer = received (kiri)
+                // Use user_id (not id) for comparison
+                const isSent = msg.sender_id === currentUser?.user_id;
+                
                 const sender = msg.sender || {};
                 const senderInitials = sender.name ? sender.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
                 const time = formatTime(msg.created_at);
@@ -814,7 +830,7 @@
                         <div class="chat-message-avatar">${senderInitials}</div>
                         <div class="chat-message-content">
                             ${!isSent ? `<div class="chat-message-sender-name">${escapeHtml(sender.name || sender.email || 'User')}</div>` : ''}
-                            <div class="chat-message-bubble">${escapeHtml(msg.message)}</div>
+                            <div class="chat-message-bubble">${escapeHtml(messageText)}</div>
                             <div class="chat-message-time">${time}</div>
                         </div>
                     </div>
@@ -835,29 +851,54 @@
         }
         
         const input = document.getElementById('chatInput');
-        const message = input.value.trim();
+        if (!input) return;
         
+        const message = input.value.trim();
         if (!message) return;
         
         try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
+
             const response = await fetch(`/api/chat/${currentChatId}/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': csrfToken.content,
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({ message })
             });
             
-            if (!response.ok) throw new Error('Failed to send message');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
+                throw new Error(errorData.error || 'Failed to send message');
+            }
             
             input.value = '';
             await loadMessages(currentChatId);
             await loadChats(); // Refresh chat list to update last message
         } catch (error) {
             console.error('Error sending message:', error);
-            showError('Gagal mengirim pesan');
+            showError(error.message || 'Gagal mengirim pesan');
+        }
+    }
+    
+    // Helper function untuk show error
+    function showError(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message
+            });
+        } else {
+            alert(message);
         }
     }
     
@@ -887,16 +928,35 @@
     // Handle Enter Key
     function handleEnter(event) {
         if (event.key === 'Enter') {
-            sendMessage();
+            // Use sendAdminMessage if available (from chat-admin.js), otherwise use sendMessage
+            if (typeof sendAdminMessage === 'function') {
+                sendAdminMessage();
+            } else if (typeof sendMessage === 'function') {
+                sendMessage();
+            }
         }
     }
     
-    // Initialize
+    // Initialize - Use admin functions from chat-admin.js
     document.addEventListener('DOMContentLoaded', function() {
-        loadChats();
+        // Set current admin user for chat-admin.js
+        window.currentAdminUser = @json(Auth::user());
+        // Set currentUserId for WhatsApp-style positioning
+        window.currentUserId = @json(Auth::user()?->user_id);
         
-        // Refresh chat list every 10 seconds
-        setInterval(loadChats, 10000);
+        console.log('Chat page loaded - Admin user:', window.currentAdminUser);
+        console.log('Chat page loaded - currentUserId:', window.currentUserId);
+        
+        // Use loadBuyerList from chat-admin.js instead of loadChats
+        if (typeof loadBuyerList === 'function') {
+            loadBuyerList();
+            // Refresh buyer list every 10 seconds
+            setInterval(loadBuyerList, 10000);
+        } else {
+            // Fallback to loadChats if chat-admin.js not loaded
+            loadChats();
+            setInterval(loadChats, 10000);
+        }
     });
     
     // Show success message if redirected with success

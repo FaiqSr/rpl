@@ -80,30 +80,42 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::post('/login', function (\Illuminate\Http\Request $request) {
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
-    
-    // Check if user exists
-    $user = \App\Models\User::where('email', $credentials['email'])->first();
-    
-    if (!$user) {
-        return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+    try {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
+        
+        // Check if user exists
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        
+        if (!$user) {
+            return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+        }
+        
+        // Verify password manually (because User model uses user_id as primary key, not id)
+        if (!\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
+            return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+        }
+        
+        // Regenerate session ID before login to prevent session fixation
+        $request->session()->regenerate();
+        
+        // Login user manually
+        \Illuminate\Support\Facades\Auth::login($user, $request->filled('remember'));
+        
+        // Ensure session is saved
+        $request->session()->save();
+        
+        return $user->role === 'admin' || $user->role === 'seller'
+            ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
+            : redirect()->route('home')->with('success', 'Login berhasil');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return back()->withErrors($e->errors())->withInput();
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Login error: ' . $e->getMessage());
+        return back()->withErrors(['email' => 'Terjadi kesalahan saat login. Silakan coba lagi.'])->with('error', 'Login gagal');
     }
-    
-    // Verify password manually (because User model uses user_id as primary key, not id)
-    if (!\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
-        return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
-    }
-    
-    // Login user manually
-    \Illuminate\Support\Facades\Auth::login($user, $request->filled('remember'));
-    $request->session()->regenerate();
-    
-    return $user->role === 'admin' || $user->role === 'seller'
-        ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
-        : redirect()->route('home')->with('success', 'Login berhasil');
 })->name('login.post');
 
 Route::get('/logout', function (\Illuminate\Http\Request $request) {
@@ -206,12 +218,13 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
         $trackingNumber = generateTrackingNumber($validated['shipping_service']);
         
         // Create order with all fields
+        // IMPORTANT: Use logged-in user's name, not from form (to prevent user impersonation)
         $orderData = [
             'user_id' => $user->user_id,
             'total_price' => $validated['total_price'],
             'status' => 'pending',
             'notes' => $validated['notes'] ?? null,
-            'buyer_name' => $validated['buyer_name'],
+            'buyer_name' => $user->name ?? $validated['buyer_name'], // Use logged-in user's name
             'buyer_phone' => $validated['phone'],
             'buyer_address' => $validated['address'],
             'shipping_service' => $validated['shipping_service'],
@@ -343,6 +356,17 @@ Route::middleware('auth.session')->group(function() {
         Route::post('/{chatId}/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])
             ->where('chatId', '[a-f0-9\-]{36}')
             ->name('chat.send');
+        Route::delete('/delete-history/{buyerId}', [\App\Http\Controllers\ChatController::class, 'deleteChatHistory'])
+            ->where('buyerId', '[a-f0-9\-]{36}')
+            ->name('chat.delete-history');
+        
+        // Admin routes
+        Route::prefix('admin')->group(function () {
+            Route::get('/buyers', [\App\Http\Controllers\ChatController::class, 'getBuyerList'])->name('chat.admin.buyers');
+            Route::get('/buyer/{buyerId}/messages', [\App\Http\Controllers\ChatController::class, 'getMessagesByBuyer'])
+                ->where('buyerId', '[a-f0-9\-]{36}')
+                ->name('chat.admin.buyer.messages');
+        });
     });
     
     // Product CRUD API

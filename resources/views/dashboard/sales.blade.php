@@ -511,6 +511,10 @@
         <i class="fa-solid fa-comment"></i>
         <span>Chat</span>
       </a>
+      <a href="/dashboard/customers" class="sidebar-menu-item">
+        <i class="fa-solid fa-users"></i>
+        <span>Pelanggan</span>
+      </a>
     </nav>
     
     <div class="sidebar-footer">
