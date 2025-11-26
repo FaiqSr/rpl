@@ -12,8 +12,9 @@ class TelegramNotificationService
 
     public function __construct()
     {
-        $this->botToken = env('TELEGRAM_BOT_TOKEN');
-        $this->chatId = env('TELEGRAM_CHAT_ID');
+        // Read directly from .env file to ensure latest value (bypass config cache)
+        $this->botToken = $this->getEnvValue('TELEGRAM_BOT_TOKEN');
+        $this->chatId = $this->getEnvValue('TELEGRAM_CHAT_ID');
     }
 
     /**
@@ -68,6 +69,24 @@ class TelegramNotificationService
             // Format pesan dengan template lengkap
             $message = $this->buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h);
             
+            // Ganti karakter khusus yang tidak didukung Telegram HTML
+            // Telegram HTML tidak mendukung degree symbol (°), jadi ganti dengan &deg;
+            $message = str_replace('°C', '&deg;C', $message);
+            $message = str_replace('°', '&deg;', $message);
+            
+            // Karena format baru tidak menggunakan HTML tags, kita tidak perlu escape
+            // Tapi tetap perlu escape karakter HTML yang berbahaya
+            // Escape & terlebih dahulu (sebelum &amp;)
+            $message = str_replace('&', '&amp;', $message);
+            // Kembalikan &deg; yang sudah benar
+            $message = str_replace('&amp;deg;', '&deg;', $message);
+            $message = str_replace('&amp;amp;', '&amp;', $message);
+            
+            // Escape < dan > yang bukan bagian dari HTML tag yang valid
+            // Karena format baru tidak menggunakan HTML tags, kita bisa escape semua
+            $message = str_replace('<', '&lt;', $message);
+            $message = str_replace('>', '&gt;', $message);
+            
             // Kirim ke Telegram
             $response = Http::timeout(10)->post("https://api.telegram.org/bot{$this->botToken}/sendMessage", [
                 'chat_id' => $this->chatId,
@@ -96,7 +115,7 @@ class TelegramNotificationService
     }
 
     /**
-     * Build laporan Telegram lengkap sesuai template
+     * Build laporan Telegram lengkap sesuai template baru
      */
     protected function buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h)
     {
@@ -118,33 +137,31 @@ class TelegramNotificationService
             $t = $thresholds[$type] ?? [];
             
             if ($type === 'temperature') {
-                if ($value < $t['min']) return 'Terlalu Rendah';
-                if ($value > $t['max']) return 'Terlalu Tinggi';
+                if ($value < $t['min'] || $value > $t['max']) return 'Tidak aman';
                 return 'Aman';
             } elseif ($type === 'humidity') {
-                if ($value < $t['min']) return 'Terlalu Rendah';
-                if ($value > $t['max']) return 'Terlalu Tinggi';
+                if ($value < $t['min'] || $value > $t['max']) return 'Tidak aman';
                 return 'Aman';
             } elseif ($type === 'ammonia') {
-                if ($value > $t['max']) return 'Berbahaya';
+                if ($value > $t['max']) return 'Tidak aman';
                 return 'Aman';
             } elseif ($type === 'light') {
-                if ($value < $t['min'] || $value > $t['max']) return 'Di Luar Batas';
+                if ($value < $t['min'] || $value > $t['max']) return 'Tidak aman';
                 return 'Aman';
             }
             
-            return 'Normal';
+            return 'Aman';
         };
         
         $getTrendIndicator = function($values) {
-            if (!is_array($values) || count($values) < 2) return '➡️ Stabil';
+            if (!is_array($values) || count($values) < 2) return 'stabil';
             $first = $values[0];
             $last = $values[count($values) - 1];
             $diff = $last - $first;
             
-            if ($diff > 1) return '📈 Meningkat';
-            if ($diff < -1) return '📉 Menurun';
-            return '➡️ Stabil';
+            if ($diff > 1) return 'meningkat';
+            if ($diff < -1) return 'menurun';
+            return 'stabil';
         };
         
         // Status Kandang
@@ -159,38 +176,63 @@ class TelegramNotificationService
         $confidence = isset($status['confidence']) ? round($status['confidence'] * 100, 1) : 0;
         $gaugeBar = $getGaugeBar($confidence);
         
-        // Penjelasan Prediksi (Reason-Based Explanation)
+        // Penjelasan Prediksi (Reason-Based Explanation) - Format sesuai contoh
         $reasons = [];
+        
+        // Analisis berdasarkan probabilitas klasifikasi
         if (isset($status['probability'])) {
             $prob = $status['probability'];
-            if (isset($prob['BURUK']) && $prob['BURUK'] > 0.3) {
-                $reasons[] = "Probabilitas BURUK tinggi (" . round($prob['BURUK'] * 100, 1) . "%)";
+            $baikProb = isset($prob['BAIK']) ? round($prob['BAIK'] * 100, 1) : 0;
+            $perhatianProb = isset($prob['PERHATIAN']) ? round($prob['PERHATIAN'] * 100, 1) : 0;
+            $burukProb = isset($prob['BURUK']) ? round($prob['BURUK'] * 100, 1) : 0;
+            
+            if ($burukProb > 0) {
+                $reasons[] = "Probabilitas kondisi BURUK mencapai {$burukProb}%";
             }
-            if (isset($prob['PERHATIAN']) && $prob['PERHATIAN'] > 0.5) {
-                $reasons[] = "Probabilitas PERHATIAN dominan (" . round($prob['PERHATIAN'] * 100, 1) . "%)";
+            if ($perhatianProb > 0) {
+                $reasons[] = "Probabilitas kondisi PERHATIAN mencapai {$perhatianProb}%";
             }
         }
         
-        // Check sensor values untuk alasan
-        if ($latest['temperature'] < 23 || $latest['temperature'] > 34) {
-            $reasons[] = "Suhu di luar rentang optimal (23-34°C)";
+        // Analisis detail setiap sensor dengan nilai spesifik
+        $tempStatus = $getStatusText($latest['temperature'], 'temperature');
+        $humStatus = $getStatusText($latest['humidity'], 'humidity');
+        $ammStatus = $getStatusText($latest['ammonia'], 'ammonia');
+        $lightStatus = $getStatusText($latest['light'], 'light');
+        
+        if ($tempStatus !== 'Aman') {
+            if ($latest['temperature'] < 23) {
+                $reasons[] = "Suhu terlalu rendah ({$latest['temperature']} &deg;C), di bawah batas optimal";
+            } elseif ($latest['temperature'] > 34) {
+                $reasons[] = "Suhu terlalu tinggi ({$latest['temperature']} &deg;C), di atas batas optimal";
+            }
         }
-        if ($latest['humidity'] < 50 || $latest['humidity'] > 70) {
-            $reasons[] = "Kelembaban di luar rentang optimal (50-70%)";
+        
+        if ($humStatus !== 'Aman') {
+            if ($latest['humidity'] < 50) {
+                $reasons[] = "Kelembaban terlalu rendah ({$latest['humidity']}%), di bawah batas optimal";
+            } elseif ($latest['humidity'] > 70) {
+                $reasons[] = "Kelembaban terlalu tinggi ({$latest['humidity']}%), di atas batas optimal";
+            }
         }
-        if ($latest['ammonia'] > 20) {
-            $reasons[] = "Kadar amoniak melebihi batas aman (>20 ppm)";
+        
+        if ($ammStatus !== 'Aman') {
+            $reasons[] = "Kadar amoniak berbahaya ({$latest['ammonia']} ppm), melebihi batas aman";
         }
-        if ($latest['light'] < 10 || $latest['light'] > 60) {
-            $reasons[] = "Intensitas cahaya di luar rentang optimal (10-60 lux)";
+        
+        if ($lightStatus !== 'Aman') {
+            if ($latest['light'] < 10) {
+                $reasons[] = "Intensitas cahaya terlalu rendah ({$latest['light']} lux), di bawah batas optimal";
+            } elseif ($latest['light'] > 60) {
+                $reasons[] = "Intensitas cahaya terlalu tinggi ({$latest['light']} lux), melebihi batas optimal";
+            }
         }
         
         if (empty($reasons)) {
-            $reasons[] = "Semua parameter sensor dalam kondisi normal";
+            $reasons[] = "Semua parameter sensor berada dalam rentang optimal";
         }
         
         // Prediksi 6 Jam
-        // $prediction_6h memiliki struktur: ['temperature' => [...], 'humidity' => [...], 'ammonia' => [...], 'light' => [...]]
         $pred6Text = [];
         if (!empty($prediction_6h) && is_array($prediction_6h)) {
             $tempPred = isset($prediction_6h['temperature']) && is_array($prediction_6h['temperature']) ? $prediction_6h['temperature'] : [];
@@ -199,7 +241,7 @@ class TelegramNotificationService
             $lightPred = isset($prediction_6h['light']) && is_array($prediction_6h['light']) ? $prediction_6h['light'] : [];
             
             if (!empty($tempPred)) {
-                $pred6Text[] = "Suhu: " . round(min($tempPred), 1) . "–" . round(max($tempPred), 1) . "°C";
+                $pred6Text[] = "Suhu: " . round(min($tempPred), 1) . "–" . round(max($tempPred), 1) . " &deg;C";
             }
             if (!empty($humPred)) {
                 $pred6Text[] = "Kelembaban: " . round(min($humPred), 1) . "–" . round(max($humPred), 1) . "%";
@@ -226,37 +268,71 @@ class TelegramNotificationService
             $ammPred = isset($prediction_6h['ammonia']) && is_array($prediction_6h['ammonia']) ? $prediction_6h['ammonia'] : [];
             $lightPred = isset($prediction_6h['light']) && is_array($prediction_6h['light']) ? $prediction_6h['light'] : [];
             
-            $trends['temperature'] = !empty($tempPred) ? $getTrendIndicator($tempPred) : '➡️ Stabil';
-            $trends['humidity'] = !empty($humPred) ? $getTrendIndicator($humPred) : '➡️ Stabil';
-            $trends['ammonia'] = !empty($ammPred) ? $getTrendIndicator($ammPred) : '➡️ Stabil';
-            $trends['light'] = !empty($lightPred) ? $getTrendIndicator($lightPred) : '➡️ Stabil';
+            $trends['temperature'] = !empty($tempPred) ? $getTrendIndicator($tempPred) : 'stabil';
+            $trends['humidity'] = !empty($humPred) ? $getTrendIndicator($humPred) : 'stabil';
+            $trends['ammonia'] = !empty($ammPred) ? $getTrendIndicator($ammPred) : 'stabil';
+            $trends['light'] = !empty($lightPred) ? $getTrendIndicator($lightPred) : 'stabil';
         } else {
-            $trends = ['temperature' => '➡️ Stabil', 'humidity' => '➡️ Stabil', 'ammonia' => '➡️ Stabil', 'light' => '➡️ Stabil'];
+            $trends = ['temperature' => 'stabil', 'humidity' => 'stabil', 'ammonia' => 'stabil', 'light' => 'stabil'];
         }
         
-        // Deteksi Anomali
+        // Deteksi Anomali - Format sesuai contoh
         $anomalyStatus = empty($anomalies) ? 'NORMAL' : 'ANOMALI';
         $anomalyCount = count($anomalies);
         $anomalyList = [];
         if (!empty($anomalies)) {
-            foreach (array_slice($anomalies, 0, 5) as $anomaly) {
+            foreach (array_slice($anomalies, 0, 3) as $anomaly) {
                 $sensorName = [
                     'temperature' => 'Suhu',
                     'humidity' => 'Kelembaban',
                     'ammonia' => 'Amoniak',
                     'light' => 'Cahaya'
                 ][$anomaly['type'] ?? 'unknown'] ?? ucfirst($anomaly['type'] ?? 'Unknown');
-                $anomalyList[] = "• {$sensorName}: " . ($anomaly['message'] ?? 'Anomali terdeteksi');
+                
+                // Gunakan value dari anomali, jika tidak ada gunakan dari latest
+                $anomalyValue = isset($anomaly['value']) ? (float)$anomaly['value'] : (float)($latest[$anomaly['type'] ?? 'temperature'] ?? 0);
+                $anomalyMessage = $anomaly['message'] ?? 'Anomali terdeteksi';
+                
+                // Tentukan unit berdasarkan type
+                $unit = '';
+                if (($anomaly['type'] ?? '') === 'temperature') {
+                    $unit = ' &deg;C';
+                } elseif (($anomaly['type'] ?? '') === 'humidity') {
+                    $unit = '%';
+                } elseif (($anomaly['type'] ?? '') === 'ammonia') {
+                    $unit = ' ppm';
+                } elseif (($anomaly['type'] ?? '') === 'light') {
+                    $unit = ' lux';
+                }
+                
+                // Format sesuai contoh: "Kelembaban terlalu rendah (47.7%)"
+                // atau "Suhu menyimpang (33.5°C, z=1.83)"
+                if (strpos($anomalyMessage, 'terlalu rendah') !== false) {
+                    $anomalyList[] = "• {$sensorName} terlalu rendah (" . round($anomalyValue, 1) . "{$unit})";
+                } elseif (strpos($anomalyMessage, 'terlalu tinggi') !== false) {
+                    $anomalyList[] = "• {$sensorName} terlalu tinggi (" . round($anomalyValue, 1) . "{$unit})";
+                } elseif (strpos($anomalyMessage, 'menyimpang') !== false || strpos($anomalyMessage, 'menyimpang') !== false) {
+                    // Jika ada z-score di message, extract dan tampilkan
+                    $zScore = '';
+                    if (preg_match('/z[=\s:]+([\d.]+)/i', $anomalyMessage, $zMatches)) {
+                        $zScore = ', z=' . round((float)$zMatches[1], 2);
+                    }
+                    $anomalyList[] = "• {$sensorName} menyimpang (" . round($anomalyValue, 1) . "{$unit}{$zScore})";
+                } else {
+                    // Fallback: format sederhana
+                    $anomalyList[] = "• {$sensorName}: " . round($anomalyValue, 1) . "{$unit} - " . $anomalyMessage;
+                }
             }
         }
         
-        // Rekomendasi Tindak Lanjut
+        // Rekomendasi Tindak Lanjut - Format sesuai contoh
         $recommendations = [];
         if ($statusLabel === 'buruk') {
-            $recommendations[] = "Segera periksa dan sesuaikan kondisi lingkungan kandang";
-            $recommendations[] = "Tingkatkan ventilasi untuk mengurangi kadar amoniak";
-            $recommendations[] = "Periksa sistem pemanas/penyejuk untuk mengatur suhu";
-            $recommendations[] = "Hubungi dokter hewan jika kondisi tidak membaik";
+            $recommendations[] = "Cek kondisi ayam secara langsung";
+            $recommendations[] = "Naikkan ventilasi";
+            $recommendations[] = "Sesuaikan suhu (pemanas/kipas)";
+            $recommendations[] = "Konsultasi dokter hewan jika tidak membaik";
+            $recommendations[] = "Monitoring setiap 30 menit";
         } elseif ($statusLabel === 'perhatian') {
             $recommendations[] = "Pantau parameter sensor secara berkala";
             $recommendations[] = "Lakukan penyesuaian kecil pada ventilasi atau suhu";
@@ -269,176 +345,116 @@ class TelegramNotificationService
             $recommendations[] = "Lakukan pengecekan berkala sesuai jadwal";
         }
         
-        // Build Message
-        $message = "<b>🐔 LAPORAN MONITORING KANDANG AYAM</b>\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        // Build Message - Format sesuai contoh yang diberikan
+        $message = "🐔 LAPORAN MONITORING KANDANG AYAM\n";
+        $message .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
         
         // Status Kandang
-        $message .= "<b>📊 Status Kandang</b>\n\n";
-        $message .= "{$statusIcon} <b>" . strtoupper($statusLabel) . "</b>\n";
-        $message .= "<i>Confidence Score: {$confidence}%</i>\n";
-        $message .= "Gauge bar: {$gaugeBar}\n\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "📊 STATUS KANDANG\n\n";
+        $message .= "{$statusIcon} " . strtoupper($statusLabel) . "\n\n";
+        $message .= "📈 Tingkat Keyakinan: {$confidence}%\n\n";
+        $message .= "{$gaugeBar} (Confidence " . ($confidence >= 80 ? 'tinggi' : ($confidence >= 60 ? 'sedang' : 'rendah')) . ")\n\n";
+        
+        // Interpretasi confidence
+        if ($confidence >= 80) {
+            $message .= "Sistem sangat yakin bahwa kondisi kandang berada dalam status " . ucfirst($statusLabel) . " dan " . ($statusLabel === 'buruk' ? 'memerlukan tindakan cepat' : ($statusLabel === 'perhatian' ? 'perlu perhatian' : 'dalam kondisi baik')) . ".\n";
+        } elseif ($confidence >= 60) {
+            $message .= "Sistem cukup yakin dengan prediksi, namun perlu monitoring lanjutan.\n";
+        } else {
+            $message .= "Sistem memerlukan verifikasi manual untuk memastikan kondisi kandang.\n";
+        }
+        
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
         
         // Penjelasan Prediksi
-        $message .= "<b>🧠 Penjelasan Prediksi (Reason-Based Explanation)</b>\n\n";
+        $message .= "🧠 Penjelasan Prediksi (Reason-Based Explanation)\n\n";
         foreach ($reasons as $reason) {
             $message .= "• {$reason}\n";
         }
-        $message .= "\n━━━━━━━━━━━━━━━━━━━━\n\n";
         
-        // Data Sensor Saat Ini
-        $message .= "<b>⚙️ Data Sensor Saat Ini</b>\n\n";
-        $message .= "🌡️ Suhu: <b>{$latest['temperature']}°C</b> — <i>" . $getStatusText($latest['temperature'], 'temperature') . "</i>\n";
-        $message .= "💧 Kelembaban: <b>{$latest['humidity']}%</b> — <i>" . $getStatusText($latest['humidity'], 'humidity') . "</i>\n";
-        $message .= "💨 Amoniak: <b>{$latest['ammonia']} ppm</b> — <i>" . $getStatusText($latest['ammonia'], 'ammonia') . "</i>\n";
-        $message .= "💡 Cahaya: <b>{$latest['light']} lux</b> — <i>" . $getStatusText($latest['light'], 'light') . "</i>\n\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+        
+        // Data Sensor Saat Ini - Format sesuai contoh
+        $message .= "⚙️ DATA SENSOR SAAT INI\n\n";
+        
+        $tempStatusText = $tempStatus === 'Aman' ? 'Aman' : 'Tidak aman';
+        $tempRange = "23–34 &deg;C";
+        $message .= "• Suhu: {$latest['temperature']} &deg;C ({$tempStatusText} — {$tempRange})\n";
+        
+        $humStatusText = $humStatus === 'Aman' ? 'Aman' : 'Tidak aman';
+        $humRange = "50–70%";
+        $message .= "• Kelembaban: {$latest['humidity']}% ({$humStatusText} — {$humRange})\n";
+        
+        $ammStatusText = $ammStatus === 'Aman' ? 'Aman' : 'Tidak aman';
+        $ammRange = "max 20 ppm";
+        $message .= "• Amoniak: {$latest['ammonia']} ppm ({$ammStatusText} — {$ammRange})\n";
+        
+        $lightStatusText = $lightStatus === 'Aman' ? 'Aman' : 'Tidak aman';
+        $lightRange = "10–60 lux";
+        $message .= "• Cahaya: {$latest['light']} lux ({$lightStatusText} — {$lightRange})\n";
+        
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
         
         // Prediksi 6 Jam
-        $message .= "<b>📈 Prediksi 6 Jam Kedepan (Ensemble LSTM)</b>\n\n";
+        $message .= "📈 PREDIKSI 6 JAM KE DEPAN (Ensemble LSTM)\n\n";
         foreach ($pred6Text as $pred) {
-            $message .= "{$pred}\n";
+            $message .= "• {$pred}\n";
         }
-        $message .= "\n━━━━━━━━━━━━━━━━━━━━\n\n";
         
-        // Indikator Risiko Tren
-        $message .= "<b>🔥 Indikator Risiko Tren</b>\n\n";
-        $message .= "Suhu: {$trends['temperature']}\n";
-        $message .= "Kelembaban: {$trends['humidity']}\n";
-        $message .= "Cahaya: {$trends['light']}\n";
-        $message .= "Amoniak: {$trends['ammonia']}\n\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+        
+        // Indikator Tren Risiko
+        $message .= "🔥 INDIKATOR TREN RISIKO\n\n";
+        $message .= "• Suhu: {$trends['temperature']}\n";
+        $message .= "• Kelembaban: {$trends['humidity']}\n";
+        $message .= "• Cahaya: {$trends['light']}\n";
+        $message .= "• Amoniak: {$trends['ammonia']}\n";
+        
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
         
         // Deteksi Anomali
-        $message .= "<b>🚨 Deteksi Anomali</b>\n\n";
-        $message .= "Status: <b>{$anomalyStatus} — {$anomalyCount} Anomali</b>\n";
+        $message .= "🚨 DETEKSI ANOMALI\n\n";
+        $message .= "Status: {$anomalyStatus}\n\n";
+        $message .= "Total Anomali: {$anomalyCount}\n\n";
+        
         if (!empty($anomalyList)) {
-            $message .= "\nContoh anomali terbaru:\n";
+            $message .= "Contoh:\n\n";
             foreach ($anomalyList as $anom) {
                 $message .= "{$anom}\n";
             }
-            $message .= "\n<i>> Anomali berasal dari kombinasi Isolation Forest + threshold.</i>\n";
+            $message .= "\nMetode deteksi: Isolation Forest + Threshold Analysis\n";
         } else {
-            $message .= "\n<i>Tidak ada anomali terdeteksi.</i>\n";
+            $message .= "Tidak ada anomali terdeteksi.\n";
         }
-        $message .= "\n━━━━━━━━━━━━━━━━━━━━\n\n";
+        
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
         
         // Rekomendasi
-        $message .= "<b>🧭 Rekomendasi Tindak Lanjut</b>\n\n";
+        $message .= "🧭 REKOMENDASI\n\n";
         foreach ($recommendations as $index => $rec) {
             $message .= ($index + 1) . ". {$rec}\n";
         }
-        $message .= "\n━━━━━━━━━━━━━━━━━━━━\n\n";
         
-        // Timestamp
+        $message .= "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+        
+        // Timestamp dan Footer
         $wibTime = now()->setTimezone('Asia/Jakarta');
-        $message .= "🕐 {$wibTime->format('d/m/Y H:i:s')} WIB\n\n";
-        $message .= "<i>📤 Dikirim otomatis oleh ChickPatrol Monitoring System</i>\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━";
-        
-        return $message;
-    }
-
-    /**
-     * Format pesan monitoring untuk Telegram (legacy - kept for backward compatibility)
-     */
-    protected function formatMonitoringMessage($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h)
-    {
-        $statusEmoji = [
-            'baik' => '✅',
-            'perhatian' => '⚠️',
-            'buruk' => '🚨',
-            'tidak diketahui' => '❓'
+        $dayNames = [
+            'Monday' => 'Monday',
+            'Tuesday' => 'Tuesday',
+            'Wednesday' => 'Wednesday',
+            'Thursday' => 'Thursday',
+            'Friday' => 'Friday',
+            'Saturday' => 'Saturday',
+            'Sunday' => 'Sunday'
         ];
-
-        $statusLabel = $status['label'] ?? 'tidak diketahui';
-        $statusEmojiIcon = $statusEmoji[$statusLabel] ?? '❓';
-        $confidence = isset($status['confidence']) ? round($status['confidence'] * 100, 1) : 0;
-
-        $message = "<b>🐔 LAPORAN MONITORING KANDANG AYAM</b>\n";
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n\n";
+        $dayName = $dayNames[$wibTime->format('l')] ?? $wibTime->format('l');
         
-        // Status Kandang
-        $message .= "<b>📊 Status Kandang:</b>\n";
-        $message .= "{$statusEmojiIcon} <b>" . strtoupper($statusLabel) . "</b>";
-        if ($confidence > 0) {
-            $message .= " (Keyakinan: {$confidence}%)";
-        }
-        $message .= "\n";
-        if (isset($status['message'])) {
-            $message .= "💬 " . $status['message'] . "\n";
-        }
-        $message .= "\n";
-
-        // Nilai Sensor Saat Ini
-        $message .= "<b>📈 Nilai Sensor Saat Ini:</b>\n";
-        $message .= "🌡️ Suhu: <b>{$latest['temperature']}°C</b>\n";
-        $message .= "💧 Kelembaban: <b>{$latest['humidity']}%</b>\n";
-        $message .= "💨 Amoniak: <b>{$latest['ammonia']} ppm</b>\n";
-        $message .= "💡 Cahaya: <b>{$latest['light']} lux</b>\n";
-        $message .= "\n";
-
-        // Prediksi 6 Jam
-        if (!empty($forecast_summary_6h)) {
-            $message .= "<b>🔮 Prediksi 6 Jam Ke Depan:</b>\n";
-            foreach ($forecast_summary_6h as $forecast) {
-                $metric = $forecast['metric'] ?? 'Unknown';
-                $summary = $forecast['summary'] ?? 'Data tidak tersedia';
-                $risk = $forecast['risk'] ?? 'tidak diketahui';
-                
-                $riskEmoji = '✅';
-                if (strpos($risk, 'di luar batas aman') !== false) {
-                    $riskEmoji = '🚨';
-                } elseif (strpos($risk, 'potensi') !== false) {
-                    $riskEmoji = '⚠️';
-                }
-                
-                $message .= "{$riskEmoji} {$summary}\n";
-            }
-            $message .= "\n";
-        }
-
-        // Anomali
-        if (!empty($anomalies)) {
-            $criticalAnomalies = array_filter($anomalies, function($a) {
-                return ($a['severity'] ?? 'warning') === 'critical';
-            });
-            $warningAnomalies = array_filter($anomalies, function($a) {
-                return ($a['severity'] ?? 'warning') === 'warning';
-            });
-
-            $message .= "<b>⚠️ Anomali Terdeteksi:</b>\n";
-            
-            if (!empty($criticalAnomalies)) {
-                $message .= "🚨 <b>KRITIS (" . count($criticalAnomalies) . "):</b>\n";
-                foreach (array_slice($criticalAnomalies, 0, 5) as $anomaly) {
-                    $message .= "• " . ($anomaly['message'] ?? $anomaly['type'] ?? 'Anomali') . "\n";
-                }
-            }
-            
-            if (!empty($warningAnomalies)) {
-                $message .= "⚠️ <b>PERINGATAN (" . count($warningAnomalies) . "):</b>\n";
-                foreach (array_slice($warningAnomalies, 0, 5) as $anomaly) {
-                    $message .= "• " . ($anomaly['message'] ?? $anomaly['type'] ?? 'Anomali') . "\n";
-                }
-            }
-            
-            if (count($anomalies) > 10) {
-                $message .= "\n<i>... dan " . (count($anomalies) - 10) . " anomali lainnya</i>\n";
-            }
-            $message .= "\n";
-        } else {
-            $message .= "<b>✅ Tidak Ada Anomali</b>\n\n";
-        }
-
-        // Timestamp dengan WIB
-        $message .= "━━━━━━━━━━━━━━━━━━━━\n";
-        // Set timezone ke WIB (Asia/Jakarta)
-        $wibTime = now()->setTimezone('Asia/Jakarta');
-        $message .= "🕐 " . $wibTime->format('d/m/Y H:i:s') . " WIB\n";
-        $message .= "<i>Dikirim otomatis oleh ChickPatrol Monitoring System</i>";
-
+        $message .= "🕐 Waktu Laporan: {$wibTime->format('d/m/Y H:i:s')} WIB\n\n";
+        $message .= "📅 Hari: {$dayName}\n\n";
+        $message .= "📤 Dikirim otomatis oleh ChickPatrol Monitoring System\n\n";
+        $message .= "🤖 Powered by Machine Learning &amp; IoT Sensors";
+        
         return $message;
     }
 }

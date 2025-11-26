@@ -30,20 +30,27 @@ class SendTelegramNotification extends Command
      */
     public function handle()
     {
+        $wibTime = now()->setTimezone('Asia/Jakarta');
+        $this->info('🔄 Checking Telegram notification at ' . $wibTime->format('Y-m-d H:i:s') . ' WIB');
+        
         // Check if Telegram notifications are enabled
         // Read directly from .env file to ensure latest value (bypass config cache)
         $telegramEnabled = $this->getEnvValue('TELEGRAM_NOTIFICATIONS_ENABLED', 'true');
         
         // Handle string 'true'/'false' and boolean true/false
         if ($telegramEnabled === 'false' || $telegramEnabled === false || $telegramEnabled === '0' || $telegramEnabled === 0) {
-            $this->info('Telegram notifications are disabled');
-            Log::info('Telegram notifications disabled', ['enabled' => $telegramEnabled]);
+            $this->info('⏸️ Telegram notifications are disabled');
+            Log::info('Telegram notifications disabled', [
+                'time' => $wibTime->format('Y-m-d H:i:s') . ' WIB',
+                'enabled' => $telegramEnabled
+            ]);
             return 0;
         }
 
         // Check if Telegram credentials are configured
-        $botToken = env('TELEGRAM_BOT_TOKEN');
-        $chatId = env('TELEGRAM_CHAT_ID');
+        // Read directly from .env file to ensure latest value (bypass config cache)
+        $botToken = $this->getEnvValue('TELEGRAM_BOT_TOKEN');
+        $chatId = $this->getEnvValue('TELEGRAM_CHAT_ID');
         
         if (!$botToken || !$chatId) {
             $this->warn('Telegram credentials not configured');
@@ -57,19 +64,18 @@ class SendTelegramNotification extends Command
         try {
             $mlService = new MachineLearningService();
             
-            // Get latest 30 sensor readings
-            $sensorReadings = SensorReading::orderBy('recorded_at', 'desc')
+            // Get latest 30 sensor readings - SAMA DENGAN YANG DIGUNAKAN DI WEB MONITORING
+            // Ambil 30 data terakhir, diurutkan dari yang paling lama (untuk history ML)
+            $sensorReadings = SensorReading::orderBy('recorded_at', 'asc')
                 ->limit(30)
-                ->get()
-                ->reverse()
-                ->values();
+                ->get();
 
             if ($sensorReadings->count() < 30) {
                 $this->warn('Insufficient sensor data (need 30, got ' . $sensorReadings->count() . ')');
                 return 0;
             }
 
-            // Format history data
+            // Format history data (dari yang paling lama ke yang terbaru)
             $history = [];
             foreach ($sensorReadings as $reading) {
                 $history[] = [
@@ -81,7 +87,7 @@ class SendTelegramNotification extends Command
                 ];
             }
 
-            // Get latest reading
+            // Get latest reading - AMBIL DATA TERAKHIR (sama dengan di web monitoring)
             $latestReading = $sensorReadings->last();
             $latest = [
                 'time' => $latestReading->recorded_at->format('Y-m-d H:00'),
@@ -90,6 +96,15 @@ class SendTelegramNotification extends Command
                 'ammonia' => (float) $latestReading->amonia_ppm,
                 'light' => (float) $latestReading->cahaya_lux
             ];
+            
+            // Log untuk debugging - pastikan data sama dengan web
+            Log::info('Telegram notification data', [
+                'latest_temperature' => $latest['temperature'],
+                'latest_humidity' => $latest['humidity'],
+                'latest_ammonia' => $latest['ammonia'],
+                'latest_light' => $latest['light'],
+                'latest_time' => $latest['time']
+            ]);
 
             // Get ML predictions
             $mlResults = $mlService->getPredictions($history);
@@ -99,7 +114,33 @@ class SendTelegramNotification extends Command
             $anomalies = $mlResults['anomalies'] ?? [];
             $forecast6Summary = $mlResults['forecast_summary_6h'] ?? [];
 
-            // Send Telegram notification
+            // Check status label - only send notification if status is PERHATIAN or BURUK
+            $statusLabel = strtolower($status['label'] ?? 'tidak diketahui');
+            
+            // Log status untuk debugging
+            $wibTime = now()->setTimezone('Asia/Jakarta');
+            $this->info('📊 Status kandang: ' . strtoupper($statusLabel) . ' (Waktu: ' . $wibTime->format('H:i:s') . ' WIB)');
+            Log::info('Telegram notification check', [
+                'time' => $wibTime->format('Y-m-d H:i:s') . ' WIB',
+                'status' => $statusLabel,
+                'enabled' => $telegramEnabled,
+                'has_credentials' => !empty($botToken) && !empty($chatId)
+            ]);
+            
+            // Only send notification if condition is not good (PERHATIAN or BURUK)
+            if ($statusLabel === 'baik') {
+                $this->info('✅ Kondisi kandang BAIK - Notifikasi tidak dikirim (status: ' . $statusLabel . ')');
+                Log::info('Telegram notification skipped - kondisi baik', [
+                    'time' => $wibTime->format('Y-m-d H:i:s') . ' WIB',
+                    'status' => $statusLabel,
+                    'reason' => 'Kondisi kandang dalam keadaan baik, tidak perlu notifikasi'
+                ]);
+                return 0;
+            }
+            
+            $this->info('⚠️ Kondisi kandang ' . strtoupper($statusLabel) . ' - Akan mengirim notifikasi Telegram...');
+
+            // Send Telegram notification only for PERHATIAN or BURUK
             $telegramService = new TelegramNotificationService();
             $sent = $telegramService->sendMonitoringNotification(
                 $latest,
@@ -110,16 +151,20 @@ class SendTelegramNotification extends Command
             );
 
             if ($sent) {
-                $this->info('✅ Telegram notification sent successfully at ' . now()->format('Y-m-d H:i:s'));
+                $wibTime = now()->setTimezone('Asia/Jakarta');
+                $this->info('✅ Telegram notification sent successfully at ' . $wibTime->format('Y-m-d H:i:s') . ' WIB (Status: ' . strtoupper($statusLabel) . ')');
                 Log::info('Telegram notification sent successfully', [
-                    'time' => now()->toDateTimeString(),
-                    'status' => $status['label'] ?? 'unknown'
+                    'time' => $wibTime->format('Y-m-d H:i:s') . ' WIB',
+                    'status' => $statusLabel,
+                    'reason' => 'Kondisi kandang memerlukan perhatian'
                 ]);
                 return 0;
             } else {
+                $wibTime = now()->setTimezone('Asia/Jakarta');
                 $this->error('❌ Failed to send Telegram notification');
                 Log::error('Failed to send Telegram notification', [
-                    'time' => now()->toDateTimeString()
+                    'time' => $wibTime->format('Y-m-d H:i:s') . ' WIB',
+                    'status' => $statusLabel
                 ]);
                 return 1;
             }

@@ -41,6 +41,32 @@ class Order extends BaseModel
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
         });
+        
+        // Auto-create chat when order is created
+        static::created(function ($order) {
+            try {
+                // Get seller (first seller user)
+                $seller = \App\Models\User::where('role', 'seller')->first();
+                
+                if ($seller) {
+                    // Check if chat already exists for this order
+                    $existingChat = \App\Models\Chat::where('order_id', $order->order_id)->first();
+                    
+                    if (!$existingChat) {
+                        \App\Models\Chat::create([
+                            'buyer_id' => $order->user_id,
+                            'seller_id' => $seller->user_id,
+                            'order_id' => $order->order_id,
+                            'last_message' => 'Pesanan baru telah dibuat',
+                            'last_message_at' => now(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail order creation
+                \Illuminate\Support\Facades\Log::error('Failed to create chat for order: ' . $e->getMessage());
+            }
+        });
     }
 
 

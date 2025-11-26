@@ -1199,6 +1199,11 @@
         return false;
       }
       
+      // Show loading state
+      statusEl.style.background = '#e7f3ff';
+      statusEl.style.color = '#004085';
+      statusText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memeriksa koneksi...';
+      
       try {
         const response = await fetch('/api/telegram/test', {
           method: 'POST',
@@ -1266,13 +1271,17 @@
         const data = await response.json();
         
         if (data.success) {
+          // Update status connection setelah pesan test berhasil
+          setTimeout(() => {
+            checkTelegramStatus();
+          }, 500);
+          
           Swal.fire({
             icon: 'success',
             title: 'Pesan Terkirim!',
             text: 'Pesan test berhasil dikirim ke Telegram Anda.',
             confirmButtonColor: '#22C55E'
           });
-          checkTelegramStatus();
         } else {
           Swal.fire({
             icon: 'error',
@@ -1511,6 +1520,16 @@
       if (botTokenInput && chatIdInput) {
         botTokenInput.addEventListener('blur', checkTelegramStatus);
         chatIdInput.addEventListener('blur', checkTelegramStatus);
+        // Also check when test message is sent successfully
+        const originalTestTelegram = testTelegramMessage;
+        window.testTelegramMessage = async function() {
+          const result = await originalTestTelegram();
+          if (result) {
+            // If test message sent successfully, update status
+            setTimeout(checkTelegramStatus, 1000);
+          }
+          return result;
+        };
       }
       
       // Initial status check

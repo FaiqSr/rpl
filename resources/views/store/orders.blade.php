@@ -292,7 +292,10 @@
           <div class="order-total">
             Total: Rp {{ number_format($order->total_price,0,',','.') }}
           </div>
-          <div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="openChatForOrder('{{ $order->order_id }}')" title="Chat dengan Penjual">
+              <i class="fa-solid fa-comments me-1"></i> Chat Penjual
+            </button>
             @if($order->status === 'dikirim')
               <button class="btn-confirm" onclick="confirmReceived('{{ $order->order_id }}')">
                 <i class="fa-solid fa-check me-1"></i> Konfirmasi Diterima
@@ -310,11 +313,50 @@
     @endforelse
   </main>
   
+  <!-- Chat Modal -->
+  @if(Auth::check())
+  <div class="modal fade" id="chatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" style="height: 600px; display: flex; flex-direction: column;">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-comments me-2"></i>Chat dengan Penjual
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0" style="flex: 1; display: flex; flex-direction: column;">
+          <div id="buyerChatMessages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa;">
+            <div class="text-center p-4 text-gray-500">
+              <i class="fa-solid fa-spinner fa-spin"></i> Memuat pesan...
+            </div>
+          </div>
+          <div class="p-3 border-top bg-white">
+            <div class="d-flex gap-2">
+              <input type="text" id="buyerChatInput" class="form-control" placeholder="Ketik pesan disini..." onkeypress="if(event.key==='Enter') sendBuyerMessage()">
+              <button class="btn btn-success" onclick="sendBuyerMessage()">
+                <i class="fa-solid fa-paper-plane"></i> Kirim
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  @endif
+  
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  @if(Auth::check())
+  <script>
+    // Set current user for chat
+    window.currentUser = {!! json_encode(Auth::user()) !!};
+  </script>
+  <script src="{{ asset('js/chat-buyer.js') }}"></script>
+  @endif
   
   <script>
+    
     async function confirmReceived(orderId) {
       const result = await Swal.fire({
         title: 'Konfirmasi Pesanan Diterima?',

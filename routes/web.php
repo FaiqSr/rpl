@@ -84,13 +84,26 @@ Route::post('/login', function (\Illuminate\Http\Request $request) {
         'email' => 'required|email',
         'password' => 'required'
     ]);
-    if (Auth::attempt($credentials, true)) {
-        $request->session()->regenerate();
-        return Auth::user()->role === 'admin'
-            ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
-            : redirect()->route('home')->with('success', 'Login berhasil');
+    
+    // Check if user exists
+    $user = \App\Models\User::where('email', $credentials['email'])->first();
+    
+    if (!$user) {
+        return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
     }
-    return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+    
+    // Verify password manually (because User model uses user_id as primary key, not id)
+    if (!\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
+        return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+    }
+    
+    // Login user manually
+    \Illuminate\Support\Facades\Auth::login($user, $request->filled('remember'));
+    $request->session()->regenerate();
+    
+    return $user->role === 'admin' || $user->role === 'seller'
+        ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
+        : redirect()->route('home')->with('success', 'Login berhasil');
 })->name('login.post');
 
 Route::get('/logout', function (\Illuminate\Http\Request $request) {
@@ -307,6 +320,30 @@ Route::middleware(['auth.session','admin'])->group(function() {
         return view('dashboard.sales', compact('orders', 'filter'));
     })->name('dashboard.sales');
     Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
+    Route::get('/dashboard/customers', [\App\Http\Controllers\CustomerController::class, 'index'])->name('dashboard.customers');
+    Route::get('/api/customers', [\App\Http\Controllers\CustomerController::class, 'getCustomers'])->name('api.customers');
+    Route::get('/api/customers/{id}', [\App\Http\Controllers\CustomerController::class, 'show'])->name('api.customers.show');
+    Route::post('/api/customers/{id}/toggle-status', [\App\Http\Controllers\CustomerController::class, 'toggleStatus'])->name('api.customers.toggle-status');
+});
+    
+// Chat API Routes - Accessible by both buyer/visitor and seller/admin
+Route::middleware('auth.session')->group(function() {
+    Route::prefix('api/chat')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
+        Route::get('/unread-count', [\App\Http\Controllers\ChatController::class, 'getUnreadCount'])->name('chat.unread-count');
+        // Route dengan orderId harus didefinisikan sebelum route tanpa parameter
+        // UUID pattern: 8-4-4-4-12 hex characters with dashes
+        Route::get('/get-or-create/{orderId}', [\App\Http\Controllers\ChatController::class, 'getOrCreateChat'])
+            ->where('orderId', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+            ->name('chat.get-or-create.order');
+        Route::get('/get-or-create', [\App\Http\Controllers\ChatController::class, 'getOrCreateChat'])->name('chat.get-or-create');
+        Route::get('/{chatId}/messages', [\App\Http\Controllers\ChatController::class, 'getMessages'])
+            ->where('chatId', '[a-f0-9\-]{36}')
+            ->name('chat.messages');
+        Route::post('/{chatId}/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])
+            ->where('chatId', '[a-f0-9\-]{36}')
+            ->name('chat.send');
+    });
     
     // Product CRUD API
     Route::post('/dashboard/products', function (\Illuminate\Http\Request $request) {
@@ -1106,15 +1143,10 @@ Route::get('/api/monitoring/tools', function () {
         \Illuminate\Support\Facades\Log::warning('ML Service tidak terhubung, menggunakan fallback prediction');
     }
 
-    // Kirim notifikasi Telegram (jika dikonfigurasi) - SEBELUM return response
-    try {
-        $telegramService = new \App\Services\TelegramNotificationService();
-        $forecast6SummaryForTelegram = isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary;
-        $telegramService->sendMonitoringNotification($latest, $currentStatus, $pred6, $anomalies, $forecast6SummaryForTelegram);
-    } catch (\Exception $telegramError) {
-        // Log error tapi jangan gagalkan response
-        \Illuminate\Support\Facades\Log::warning('Failed to send Telegram notification: ' . $telegramError->getMessage());
-    }
+    // NOTIFIKASI TELEGRAM DIHAPUS DARI ROUTE INI
+    // Notifikasi Telegram hanya dikirim melalui scheduler command (telegram:send-monitoring)
+    // yang berjalan setiap 5 menit dan hanya mengirim saat kondisi PERHATIAN atau BURUK
+    // Hal ini mencegah notifikasi spam saat user membuka/merefresh halaman monitoring
     
     return response()->json([
         'meta' => [

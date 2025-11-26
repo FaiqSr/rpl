@@ -355,10 +355,17 @@
       display: flex;
       gap: 0.75rem;
       margin-bottom: 1rem;
+      justify-content: flex-start;
     }
     
     .chat-message.sent {
       flex-direction: row-reverse;
+      justify-content: flex-end;
+    }
+    
+    .chat-message:not(.sent) {
+      flex-direction: row;
+      justify-content: flex-start;
     }
     
     .chat-message-avatar {
@@ -372,10 +379,25 @@
       justify-content: center;
       font-size: 0.875rem;
       color: #6c757d;
+      font-weight: 500;
+    }
+    
+    .chat-message.sent .chat-message-avatar {
+      background: #22C55E;
+      color: white;
     }
     
     .chat-message-content {
       max-width: 60%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .chat-message-sender-name {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
     }
     
     .chat-message-bubble {
@@ -386,11 +408,13 @@
       color: #2F2F2F;
       line-height: 1.5;
       word-wrap: break-word;
+      border: 1px solid #e9ecef;
     }
     
     .chat-message.sent .chat-message-bubble {
       background: #22C55E;
       color: white;
+      border: none;
     }
     
     .chat-message-time {
@@ -398,6 +422,14 @@
       color: #6c757d;
       margin-top: 0.25rem;
       padding: 0 0.5rem;
+    }
+    
+    .chat-message.sent .chat-message-time {
+      text-align: right;
+    }
+    
+    .chat-message:not(.sent) .chat-message-time {
+      text-align: left;
     }
     
     .chat-input-area {
@@ -559,71 +591,23 @@
           <input type="text" placeholder="🔍">
         </div>
         
-        <div class="chat-list">
-          <div class="chat-item active" onclick="selectChat(1)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(2)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(3)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(4)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
+        <div class="chat-list" id="chatList">
+          <div class="text-center p-4 text-gray-500">
+            <i class="fa-solid fa-spinner fa-spin"></i> Memuat chat...
           </div>
         </div>
       </div>
       
       <!-- Chat Main Area -->
       <div class="chat-main">
-        <div class="chat-main-header">
+        <div class="chat-main-header" id="chatMainHeader" style="display: none;">
           <div class="chat-main-header-left">
-            <div class="chat-main-header-avatar">
+            <div class="chat-main-header-avatar" id="chatHeaderAvatar">
               <i class="fa-solid fa-user"></i>
             </div>
             <div class="chat-main-header-info">
-              <h3>Ratna Sulawasti</h3>
-              <p>Online</p>
+              <h3 id="chatHeaderName">Pilih chat untuk memulai</h3>
+              <p id="chatHeaderStatus">-</p>
             </div>
           </div>
           <div class="chat-main-header-icons">
@@ -633,28 +617,9 @@
         </div>
         
         <div class="chat-messages" id="chatMessages">
-          <div class="chat-message">
-            <div class="chat-message-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-message-content">
-              <div class="chat-message-bubble">
-                Lorem ipsum dolor sit amet
-              </div>
-              <div class="chat-message-time">12:00</div>
-            </div>
-          </div>
-          
-          <div class="chat-message sent">
-            <div class="chat-message-avatar">
-              AF
-            </div>
-            <div class="chat-message-content">
-              <div class="chat-message-bubble">
-                Baik Terima kasih banyak
-              </div>
-              <div class="chat-message-time">12:01</div>
-            </div>
+          <div class="text-center p-8 text-gray-400">
+            <i class="fa-solid fa-comments" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-4">Pilih chat untuk memulai percakapan</p>
           </div>
         </div>
         
@@ -705,38 +670,218 @@
         chevron.classList.toggle('rotate');
     }
     
+    let currentChatId = null;
+    let currentChat = null;
+    let messagePollInterval = null;
+    
+    // Load chats list
+    async function loadChats() {
+        try {
+            const response = await fetch('/api/chat', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load chats');
+            
+            const chats = await response.json();
+            const chatList = document.getElementById('chatList');
+            
+            if (chats.length === 0) {
+                chatList.innerHTML = '<div class="text-center p-4 text-gray-500">Belum ada chat</div>';
+                return;
+            }
+            
+            chatList.innerHTML = chats.map(chat => {
+                const buyer = chat.buyer || {};
+                const order = chat.order || {};
+                const lastMessage = chat.last_message || (chat.latest_message ? chat.latest_message.message : null) || 'Belum ada pesan';
+                const lastMessageTime = chat.last_message_at ? formatTime(chat.last_message_at) : '';
+                const unreadCount = chat.seller_unread_count || 0;
+                const unreadBadge = unreadCount > 0 ? `<span class="badge bg-danger ms-2">${unreadCount}</span>` : '';
+                const orderInfo = order && order.order_id ? `<small class="text-muted d-block" style="font-size: 0.7rem;">Pesanan #${order.order_id.substring(0, 8)}</small>` : '';
+                
+                // Get buyer name - use actual name from database
+                const buyerName = buyer.name || buyer.email || 'Pembeli';
+                const buyerInitial = buyerName.charAt(0).toUpperCase();
+                
+                return `
+                    <div class="chat-item" onclick="selectChat('${chat.chat_id}')" data-chat-id="${chat.chat_id}">
+                        <div class="chat-item-avatar">
+                            ${buyerInitial}
+                        </div>
+                        <div class="chat-item-content">
+                            <div class="chat-item-header">
+                                <span class="chat-item-name">${escapeHtml(buyerName)} ${unreadBadge}</span>
+                                <span class="chat-item-time">${lastMessageTime}</span>
+                            </div>
+                            ${orderInfo}
+                            <div class="chat-item-message">${escapeHtml(lastMessage).substring(0, 40)}${lastMessage.length > 40 ? '...' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Error loading chats:', error);
+            document.getElementById('chatList').innerHTML = '<div class="text-center p-4 text-danger">Gagal memuat chat</div>';
+        }
+    }
+    
     // Select Chat
-    function selectChat(id) {
+    async function selectChat(chatId) {
+        currentChatId = chatId;
+        
+        // Update active state
         document.querySelectorAll('.chat-item').forEach(item => {
             item.classList.remove('active');
         });
-        event.currentTarget.classList.add('active');
+        document.querySelector(`[data-chat-id="${chatId}"]`)?.classList.add('active');
+        
+        // Load chat details and messages
+        await loadChatDetails(chatId);
+        await loadMessages(chatId);
+        
+        // Start polling for new messages
+        if (messagePollInterval) {
+            clearInterval(messagePollInterval);
+        }
+        messagePollInterval = setInterval(() => {
+            if (currentChatId) {
+                loadMessages(currentChatId);
+            }
+        }, 3000); // Poll every 3 seconds
+    }
+    
+    // Load chat details
+    async function loadChatDetails(chatId) {
+        try {
+            const response = await fetch(`/api/chat/get-or-create?chat_id=${chatId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load chat details');
+            
+            const chat = await response.json();
+            currentChat = chat;
+            
+            const buyer = chat.buyer || {};
+            const order = chat.order || {};
+            const buyerName = buyer.name || buyer.email || 'Pembeli';
+            const orderInfo = order && order.order_id ? ` (Pesanan #${order.order_id.substring(0, 8)})` : '';
+            document.getElementById('chatHeaderName').textContent = buyerName + orderInfo;
+            document.getElementById('chatHeaderStatus').textContent = 'Online';
+            document.getElementById('chatHeaderAvatar').innerHTML = buyerName.charAt(0).toUpperCase();
+            document.getElementById('chatMainHeader').style.display = 'flex';
+        } catch (error) {
+            console.error('Error loading chat details:', error);
+        }
+    }
+    
+    // Load messages
+    async function loadMessages(chatId) {
+        try {
+            const response = await fetch(`/api/chat/${chatId}/messages`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load messages');
+            
+            const messages = await response.json();
+            const chatMessages = document.getElementById('chatMessages');
+            const currentUser = {!! json_encode(Auth::user()) !!};
+            
+            if (messages.length === 0) {
+                chatMessages.innerHTML = '<div class="text-center p-8 text-gray-400"><i class="fa-solid fa-comments" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-4">Belum ada pesan</p></div>';
+                return;
+            }
+            
+            chatMessages.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentUser.user_id;
+                const sender = msg.sender || {};
+                const senderInitials = sender.name ? sender.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
+                const time = formatTime(msg.created_at);
+                
+                return `
+                    <div class="chat-message ${isSent ? 'sent' : ''}">
+                        <div class="chat-message-avatar">${senderInitials}</div>
+                        <div class="chat-message-content">
+                            ${!isSent ? `<div class="chat-message-sender-name">${escapeHtml(sender.name || sender.email || 'User')}</div>` : ''}
+                            <div class="chat-message-bubble">${escapeHtml(msg.message)}</div>
+                            <div class="chat-message-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
     }
     
     // Send Message
-    function sendMessage() {
+    async function sendMessage() {
+        if (!currentChatId) {
+            showError('Pilih chat terlebih dahulu');
+            return;
+        }
+        
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
         
-        if (message) {
-            const chatMessages = document.getElementById('chatMessages');
-            const now = new Date();
-            const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+        if (!message) return;
+        
+        try {
+            const response = await fetch(`/api/chat/${currentChatId}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ message })
+            });
             
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message sent';
-            messageDiv.innerHTML = `
-                <div class="chat-message-avatar">AF</div>
-                <div class="chat-message-content">
-                    <div class="chat-message-bubble">${message}</div>
-                    <div class="chat-message-time">${time}</div>
-                </div>
-            `;
+            if (!response.ok) throw new Error('Failed to send message');
             
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
             input.value = '';
+            await loadMessages(currentChatId);
+            await loadChats(); // Refresh chat list to update last message
+        } catch (error) {
+            console.error('Error sending message:', error);
+            showError('Gagal mengirim pesan');
         }
+    }
+    
+    // Helper functions
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (minutes < 1) return 'Baru saja';
+        if (minutes < 60) return `${minutes}m`;
+        if (hours < 24) return `${hours}j`;
+        if (days < 7) return `${days}d`;
+        
+        return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     // Handle Enter Key
@@ -745,6 +890,14 @@
             sendMessage();
         }
     }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChats();
+        
+        // Refresh chat list every 10 seconds
+        setInterval(loadChats, 10000);
+    });
     
     // Show success message if redirected with success
     @if(session('success'))

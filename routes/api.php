@@ -25,159 +25,403 @@ Route::prefix('sensor')->name('sensor.')->group(function () {
 Route::prefix('telegram')->name('telegram.')->group(function () {
     Route::post('/test', function (Request $request) {
         try {
-            $request->validate([
-                'bot_token' => 'required|string',
-                'chat_id' => 'required|string'
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'message' => 'Token Bot dan Chat ID harus diisi'], 400);
-        }
-        
-        $botToken = trim($request->bot_token);
-        $chatId = trim($request->chat_id);
-        
-        // Remove quotes if present
-        $botToken = trim($botToken, '"\'');
-        $chatId = trim($chatId, '"\'');
-        
-        // Validate token format (should be numeric:token)
-        if (!preg_match('/^\d+:[A-Za-z0-9_-]+$/', $botToken)) {
-            return response()->json(['success' => false, 'message' => 'Format token tidak valid. Token harus dalam format: 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11'], 400);
-        }
-        
-        try {
-            $response = Http::timeout(10)->get("https://api.telegram.org/bot{$botToken}/getMe");
-            
-            // Handle HTTP errors first
-            if ($response->failed()) {
-                $errorBody = $response->json();
-                $errorDescription = $errorBody['description'] ?? 'Gagal menghubungi Telegram API';
-                $errorCode = $errorBody['error_code'] ?? $response->status();
-                
-                // Provide more helpful error messages
-                if ($errorCode === 401) {
-                    $errorDescription = 'Token tidak valid atau sudah expired. Silakan buat token baru dari @BotFather.';
-                } elseif ($errorCode === 400) {
-                    $errorDescription = 'Format token tidak valid. Pastikan token dalam format: 123456789:ABC-DEF1234...';
-                }
-                
-                Log::error('Telegram Test HTTP Error', [
-                    'status' => $response->status(),
-                    'error' => $errorDescription,
-                    'error_code' => $errorCode,
-                    'response' => $errorBody,
-                    'token_prefix' => substr($botToken, 0, 10) . '...'
+            // Validate request
+            try {
+                $validated = $request->validate([
+                    'bot_token' => 'required|string',
+                    'chat_id' => 'required|string'
                 ]);
-                return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Token Bot dan Chat ID harus diisi',
+                    'errors' => $e->errors()
+                ], 400);
             }
             
-            $data = $response->json();
+            $botToken = trim($request->bot_token ?? '');
+            $chatId = trim($request->chat_id ?? '');
             
-            if (isset($data['ok']) && $data['ok'] === true) {
-                // Also verify chat_id by trying to get chat info
+            // Remove quotes if present
+            $botToken = trim($botToken, '"\'');
+            $chatId = trim($chatId, '"\'');
+            
+            // Validate token format (should be numeric:token) - more flexible pattern
+            if (empty($botToken) || !preg_match('/^\d+:[A-Za-z0-9_-]+$/', $botToken)) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Format token tidak valid. Token harus dalam format: 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11'
+                ], 400);
+            }
+            
+            if (empty($chatId)) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Chat ID tidak boleh kosong'
+                ], 400);
+            }
+            
+            // Retry mechanism untuk mengatasi connection reset
+            $maxRetries = 3;
+            $retryDelay = 1; // seconds
+            $lastError = null;
+            
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
                 try {
-                    $chatResponse = Http::timeout(10)->get("https://api.telegram.org/bot{$botToken}/getChat", [
-                        'chat_id' => $chatId
-                    ]);
+                    // Increase timeout untuk setiap retry
+                    $timeout = 15 + ($attempt * 5); // 15s, 20s, 25s
                     
-                    if ($chatResponse->failed()) {
-                        $chatErrorBody = $chatResponse->json();
-                        $chatError = $chatErrorBody['description'] ?? 'Chat ID tidak valid';
-                        Log::warning('Telegram Chat ID Error', ['error' => $chatError, 'chat_id' => $chatId, 'response' => $chatErrorBody]);
-                        return response()->json(['success' => false, 'message' => 'Bot token valid, tapi Chat ID error: ' . $chatError], 400);
+                    $response = \Illuminate\Support\Facades\Http::timeout($timeout)
+                        ->retry(2, 1000) // Retry 2 kali dengan delay 1 detik
+                        ->get("https://api.telegram.org/bot{$botToken}/getMe");
+                    
+                    // Handle HTTP errors first
+                    if ($response->failed()) {
+                        try {
+                            $errorBody = $response->json();
+                        } catch (\Exception $e) {
+                            $errorBody = [];
+                        }
+                        $errorDescription = $errorBody['description'] ?? 'Gagal menghubungi Telegram API';
+                        $errorCode = $errorBody['error_code'] ?? $response->status();
+                        
+                        // Provide more helpful error messages
+                        if ($errorCode === 401) {
+                            $errorDescription = 'Token tidak valid atau sudah expired. Silakan buat token baru dari @BotFather.';
+                        } elseif ($errorCode === 400) {
+                            $errorDescription = 'Format token tidak valid. Pastikan token dalam format: 123456789:ABC-DEF1234...';
+                        }
+                        
+                        // Jika error 401 atau 400, tidak perlu retry
+                        if ($errorCode == 401 || $errorCode == 400) {
+                            Log::error('Telegram Test HTTP Error', [
+                                'status' => $response->status(),
+                                'error' => $errorDescription,
+                                'error_code' => $errorCode,
+                                'response' => $errorBody,
+                                'token_prefix' => substr($botToken, 0, 10) . '...'
+                            ]);
+                            return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                        }
+                        
+                        // Untuk error lain, lanjutkan retry
+                        $lastError = $errorDescription;
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        
+                        Log::error('Telegram Test HTTP Error', [
+                            'status' => $response->status(),
+                            'error' => $errorDescription,
+                            'error_code' => $errorCode,
+                            'response' => $errorBody,
+                            'token_prefix' => substr($botToken, 0, 10) . '...',
+                            'attempt' => $attempt
+                        ]);
+                        return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
                     }
                     
-                    $chatData = $chatResponse->json();
-                    if (isset($chatData['ok']) && $chatData['ok'] === true) {
-                        return response()->json(['success' => true, 'message' => 'Bot token dan Chat ID valid']);
-                    } else {
-                        $chatError = $chatData['description'] ?? 'Chat ID tidak valid';
-                        Log::warning('Telegram Chat ID Error', ['error' => $chatError, 'chat_id' => $chatId, 'response' => $chatData]);
-                        return response()->json(['success' => false, 'message' => 'Bot token valid, tapi Chat ID error: ' . $chatError], 400);
+                    // Try to parse JSON response
+                    try {
+                        $data = $response->json();
+                    } catch (\Exception $e) {
+                        Log::error('Telegram Test JSON Parse Error', ['error' => $e->getMessage(), 'response_body' => substr($response->body(), 0, 200)]);
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        return response()->json(['success' => false, 'message' => 'Gagal memparse response dari Telegram API'], 500);
                     }
-                } catch (\Exception $e) {
-                    // If chat_id check fails, still return success for bot token
-                    Log::warning('Telegram Chat ID Check Failed', ['error' => $e->getMessage()]);
-                    return response()->json(['success' => true, 'message' => 'Bot token valid, Chat ID perlu diverifikasi']);
+                    
+                    if (isset($data['ok']) && $data['ok'] === true) {
+                    // Also verify chat_id by trying to get chat info
+                    try {
+                        $chatResponse = \Illuminate\Support\Facades\Http::timeout(10)->get("https://api.telegram.org/bot{$botToken}/getChat", [
+                            'chat_id' => $chatId
+                        ]);
+                        
+                        if ($chatResponse->failed()) {
+                            $chatErrorBody = $chatResponse->json();
+                            $chatError = $chatErrorBody['description'] ?? 'Chat ID tidak valid';
+                            Log::warning('Telegram Chat ID Error', ['error' => $chatError, 'chat_id' => $chatId, 'response' => $chatErrorBody]);
+                            return response()->json(['success' => false, 'message' => 'Bot token valid, tapi Chat ID error: ' . $chatError], 400);
+                        }
+                        
+                        try {
+                            $chatData = $chatResponse->json();
+                        } catch (\Exception $e) {
+                            Log::warning('Telegram Chat ID JSON Parse Error', ['error' => $e->getMessage()]);
+                            return response()->json(['success' => true, 'message' => 'Bot token valid, Chat ID perlu diverifikasi']);
+                        }
+                        if (isset($chatData['ok']) && $chatData['ok'] === true) {
+                            return response()->json(['success' => true, 'message' => 'Bot token dan Chat ID valid']);
+                        } else {
+                            $chatError = $chatData['description'] ?? 'Chat ID tidak valid';
+                            Log::warning('Telegram Chat ID Error', ['error' => $chatError, 'chat_id' => $chatId, 'response' => $chatData]);
+                            return response()->json(['success' => false, 'message' => 'Bot token valid, tapi Chat ID error: ' . $chatError], 400);
+                        }
+                    } catch (\Exception $e) {
+                        // If chat_id check fails, still return success for bot token
+                        Log::warning('Telegram Chat ID Check Failed', ['error' => $e->getMessage()]);
+                        return response()->json(['success' => true, 'message' => 'Bot token valid, Chat ID perlu diverifikasi']);
+                    }
                 }
-            }
-            
-            $errorDescription = $data['description'] ?? 'Bot token tidak valid';
-            $errorCode = $data['error_code'] ?? 0;
-            
-            // Provide more helpful error messages
-            if ($errorCode === 401) {
-                $errorDescription = 'Token tidak valid atau sudah expired. Silakan buat token baru dari @BotFather.';
-            } elseif ($errorCode === 400) {
-                $errorDescription = 'Format token tidak valid. Pastikan token dalam format: 123456789:ABC-DEF1234...';
-            }
-            
-            Log::error('Telegram Test Error', ['error' => $errorDescription, 'error_code' => $errorCode, 'response' => $data, 'token_prefix' => substr($botToken, 0, 10) . '...']);
-            return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::error('Telegram Test Connection Error', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Tidak dapat terhubung ke Telegram API. Periksa koneksi internet.'], 500);
-        } catch (\Exception $e) {
-            Log::error('Telegram Test Error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                
+                        $errorDescription = $data['description'] ?? 'Bot token tidak valid';
+                        $errorCode = $data['error_code'] ?? 0;
+                        
+                        // Provide more helpful error messages
+                        if ($errorCode === 401) {
+                            $errorDescription = 'Token tidak valid atau sudah expired. Silakan buat token baru dari @BotFather.';
+                        } elseif ($errorCode === 400) {
+                            $errorDescription = 'Format token tidak valid. Pastikan token dalam format: 123456789:ABC-DEF1234...';
+                        }
+                        
+                        // Jika error 401 atau 400, tidak perlu retry
+                        if ($errorCode == 401 || $errorCode == 400) {
+                            Log::error('Telegram Test Error', ['error' => $errorDescription, 'error_code' => $errorCode, 'response' => $data, 'token_prefix' => substr($botToken, 0, 10) . '...']);
+                            return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                        }
+                        
+                        $lastError = $errorDescription;
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        
+                        Log::error('Telegram Test Error', ['error' => $errorDescription, 'error_code' => $errorCode, 'response' => $data, 'token_prefix' => substr($botToken, 0, 10) . '...', 'attempt' => $attempt]);
+                        return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                        
+                    } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                        $lastError = $e->getMessage();
+                        Log::warning('Telegram Test Connection Error (Attempt ' . $attempt . '/' . $maxRetries . ')', [
+                            'error' => $e->getMessage(),
+                            'attempt' => $attempt
+                        ]);
+                        
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        
+                        // Last attempt failed
+                        Log::error('Telegram Test Connection Error - All Retries Failed', ['error' => $e->getMessage()]);
+                        return response()->json([
+                            'success' => false, 
+                            'message' => 'Tidak dapat terhubung ke Telegram API setelah ' . $maxRetries . ' kali percobaan. Periksa koneksi internet atau coba lagi nanti.',
+                            'error_type' => 'connection_error'
+                        ], 500);
+                        
+                    } catch (\Throwable $e) {
+                        $lastError = $e->getMessage();
+                        Log::error('Telegram Test Error (Attempt ' . $attempt . '/' . $maxRetries . ')', [
+                            'error' => $e->getMessage(),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine(),
+                            'attempt' => $attempt
+                        ]);
+                        
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        
+                        // Last attempt failed
+                        return response()->json([
+                            'success' => false, 
+                            'message' => 'Error: ' . $e->getMessage() . ' (Setelah ' . $maxRetries . ' kali percobaan)'
+                        ], 500);
+                    }
+                }
+                
+                // Fallback jika semua retry gagal
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Gagal menghubungi Telegram API setelah ' . $maxRetries . ' kali percobaan. ' . ($lastError ? 'Error: ' . $lastError : '')
+                ], 500);
+        } catch (\Throwable $e) {
+            Log::error('Telegram Test Outer Error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 500)
+            ]);
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     })->name('test');
     
     Route::post('/send-test', function (Request $request) {
         try {
-            $request->validate([
-                'bot_token' => 'required|string',
-                'chat_id' => 'required|string',
-                'message' => 'required|string'
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'message' => 'Semua field harus diisi'], 400);
-        }
-        
-        $botToken = trim($request->bot_token);
-        $chatId = trim($request->chat_id);
-        
-        // Remove quotes if present
-        $botToken = trim($botToken, '"\'');
-        $chatId = trim($chatId, '"\'');
-        
-        try {
-            $response = Http::timeout(10)->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
-                'chat_id' => $chatId,
-                'text' => $request->message,
-                'parse_mode' => 'HTML'
-            ]);
-            
-            // Handle HTTP errors first
-            if ($response->failed()) {
-                $errorBody = $response->json();
-                $errorDescription = $errorBody['description'] ?? 'Gagal mengirim pesan';
-                $errorCode = $errorBody['error_code'] ?? $response->status();
-                
-                Log::error('Telegram Send HTTP Error', [
-                    'status' => $response->status(),
-                    'error' => $errorDescription,
-                    'error_code' => $errorCode,
-                    'body' => $errorBody
+            // Validate request
+            try {
+                $request->validate([
+                    'bot_token' => 'required|string',
+                    'chat_id' => 'required|string',
+                    'message' => 'required|string'
                 ]);
-                return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json(['success' => false, 'message' => 'Semua field harus diisi'], 400);
             }
             
-            $data = $response->json();
-            if (isset($data['ok']) && $data['ok'] === true) {
-                return response()->json(['success' => true, 'message' => 'Pesan berhasil dikirim']);
+            $botToken = trim($request->bot_token ?? '');
+            $chatId = trim($request->chat_id ?? '');
+            
+            // Remove quotes if present
+            $botToken = trim($botToken, '"\'');
+            $chatId = trim($chatId, '"\'');
+            
+            // Validate inputs
+            if (empty($botToken)) {
+                return response()->json(['success' => false, 'message' => 'Token Bot tidak boleh kosong'], 400);
             }
             
-            // If response is successful but ok is false, get error description
-            $errorDescription = $data['description'] ?? 'Gagal mengirim pesan';
-            $errorCode = $data['error_code'] ?? 0;
-            Log::error('Telegram API Error', ['response' => $data, 'error_code' => $errorCode]);
-            return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::error('Telegram Connection Error', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Tidak dapat terhubung ke Telegram API. Periksa koneksi internet.'], 500);
-        } catch (\Exception $e) {
-            Log::error('Telegram Send Error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            if (empty($chatId)) {
+                return response()->json(['success' => false, 'message' => 'Chat ID tidak boleh kosong'], 400);
+            }
+            
+            if (empty($request->message)) {
+                return response()->json(['success' => false, 'message' => 'Pesan tidak boleh kosong'], 400);
+            }
+            
+            // Retry mechanism untuk mengatasi connection reset
+            $maxRetries = 3;
+            $retryDelay = 1; // seconds
+            $lastError = null;
+            
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                try {
+                    // Increase timeout untuk setiap retry
+                    $timeout = 15 + ($attempt * 5); // 15s, 20s, 25s
+                    
+                    $response = \Illuminate\Support\Facades\Http::timeout($timeout)
+                        ->retry(2, 1000) // Retry 2 kali dengan delay 1 detik
+                        ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                            'chat_id' => $chatId,
+                            'text' => $request->message,
+                            'parse_mode' => 'HTML'
+                        ]);
+                    
+                    // Handle HTTP errors first
+                    if ($response->failed()) {
+                        try {
+                            $errorBody = $response->json();
+                        } catch (\Exception $e) {
+                            $errorBody = ['description' => 'HTTP Error ' . $response->status()];
+                        }
+                        
+                        $errorDescription = $errorBody['description'] ?? 'Gagal mengirim pesan';
+                        $errorCode = $errorBody['error_code'] ?? $response->status();
+                        
+                        // Jika error 401 atau 400, tidak perlu retry
+                        if ($errorCode == 401 || $errorCode == 400) {
+                            Log::error('Telegram Send HTTP Error', [
+                                'status' => $response->status(),
+                                'error' => $errorDescription,
+                                'error_code' => $errorCode,
+                                'body' => $errorBody
+                            ]);
+                            return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                        }
+                        
+                        // Untuk error lain, lanjutkan retry
+                        $lastError = $errorDescription;
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                    }
+                    
+                    // Try to parse JSON response
+                    try {
+                        $data = $response->json();
+                    } catch (\Exception $e) {
+                        Log::error('Telegram Send JSON Parse Error', ['error' => $e->getMessage(), 'response_body' => substr($response->body(), 0, 200)]);
+                        if ($attempt < $maxRetries) {
+                            sleep($retryDelay);
+                            continue;
+                        }
+                        return response()->json(['success' => false, 'message' => 'Gagal memparse response dari Telegram API'], 500);
+                    }
+                    
+                    if (isset($data['ok']) && $data['ok'] === true) {
+                        Log::info('Telegram Send Success', ['attempt' => $attempt]);
+                        return response()->json(['success' => true, 'message' => 'Pesan berhasil dikirim']);
+                    }
+                    
+                    // If response is successful but ok is false, get error description
+                    $errorDescription = $data['description'] ?? 'Gagal mengirim pesan';
+                    $errorCode = $data['error_code'] ?? 0;
+                    
+                    // Jika error 401 atau 400, tidak perlu retry
+                    if ($errorCode == 401 || $errorCode == 400) {
+                        Log::error('Telegram API Error', ['response' => $data, 'error_code' => $errorCode]);
+                        return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                    }
+                    
+                    $lastError = $errorDescription;
+                    if ($attempt < $maxRetries) {
+                        sleep($retryDelay);
+                        continue;
+                    }
+                    
+                    Log::error('Telegram API Error', ['response' => $data, 'error_code' => $errorCode]);
+                    return response()->json(['success' => false, 'message' => $errorDescription, 'error_code' => $errorCode], 400);
+                    
+                } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                    $lastError = $e->getMessage();
+                    Log::warning('Telegram Connection Error (Attempt ' . $attempt . '/' . $maxRetries . ')', [
+                        'error' => $e->getMessage(),
+                        'attempt' => $attempt
+                    ]);
+                    
+                    if ($attempt < $maxRetries) {
+                        sleep($retryDelay);
+                        continue;
+                    }
+                    
+                    // Last attempt failed
+                    Log::error('Telegram Connection Error - All Retries Failed', ['error' => $e->getMessage()]);
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Tidak dapat terhubung ke Telegram API setelah ' . $maxRetries . ' kali percobaan. Periksa koneksi internet atau coba lagi nanti.',
+                        'error_type' => 'connection_error'
+                    ], 500);
+                    
+                } catch (\Throwable $e) {
+                    $lastError = $e->getMessage();
+                    Log::error('Telegram Send Error (Attempt ' . $attempt . '/' . $maxRetries . ')', [
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'attempt' => $attempt
+                    ]);
+                    
+                    if ($attempt < $maxRetries) {
+                        sleep($retryDelay);
+                        continue;
+                    }
+                    
+                    // Last attempt failed
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Error: ' . $e->getMessage() . ' (Setelah ' . $maxRetries . ' kali percobaan)'
+                    ], 500);
+                }
+            }
+            
+            // Fallback jika semua retry gagal
+            return response()->json([
+                'success' => false, 
+                'message' => 'Gagal mengirim pesan setelah ' . $maxRetries . ' kali percobaan. ' . ($lastError ? 'Error: ' . $lastError : '')
+            ], 500);
+        } catch (\Throwable $e) {
+            Log::error('Telegram Send Outer Error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 500)
+            ]);
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     })->name('send-test');

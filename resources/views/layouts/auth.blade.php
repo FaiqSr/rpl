@@ -278,6 +278,9 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
     
@@ -286,7 +289,7 @@
         // CSRF Token setup for AJAX
         document.addEventListener('DOMContentLoaded', function() {
             const token = document.querySelector('meta[name="csrf-token"]');
-            if (token) {
+            if (token && typeof axios !== 'undefined') {
                 window.axios = axios;
                 window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
             }

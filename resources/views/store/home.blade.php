@@ -273,6 +273,10 @@
           <a href="{{ route('orders') }}" class="text-gray-600 text-sm me-3 text-decoration-none" title="Pesanan Saya">
             <i class="fa-solid fa-shopping-bag me-1"></i> Pesanan Saya
           </a>
+          <a href="#" onclick="openChatModal(); return false;" class="text-gray-600 text-sm me-3 text-decoration-none position-relative" title="Chat">
+            <i class="fa-solid fa-comments me-1"></i> Chat
+            <span id="chatBadge" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
+          </a>
           <a href="{{ route('profile') }}" class="text-gray-600 text-sm me-2 text-decoration-none">Halo, {{ Auth::user()->name }}</a>
           <a href="{{ route('logout') }}" class="btn-outline-secondary">Logout</a>
         @else
@@ -365,6 +369,39 @@
     </div>
   </footer>
 
+  <!-- Chat Modal for Buyer -->
+  @if(Auth::check())
+  <div class="modal fade" id="chatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" style="height: 600px; display: flex; flex-direction: column;">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-comments me-2"></i>Chat dengan Penjual
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <!-- Chat Messages -->
+          <div id="buyerChatMessages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa;">
+            <div class="text-center p-4 text-gray-500">
+              <i class="fa-solid fa-spinner fa-spin"></i> Memuat pesan...
+            </div>
+          </div>
+          <!-- Chat Input -->
+          <div class="border-top p-3 bg-white">
+            <div class="input-group">
+              <input type="text" id="buyerChatInput" class="form-control" placeholder="Ketik pesan disini..." onkeypress="if(event.key==='Enter') sendBuyerMessage()">
+              <button class="btn btn-success" onclick="sendBuyerMessage()">
+                <i class="fa-solid fa-paper-plane"></i> Kirim
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  @endif
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
   <script>
@@ -386,8 +423,34 @@
         });
     }
     
+    // Update chat unread count
+    function updateChatCount() {
+      fetch('/api/chat/unread-count', {
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          const badge = document.getElementById('chatBadge');
+          if (badge) {
+            if (data.unread_count > 0) {
+              badge.textContent = data.unread_count;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        })
+        .catch(err => console.error('Error loading chat count:', err));
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
       updateCartCount();
+      updateChatCount();
+      // Refresh chat count every 30 seconds
+      setInterval(updateChatCount, 30000);
     });
     @endif
   </script>
@@ -475,5 +538,13 @@
     }
     });
   </script>
+  
+  @if(Auth::check())
+  <script>
+    // Set current user for chat
+    window.currentUser = {!! json_encode(Auth::user()) !!};
+  </script>
+  <script src="{{ asset('js/chat-buyer.js') }}"></script>
+  @endif
 </body>
 </html>

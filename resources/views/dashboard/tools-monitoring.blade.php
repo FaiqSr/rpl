@@ -1185,10 +1185,8 @@
       const sensorStatus = getSensorStatus(key, value);
       
       // Format nilai dengan presisi yang sesuai
-      const formattedValue = (key === 'temperature' || key === 'humidity') ? 
-        parseFloat(value).toFixed(1) : 
-        (key === 'ammonia') ? parseFloat(value).toFixed(1) : 
-        Math.round(parseFloat(value));
+      // Semua sensor menggunakan 1 desimal untuk konsistensi
+      const formattedValue = parseFloat(value).toFixed(1);
       
       // Tentukan ikon sensor
       const sensorIcons = {
@@ -1761,7 +1759,7 @@
         const hum = 65 + (Math.random()*10-5);
         const ammo = Math.max(5, 10 + (Math.random()*7-3));
         const light = (i>=6 && i<=18)? 700 + (Math.random()*200-100) : 120 + (Math.random()*60-30);
-        history.push({time:hour, temperature:+temp.toFixed(1), humidity:+hum.toFixed(1), ammonia:+ammo.toFixed(1), light:Math.round(light)});
+        history.push({time:hour, temperature:+temp.toFixed(1), humidity:+hum.toFixed(1), ammonia:+ammo.toFixed(1), light:+light.toFixed(1)});
       }
       const latest = history[history.length-1];
       const predict = arr => {
