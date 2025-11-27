@@ -47,8 +47,97 @@ if (!function_exists('getPaymentAccount')) {
 
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
-    $products = Product::with('images')->orderByDesc('created_at')->paginate(24);
-    return view('store.home', compact('products'));
+    $query = Product::with('images');
+    
+    // Filter by search
+    if (request('search')) {
+        $search = request('search');
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', '%' . $search . '%')
+              ->orWhere('description', 'like', '%' . $search . '%')
+              ->orWhere('slug', 'like', '%' . $search . '%');
+        });
+    }
+    
+    // Filter by category
+    if (request('category')) {
+        $category = request('category');
+        
+        // Check if it's a homepage category slug
+        $homepageCategory = \App\Models\HomepageCategory::where('slug', $category)->where('is_active', true)->first();
+        
+        if ($homepageCategory) {
+            // Use homepage category name to filter products with keyword mapping
+            $categoryName = strtolower($homepageCategory->name);
+            $categorySlug = strtolower($homepageCategory->slug);
+            
+            // Map category names to product keywords
+            $categoryKeywords = [
+                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal'],
+                'daging segar' => ['daging', 'ayam segar', 'ayam utuh', 'ayam potong'],
+                'daging' => ['daging', 'ayam segar', 'ayam utuh', 'ayam potong'],
+                'ayam karkas' => ['karkas', 'ayam karkas', 'carcass'],
+                'dada' => ['dada', 'breast', 'fillet'],
+                'paha' => ['paha', 'thigh', 'drumstick'],
+                'sayap' => ['sayap', 'wing'],
+            ];
+            
+            // Get keywords for this category
+            $keywords = $categoryKeywords[$categorySlug] ?? $categoryKeywords[$categoryName] ?? [$categoryName, $categorySlug];
+            
+            $query->where(function($q) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $q->orWhere('slug', 'like', '%' . $keyword . '%')
+                      ->orWhere('name', 'like', '%' . $keyword . '%');
+                }
+            });
+        } else {
+            // Fallback to old category map for backward compatibility
+            $categoryMap = [
+                'daging-ayam-segar' => ['daging', 'ayam-segar', 'ayam-utuh'],
+                'olahan' => ['olahan', 'sosis', 'nugget', 'bakso'],
+                'alat-alat' => ['alat', 'peralatan'],
+                'pakan' => ['pakan', 'makanan-ayam'],
+                'obat-vitamin' => ['obat', 'vitamin', 'suplemen'],
+                'peralatan-kandang' => ['kandang', 'peralatan-kandang']
+            ];
+            
+            if (isset($categoryMap[$category])) {
+                $query->where(function($q) use ($categoryMap, $category) {
+                    foreach ($categoryMap[$category] as $pattern) {
+                        $q->orWhere('slug', 'like', '%' . $pattern . '%')
+                          ->orWhere('name', 'like', '%' . $pattern . '%');
+                    }
+                });
+            }
+        }
+    }
+    
+    $products = $query->orderByDesc('created_at')->paginate(24);
+    
+    // Get banners and group by banner_type
+    $allBanners = \App\Models\HomepageBanner::where('is_active', true)
+        ->orderBy('banner_type')
+        ->orderBy('sort_order')
+        ->orderBy('created_at')
+        ->get();
+    
+    // Group banners by banner_type (default to 'square' if banner_type is null)
+    $banners = [
+        'square' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'square';
+        })->values(),
+        'rectangle_top' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'rectangle_top';
+        })->values(),
+        'rectangle_bottom' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'rectangle_bottom';
+        })->values(),
+    ];
+    
+    $homepageCategories = \App\Models\HomepageCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    $articleCategories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    return view('store.home', compact('products', 'banners', 'homepageCategories', 'articleCategories'));
 })->name('home');
 
 // Authentication Pages (hanya tampilan, tidak ada proses backend)
@@ -334,6 +423,566 @@ Route::middleware(['auth.session','admin'])->group(function() {
     })->name('dashboard.sales');
     Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
     Route::get('/dashboard/customers', [\App\Http\Controllers\CustomerController::class, 'index'])->name('dashboard.customers');
+    
+    // Article Categories Management
+    Route::get('/dashboard/article-categories', function () {
+        $categories = \App\Models\ArticleCategory::orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.article-categories', compact('categories'));
+    })->name('dashboard.article-categories');
+    
+    Route::get('/dashboard/article-categories/{id}', function ($id) {
+        $category = \App\Models\ArticleCategory::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'category' => $category
+        ]);
+    });
+    
+    Route::post('/dashboard/article-categories', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:article_categories,slug',
+                'description' => 'nullable|string',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            $category = \App\Models\ArticleCategory::create([
+                'category_id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $validated['name'],
+                'slug' => $validated['slug'],
+                'description' => $validated['description'] ?? null,
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dibuat',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/article-categories/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $category = \App\Models\ArticleCategory::findOrFail($id);
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:article_categories,slug,' . $id . ',category_id',
+                'description' => 'nullable|string',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            $category->update($validated);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil diperbarui',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/article-categories/{id}', function ($id) {
+        try {
+            $category = \App\Models\ArticleCategory::findOrFail($id);
+            
+            // Check if category has articles
+            if ($category->articles()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak dapat dihapus karena masih memiliki artikel'
+                ], 400);
+            }
+            
+            $category->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Homepage Management
+    Route::get('/dashboard/homepage', function () {
+        $banners = \App\Models\HomepageBanner::orderBy('banner_type')->orderBy('sort_order')->orderBy('created_at')->get();
+        $categories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.homepage', compact('banners', 'categories'));
+    })->name('dashboard.homepage');
+    
+    // Banner Routes
+    Route::get('/dashboard/homepage/banners/{id}', function ($id) {
+        $banner = \App\Models\HomepageBanner::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'banner' => $banner
+        ]);
+    });
+    
+    Route::post('/dashboard/homepage/banners', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'banner_type' => 'required|string|in:square,rectangle_top,rectangle_bottom',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'link_url' => 'nullable|string|max:500',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            $imageUrl = null;
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+                $extension = strtolower($file->getClientOriginalExtension());
+                $filename = time() . '_' . uniqid() . '.' . $extension;
+                $destinationPath = public_path('storage/homepage-banners');
+                
+                // Ensure directory exists
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                
+                // For JPEG, optimize quality
+                if (in_array($extension, ['jpg', 'jpeg'])) {
+                    $image = imagecreatefromjpeg($file->getRealPath());
+                    if ($image) {
+                        imagejpeg($image, $destinationPath . '/' . $filename, 95); // 95% quality
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } elseif ($extension === 'png') {
+                    $image = imagecreatefrompng($file->getRealPath());
+                    if ($image) {
+                        imagealphablending($image, false);
+                        imagesavealpha($image, true);
+                        imagepng($image, $destinationPath . '/' . $filename, 9); // 9 = highest compression but lossless
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } else {
+                    $file->move($destinationPath, $filename);
+                }
+                
+                $imageUrl = asset('storage/homepage-banners/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $imageUrl = $request->input('image_url');
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gambar banner harus diisi (URL atau upload file)'
+                ], 422);
+            }
+            
+            $banner = \App\Models\HomepageBanner::create([
+                'banner_id' => (string) \Illuminate\Support\Str::uuid(),
+                'title' => $validated['title'] ?? null,
+                'banner_type' => $validated['banner_type'],
+                'image_url' => $imageUrl,
+                'link_url' => $validated['link_url'] ?? null,
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil dibuat',
+                'banner' => $banner
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/homepage/banners/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $banner = \App\Models\HomepageBanner::where('banner_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'banner_type' => 'required|string|in:square,rectangle_top,rectangle_bottom',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'link_url' => 'nullable|string|max:500',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            if ($request->hasFile('image_file')) {
+                // Delete old image if exists
+                if ($banner->image_url && strpos($banner->image_url, asset('storage/homepage-banners')) === 0) {
+                    $oldFile = str_replace(asset('storage/homepage-banners'), public_path('storage/homepage-banners'), $banner->image_url);
+                    if (file_exists($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+                
+                $file = $request->file('image_file');
+                $extension = strtolower($file->getClientOriginalExtension());
+                $filename = time() . '_' . uniqid() . '.' . $extension;
+                $destinationPath = public_path('storage/homepage-banners');
+                
+                // Ensure directory exists
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                
+                // For JPEG, optimize quality
+                if (in_array($extension, ['jpg', 'jpeg'])) {
+                    $image = imagecreatefromjpeg($file->getRealPath());
+                    if ($image) {
+                        imagejpeg($image, $destinationPath . '/' . $filename, 95); // 95% quality
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } elseif ($extension === 'png') {
+                    $image = imagecreatefrompng($file->getRealPath());
+                    if ($image) {
+                        imagealphablending($image, false);
+                        imagesavealpha($image, true);
+                        imagepng($image, $destinationPath . '/' . $filename, 9); // 9 = highest compression but lossless
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } else {
+                    $file->move($destinationPath, $filename);
+                }
+                
+                $validated['image_url'] = asset('storage/homepage-banners/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $validated['image_url'] = $request->input('image_url');
+            } else {
+                // Keep existing image if not provided
+                unset($validated['image_url']);
+            }
+            
+            $banner->update($validated);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil diperbarui',
+                'banner' => $banner
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/homepage/banners/{id}', function ($id) {
+        try {
+            $banner = \App\Models\HomepageBanner::where('banner_id', $id)->firstOrFail();
+            $banner->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Category Routes
+    Route::get('/dashboard/homepage/categories/{id}', function ($id) {
+        try {
+            \Log::info('Fetching category with ID: ' . $id);
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->first();
+            
+            if (!$category) {
+                \Log::warning('Category not found with ID: ' . $id);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak ditemukan'
+                ], 404);
+            }
+            
+            \Log::info('Category found: ' . $category->name);
+            return response()->json([
+                'success' => true,
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching category: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::post('/dashboard/homepage/categories', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:homepage_categories,slug',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            $imageUrl = null;
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path('storage/homepage-categories'), $filename);
+                $imageUrl = asset('storage/homepage-categories/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $imageUrl = $request->input('image_url');
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Foto kategori harus diisi (URL atau upload file)'
+                ], 422);
+            }
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            $category = \App\Models\HomepageCategory::create([
+                'category_id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $validated['name'],
+                'slug' => $validated['slug'],
+                'image_url' => $imageUrl,
+                'link_url' => null, // Tidak digunakan lagi, kategori digunakan untuk filter
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dibuat',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/homepage/categories/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:homepage_categories,slug,' . $id . ',category_id',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            if ($request->hasFile('image_file')) {
+                // Delete old image if exists
+                if ($category->image_url && strpos($category->image_url, asset('storage/homepage-categories')) === 0) {
+                    $oldFile = str_replace(asset('storage/homepage-categories'), public_path('storage/homepage-categories'), $category->image_url);
+                    if (file_exists($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+                
+                $file = $request->file('image_file');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path('storage/homepage-categories'), $filename);
+                $validated['image_url'] = asset('storage/homepage-categories/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $validated['image_url'] = $request->input('image_url');
+            } else {
+                // Keep existing image if not provided
+                unset($validated['image_url']);
+            }
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            // Remove link_url from update (not used anymore)
+            unset($validated['link_url']);
+            $validated['link_url'] = null;
+            
+            $category->update($validated);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil diperbarui',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/homepage/categories/{id}', function ($id) {
+        try {
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->firstOrFail();
+            $category->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Articles Management
+    Route::get('/dashboard/articles', function () {
+        $articles = \App\Models\Article::with(['user', 'category'])->orderByDesc('created_at')->get();
+        $categories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.articles', compact('articles', 'categories'));
+    })->name('dashboard.articles');
+    
+    Route::get('/dashboard/articles/{id}', function ($id) {
+        $article = \App\Models\Article::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'article' => $article
+        ]);
+    });
+    
+    Route::post('/dashboard/articles', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'category_id' => 'required|exists:article_categories,category_id',
+                'content' => 'required|string'
+            ]);
+            
+            $article = \App\Models\Article::create([
+                'article_id' => (string) \Illuminate\Support\Str::uuid(),
+                'author_id' => Auth::user()->user_id,
+                'category_id' => $validated['category_id'],
+                'title' => $validated['title'],
+                'content' => $validated['content']
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil dibuat',
+                'article' => $article
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/articles/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $article = \App\Models\Article::findOrFail($id);
+            
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'category_id' => 'required|exists:article_categories,category_id',
+                'content' => 'required|string'
+            ]);
+            
+            $article->update([
+                'title' => $validated['title'],
+                'category_id' => $validated['category_id'],
+                'content' => $validated['content']
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil diperbarui',
+                'article' => $article
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/articles/{id}', function ($id) {
+        try {
+            $article = \App\Models\Article::findOrFail($id);
+            $article->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
     Route::get('/api/customers', [\App\Http\Controllers\CustomerController::class, 'getCustomers'])->name('api.customers');
     Route::get('/api/customers/{id}', [\App\Http\Controllers\CustomerController::class, 'show'])->name('api.customers.show');
     Route::post('/api/customers/{id}/toggle-status', [\App\Http\Controllers\CustomerController::class, 'toggleStatus'])->name('api.customers.toggle-status');
@@ -590,8 +1239,28 @@ Route::middleware('auth.session')->group(function() {
 
 // Other Pages
 Route::get('/articles', function () {
-    return view('articles');
+    $query = \App\Models\Article::with(['user', 'category'])->whereHas('category', function($q) {
+        $q->where('is_active', true);
+    });
+    
+    // Filter by category slug
+    if (request('category')) {
+        $categorySlug = request('category');
+        $query->whereHas('category', function($q) use ($categorySlug) {
+            $q->where('slug', $categorySlug)->where('is_active', true);
+        });
+    }
+    
+    $articles = $query->orderByDesc('created_at')->paginate(12);
+    $categories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    return view('articles', compact('articles', 'categories'));
 })->name('articles');
+
+// Article Detail Page
+Route::get('/articles/{id}', function ($id) {
+    $article = \App\Models\Article::with(['user', 'category'])->findOrFail($id);
+    return view('article-detail', compact('article'));
+})->name('article.detail');
 
 Route::get('/marketplace', function () {
     return view('marketplace');
@@ -786,18 +1455,21 @@ Route::middleware('auth.session')->group(function(){
             'phone' => 'required|string',
             'notes' => 'nullable|string',
             'shipping_service' => 'required|string',
-            'payment_method' => 'required|string|in:QRIS,Transfer Bank'
+            'payment_method' => 'required|string|in:QRIS,Transfer Bank',
+            'selected_cart_ids' => 'required|array',
+            'selected_cart_ids.*' => 'required|string|exists:carts,cart_id'
         ]);
         
         $user = Auth::user();
         
-        // Get all cart items
+        // Get only selected cart items
         $cartItems = \App\Models\Cart::with(['product'])
             ->where('user_id', $user->user_id)
+            ->whereIn('cart_id', $validated['selected_cart_ids'])
             ->get();
         
         if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Keranjang kosong'], 400);
+            return response()->json(['message' => 'Tidak ada produk yang dipilih'], 400);
         }
         
         // Check stock for all items
@@ -857,8 +1529,10 @@ Route::middleware('auth.session')->group(function(){
             $item->product->save();
         }
         
-        // Clear cart
-        \App\Models\Cart::where('user_id', $user->user_id)->delete();
+        // Clear only selected cart items
+        \App\Models\Cart::where('user_id', $user->user_id)
+            ->whereIn('cart_id', $validated['selected_cart_ids'])
+            ->delete();
         
         return response()->json([
             'success' => true,

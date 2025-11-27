@@ -9,6 +9,9 @@
   $isSales = $currentRoute === 'dashboard.sales' || request()->is('dashboard/sales');
   $isChat = $currentRoute === 'dashboard.chat' || request()->is('dashboard/chat');
   $isCustomers = $currentRoute === 'dashboard.customers' || request()->is('dashboard/customers');
+  $isArticles = $currentRoute === 'dashboard.articles' || request()->is('dashboard/articles*');
+  $isArticleCategories = $currentRoute === 'dashboard.article-categories' || request()->is('dashboard/article-categories*');
+  $isHomepage = $currentRoute === 'dashboard.homepage' || request()->is('dashboard/homepage*');
   
   // Check if any tools submenu is active
   $isToolsActive = $isTools || $isToolsMonitoring || $isToolsInformation;
@@ -53,6 +56,14 @@
     <a href="/dashboard/customers" class="sidebar-menu-item {{ $isCustomers ? 'active' : '' }}">
       <i class="fa-solid fa-users"></i>
       <span>Pelanggan</span>
+    </a>
+    <a href="{{ route('dashboard.articles') }}" class="sidebar-menu-item {{ $isArticles ? 'active' : '' }}">
+      <i class="fa-solid fa-newspaper"></i>
+      <span>Konten Artikel</span>
+    </a>
+    <a href="{{ route('dashboard.homepage') }}" class="sidebar-menu-item {{ $isHomepage ? 'active' : '' }}">
+      <i class="fa-solid fa-home"></i>
+      <span>Pengaturan Homestore</span>
     </a>
   </div>
   <div class="sidebar-footer">

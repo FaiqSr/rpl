@@ -13,37 +13,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- SweetAlert2 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
+    :root {
+      --primary-green: #69B578;
+      --dark-green: #5a8c64;
+    }
     body { background:#FAFAF8; font-family: 'Inter', -apple-system, sans-serif; }
-    
-    .navbar {
-      background: white;
-      border-bottom: 1px solid #e9ecef;
-      padding: 0.875rem 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    .navbar-container {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-    }
-    
-    .navbar-brand {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: #2F2F2F;
-      text-decoration: none;
-      white-space: nowrap;
-      margin-right: 1rem;
-    }
     
     .order-card {
       background: white;
@@ -269,21 +245,7 @@
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="{{ route('home') }}" class="navbar-brand">ChickPatrol</a>
-      <div class="ms-auto">
-        <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-900 text-decoration-none me-3">
-          <i class="fa-solid fa-arrow-left me-2"></i>Kembali ke Beranda
-        </a>
-        @if(Auth::check())
-          <a href="{{ route('profile') }}" class="text-gray-600 text-sm me-2 text-decoration-none">Halo, {{ Auth::user()->name }}</a>
-          <a href="{{ route('logout') }}" class="btn btn-outline-secondary btn-sm">Logout</a>
-        @endif
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-6">
@@ -326,7 +288,10 @@
             @endphp
             <div class="order-product mb-2">
               @if($image)
-                <img src="{{ $image }}" alt="{{ $product->name }}" class="order-product-img">
+                <img src="{{ $image }}" alt="{{ $product->name }}" class="order-product-img" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="order-product-img d-flex align-items-center justify-content-center" style="display: none;">
+                  <i class="fa-solid fa-image text-gray-400"></i>
+                </div>
               @else
                 <div class="order-product-img d-flex align-items-center justify-content-center">
                   <i class="fa-solid fa-image text-gray-400"></i>
@@ -475,6 +440,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/navbar.js') }}"></script>
   @if(Auth::check())
   <script>
     // Set current user for chat

@@ -2,14 +2,17 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Profil Saya - ChickPatrol</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Tailwind CSS via Vite -->
   @vite(['resources/css/app.css'])
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
-    body { background:#f8f9fa; font-family:'Inter',sans-serif; }
+    body { background:#FAFAF8; font-family:'Inter',sans-serif; }
     .profile-card { background:white; border:1px solid #e9ecef; border-radius:12px; padding:2rem; max-width:720px; margin:2rem auto; }
     .profile-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
     .avatar { width:64px; height:64px; border-radius:50%; background:#e9ecef; display:flex; align-items:center; justify-content:center; font-size:28px; color:#6c757d; }
@@ -19,15 +22,7 @@
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg bg-white border-bottom mb-3">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{{ route('home') }}">ChickPatrol</a>
-      <div class="ms-auto d-flex align-items-center gap-2">
-        <a href="{{ route('home') }}" class="btn btn-sm btn-outline-secondary">Home</a>
-        <a href="{{ route('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <div class="profile-card">
     <div class="profile-header">
@@ -74,5 +69,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ asset('js/navbar.js') }}"></script>
 </body>
 </html>

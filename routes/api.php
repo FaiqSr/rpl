@@ -12,6 +12,19 @@ Route::prefix('article')->name('article.')->group(function () {
     Route::get('/', [ArticleController::class, 'CartByUserJson']);
 });
 
+// Public API - Article Categories
+Route::get('/article-categories', function () {
+    $categories = \App\Models\ArticleCategory::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
+    
+    return response()->json([
+        'success' => true,
+        'categories' => $categories
+    ]);
+});
+
 Route::prefix('cart')->name('cart')->group(function () {
     Route::get('/', [CartController::class, 'CartByUserJson'])->name('cartGetAllJson');
 });

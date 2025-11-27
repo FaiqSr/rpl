@@ -9,6 +9,7 @@
   @vite(['resources/css/app.css'])
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
     :root {
       --primary-green: #69B578;
@@ -16,9 +17,6 @@
       --cream: #F5E6D3;
     }
     body { background:#FAFAF8; font-family: 'Inter', -apple-system, sans-serif; }
-    .navbar { background: white; border-bottom: 1px solid #e9ecef; padding: 0.875rem 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .navbar-container { width: 100%; padding: 0 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
-    .navbar-brand { font-size: 1.125rem; font-weight: 700; color: #2F2F2F; text-decoration: none; white-space: nowrap; margin-right: 1rem; flex-shrink: 0; }
     .btn-primary { padding: 0.75rem 2rem; border: none; border-radius: 8px; background: var(--primary-green); color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .btn-primary:hover { background: var(--dark-green); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(105, 181, 120, 0.3); }
     .product-image { width: 100%; height: 400px; object-fit: cover; border-radius: 12px; background: #f5f5f5; }
@@ -26,21 +24,7 @@
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="{{ route('home') }}" class="navbar-brand">ChickPatrol</a>
-      <div class="ms-auto d-flex align-items-center gap-3">
-        @if(Auth::check())
-          <a href="{{ route('cart') }}" class="text-gray-600 text-sm text-decoration-none position-relative" title="Keranjang">
-            <i class="fa-solid fa-shopping-cart me-1"></i> Keranjang
-            <span id="cartBadge" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
-          </a>
-        @endif
-        <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-900"><i class="fa-solid fa-arrow-left me-2"></i>Kembali</a>
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -48,7 +32,10 @@
       <div>
         @php($img = optional($product->images->first())->url ?? null)
         @if($img)
-          <img src="{{ $img }}" alt="{{ $product->name }}" class="product-image">
+          <img src="{{ $img }}" alt="{{ $product->name }}" class="product-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="product-image flex items-center justify-center text-gray-400" style="display: none;">
+            <i class="fa-solid fa-image fa-4x"></i>
+          </div>
         @else
           <div class="product-image flex items-center justify-center text-gray-400">
             <i class="fa-solid fa-image fa-4x"></i>
@@ -111,6 +98,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/navbar.js') }}"></script>
   <script>
     window.isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
     window.userProfile = {

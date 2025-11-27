@@ -14,6 +14,7 @@ class Product extends BaseModel
     protected $primaryKey = 'product_id';
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'price',
         'stock',
