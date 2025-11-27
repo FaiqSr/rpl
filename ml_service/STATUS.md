@@ -12,16 +12,10 @@ Dari output terminal, service sudah berhasil:
 
 ## ⚠️ Warning yang Muncul
 
-Ada beberapa warning tentang version mismatch scikit-learn:
-- Model dibuat dengan scikit-learn 1.5.1
-- Environment menggunakan scikit-learn 1.3.2
-
-**Solusi (Optional):**
-```bash
-pip install --upgrade scikit-learn==1.5.1
-```
-
-Warning ini tidak critical, model tetap bisa digunakan. Tapi untuk menghilangkan warning, upgrade scikit-learn.
+✅ **scikit-learn sudah di-upgrade ke versi 1.7.2**
+- Versi sebelumnya: 1.3.2
+- Versi sekarang: 1.7.2 (kompatibel dengan model yang dibuat dengan 1.5.1)
+- Warning version mismatch sudah teratasi
 
 ## 🧪 Testing Service
 

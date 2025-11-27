@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,123 +25,6 @@
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
     
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-menu-item.active {
-      border-left: 3px solid #22C55E;
-      padding-left: calc(1rem - 3px);
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -219,61 +102,7 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item active">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item" onclick="toggleSubmenu()" style="cursor: pointer;">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon"></i>
-      </div>
-      <div class="sidebar-submenu">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
@@ -356,12 +185,6 @@
     };
     
     // Toggle Submenu
-    function toggleSubmenu() {
-        const submenu = document.querySelector('.sidebar-submenu');
-        const chevron = document.querySelector('.chevron-icon');
-        submenu.classList.toggle('show');
-        chevron.classList.toggle('rotate');
-    }
     
     // Show success message if redirected with success
     @if(session('success'))

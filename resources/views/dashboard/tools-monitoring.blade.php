@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,124 +24,6 @@
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
-    
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -868,61 +750,7 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Fantastic F</h6>
-        <p>Founder</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item active" onclick="toggleSubmenu()">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon rotate"></i>
-      </div>
-      <div class="sidebar-submenu show">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}" class="active">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
@@ -1082,14 +910,17 @@
     const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
+    // Global variable untuk menyimpan thresholds dari API
+    let globalThresholds = {
+      temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
+      humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
+      ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
+      light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
+    };
+    
     // Fungsi untuk menentukan status sensor berdasarkan threshold (Premium Colors)
     function getSensorStatus(key, value){
-      const thresholds = {
-        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
-        humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
-        ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
-        light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
-      };
+      const thresholds = globalThresholds;
       
       // Premium colors: #22C55E (hijau), #FACC15 (kuning), #EF4444 (merah)
       const premiumGreen = '#22C55E';
@@ -1312,7 +1143,12 @@
           techInfo.push(`<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><strong>${confidenceIcon} Keyakinan:</strong> ${confidenceLevel}</span>`);
         }
         
-        // Probabilitas detail HANYA jika confidence < 80%
+        // Tampilkan manual review flag jika diperlukan (tanpa perbandingan detail)
+        if (status.needs_manual_review) {
+          techInfo.push(`<span style="display: inline-flex; align-items: center; gap: 0.25rem; color: #FEF3C7;"><strong>⚠️ Perlu Verifikasi Manual</strong></span>`);
+        }
+        
+        // Probabilitas detail (dari ML original) HANYA jika confidence < 80%
         if (status.probability && status.confidence !== undefined && status.confidence < 0.8) {
           const prob = status.probability;
           const probBAIK = (prob.BAIK * 100).toFixed(1);
@@ -1362,9 +1198,11 @@
         const predictionBanner = document.getElementById('predictionBanner');
         if (predictionBanner) {
           const severity = status.severity || 'normal';
-          if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
+          // Tentukan warna banner berdasarkan status label (prioritas utama)
+          const statusLabelLower = (status.label || '').toLowerCase();
+          if (statusLabelLower === 'buruk' || statusLabelLower.includes('buruk') || severity === 'critical' || severity === 'bahaya' || status.label?.includes('tidak optimal')) {
               predictionBanner.style.background = 'linear-gradient(90deg, #EF4444, #DC2626)'; // Merah premium untuk bahaya
-          } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
+          } else if (statusLabelLower === 'perhatian' || statusLabelLower.includes('perhatian') || severity === 'warning') {
               predictionBanner.style.background = 'linear-gradient(90deg, #FACC15, #FB923C)'; // Kuning-orange premium untuk perhatian
           } else {
               predictionBanner.style.background = 'linear-gradient(90deg, #22C55E, #16A34A)'; // Hijau premium untuk aman
@@ -1618,29 +1456,62 @@
         return typeMap[typeLower] || { icon: '⚠️', badgeClass: 'unknown', label: (type || 'UNKNOWN').toUpperCase() };
       }
       
-      // Helper function untuk format deskripsi ringkas
-      function formatAnomalyDescription(message, value) {
+      // Helper function untuk format deskripsi ringkas dengan threshold dari database
+      function formatAnomalyDescription(message, value, sensorType) {
         if (!message) return 'Anomali terdeteksi';
         
-        // Extract nilai dan batas dari message jika ada
+        // Extract nilai dari message
         const valueMatch = message.match(/nilai:\s*([\d.]+)/i);
-        const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
         const unitMatch = message.match(/(lux|ppm|°C|%)/i);
         const unit = unitMatch ? unitMatch[1] : '';
         
-        if (valueMatch && thresholdMatch) {
-          const val = parseFloat(valueMatch[1]).toFixed(1);
-          const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
-          const direction = message.includes('di atas') ? 'di atas' : message.includes('di bawah') ? 'di bawah' : '';
-          return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+        // Tentukan threshold berdasarkan sensor type dari globalThresholds
+        // Pastikan menggunakan nilai yang sudah dikonversi ke number
+        let safeThreshold = '';
+        const sensorTypeLower = (sensorType || '').toLowerCase();
+        if (sensorTypeLower === 'temperature' || sensorTypeLower === 'suhu') {
+          const max = typeof globalThresholds.temperature?.ideal_max === 'number' 
+            ? globalThresholds.temperature.ideal_max 
+            : parseFloat(globalThresholds.temperature?.ideal_max) || 34;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'humidity' || sensorTypeLower === 'kelembaban') {
+          const max = typeof globalThresholds.humidity?.ideal_max === 'number' 
+            ? globalThresholds.humidity.ideal_max 
+            : parseFloat(globalThresholds.humidity?.ideal_max) || 70;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'ammonia' || sensorTypeLower === 'amoniak') {
+          const max = typeof globalThresholds.ammonia?.ideal_max === 'number' 
+            ? globalThresholds.ammonia.ideal_max 
+            : parseFloat(globalThresholds.ammonia?.ideal_max) || 20;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'light' || sensorTypeLower === 'cahaya') {
+          const max = typeof globalThresholds.light?.ideal_high === 'number' 
+            ? globalThresholds.light.ideal_high 
+            : parseFloat(globalThresholds.light?.ideal_high) || 40;
+          safeThreshold = max.toFixed(1);
         }
         
-        // Jika ada z-score, format dengan z-score
-        const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
-        if (zScoreMatch && valueMatch) {
+        if (valueMatch) {
           const val = parseFloat(valueMatch[1]).toFixed(1);
-          const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
-          return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+          
+          // Jika ada z-score, format dengan z-score
+          const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
+          if (zScoreMatch) {
+            const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
+            return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+          }
+          
+          // Jika ada threshold dari database, gunakan itu
+          if (safeThreshold) {
+            return `Nilai: ${val} ${unit} (batas aman: ${safeThreshold} ${unit})`;
+          }
+          
+          // Fallback: coba extract dari message
+          const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
+          if (thresholdMatch) {
+            const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
+            return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+          }
         }
         
         // Fallback: gunakan message asli tapi ringkas (hapus duplikasi nilai)
@@ -1684,7 +1555,9 @@
         // Tentukan severity berdasarkan type atau severity dari data
         const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
         const typeInfo = getAnomalyTypeInfo(a.type);
-        const description = formatAnomalyDescription(a.message || '', a.value);
+        // Pastikan sensorType menggunakan format yang benar (lowercase)
+        const sensorType = (a.type || a.sensor_type || '').toLowerCase();
+        const description = formatAnomalyDescription(a.message || '', a.value, sensorType);
         const formattedTime = formatAnomalyTime(a.time, startIndex + idx);
         
         return `
@@ -1792,18 +1665,19 @@
         const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
         return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
       };
-      const forecast_summary_6h = [
-        sum(pred6.temperature,'Suhu','°C',20,30),
-        sum(pred6.humidity,'Kelembaban','%',55,75),
-        sum(pred6.ammonia,'Amoniak','ppm',0,25),
-        sum(pred6.light,'Cahaya','lux',200,900)
-      ];
-      const forecast_summary_24h = [
-        sum(pred24.temperature,'Suhu','°C',20,30),
-        sum(pred24.humidity,'Kelembaban','%',55,75),
-        sum(pred24.ammonia,'Amoniak','ppm',0,25),
-        sum(pred24.light,'Cahaya','lux',200,900)
-      ];
+        // Gunakan threshold dari globalThresholds untuk forecast summary
+        const forecast_summary_6h = [
+          sum(pred6.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+          sum(pred6.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+          sum(pred6.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+          sum(pred6.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+        ];
+        const forecast_summary_24h = [
+          sum(pred24.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+          sum(pred24.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+          sum(pred24.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+          sum(pred24.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+        ];
       const anomalies = [];
       return { latest, history, prediction_6h:pred6, prediction_24h:pred24, status, anomalies, forecast_summary_6h, forecast_summary_24h };
     }
@@ -1854,6 +1728,9 @@
             <i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i>
             ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}
           </span>
+          <div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 0.75rem; line-height: 1.4;">
+            <strong>⚠️ Perhatian:</strong> ML Service tidak terhubung. Untuk menggunakan Random Forest, LSTM, dan Isolation Forest, jalankan <code>START_ML_SERVICE.bat</code> di folder root project.
+          </div>
         </div>`;
       }
       
@@ -1909,49 +1786,82 @@
       const alerts = [];
       
       // 1. Check status BURUK dengan confidence tinggi
+      // Status sudah menggunakan threshold dari database (dihitung di routes/web.php berdasarkan data sensor aktual)
       if (status.label === 'buruk' && status.confidence >= 0.6) {
         alerts.push({
           type: 'critical',
           title: '🚨 Peringatan: Kondisi Kandang Membahayakan',
-          message: status.message || 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam.',
-          action: 'Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan. Jika perlu, hubungi dokter hewan.',
+          message: status.message || 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam berdasarkan threshold yang tersimpan.',
+          action: 'Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan sesuai threshold yang tersimpan. Jika perlu, hubungi dokter hewan.',
           urgency: 'high'
         });
       }
       
       // 2. Check prediksi 6h menunjukkan BURUK (probability > 0.55 dari threshold optimal)
+      // Status probability sudah menggunakan threshold dari database (dihitung di routes/web.php)
       if (status.probability && status.probability.BURUK > 0.55) {
+        const burukProbability = (status.probability.BURUK * 100).toFixed(1);
+        const urgency = status.probability.BURUK > 0.70 ? 'high' : 'medium';
+        const type = status.probability.BURUK > 0.70 ? 'critical' : 'warning';
+        
         alerts.push({
-          type: 'warning',
+          type: type,
           title: '⚠️ Prediksi: Risiko Meningkat dalam 6 Jam',
-          message: `Model ML memprediksi kondisi kandang berpotensi memburuk (${(status.probability.BURUK * 100).toFixed(1)}% kemungkinan BURUK).`,
-          action: 'Lakukan tindakan pencegahan: periksa ventilasi, suhu, dan kelembaban.',
-          urgency: 'medium'
+          message: `Model ML memprediksi kondisi kandang berpotensi memburuk (${burukProbability}% kemungkinan BURUK) berdasarkan threshold yang tersimpan.`,
+          action: 'Lakukan tindakan pencegahan: periksa ventilasi, suhu, kelembaban, dan cahaya sesuai threshold yang tersimpan.',
+          urgency: urgency
         });
       }
       
       // 3. Check anomali critical
+      // Anomali sudah menggunakan threshold dari database (melalui formatAnomalyDescription)
       const criticalAnomalies = anomalies.filter(a => a.severity === 'critical');
       if (criticalAnomalies.length > 0) {
+        // Ambil detail anomali dengan threshold yang benar
+        const anomalyDetails = criticalAnomalies.slice(0, 3).map(a => {
+          const sensorType = (a.type || a.sensor_type || '').toLowerCase();
+          let thresholdInfo = '';
+          
+          // Tentukan threshold info berdasarkan sensor type
+          if (sensorType === 'temperature' || sensorType === 'suhu') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.temperature?.ideal_max || 34}°C)`;
+          } else if (sensorType === 'humidity' || sensorType === 'kelembaban') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.humidity?.ideal_max || 70}%)`;
+          } else if (sensorType === 'ammonia' || sensorType === 'amoniak') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.ammonia?.ideal_max || 20} ppm)`;
+          } else if (sensorType === 'light' || sensorType === 'cahaya') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.light?.ideal_high || 40} lux)`;
+          }
+          
+          return (a.message || a.type) + thresholdInfo;
+        }).join(', ');
+        
         alerts.push({
           type: 'critical',
           title: `🚨 ${criticalAnomalies.length} Anomali Kritis Terdeteksi`,
-          message: criticalAnomalies.slice(0, 3).map(a => a.message || a.type).join(', '),
-          action: 'Segera periksa sensor dan kondisi kandang.',
+          message: anomalyDetails || criticalAnomalies.slice(0, 3).map(a => a.message || a.type).join(', '),
+          action: 'Segera periksa sensor dan kondisi kandang sesuai threshold yang tersimpan.',
           urgency: 'high'
         });
       }
       
       // 4. Check forecast menunjukkan threshold akan dilampaui
+      // Pastikan menggunakan forecast_summary yang sudah menggunakan threshold dari database
       if (forecast_summary_6h && Array.isArray(forecast_summary_6h)) {
         forecast_summary_6h.forEach(forecast => {
-          if (forecast.risk && (forecast.risk.includes('di luar batas aman') || forecast.risk.includes('bahaya'))) {
+          // Cek apakah risk menunjukkan kondisi di luar batas aman atau potensi keluar batas
+          // forecast.risk sudah menggunakan threshold dari database (melalui globalThresholds)
+          if (forecast.risk && (forecast.risk.includes('di luar batas aman') || forecast.risk.includes('potensi keluar batas aman'))) {
+            // Tentukan urgency berdasarkan risk level
+            const urgency = forecast.risk.includes('di luar batas aman') ? 'high' : 'medium';
+            const type = forecast.risk.includes('di luar batas aman') ? 'critical' : 'warning';
+            
             alerts.push({
-              type: 'warning',
-              title: `⚠️ ${forecast.metric} Diprediksi Keluar Batas Aman`,
-              message: forecast.summary || `${forecast.metric} diprediksi keluar batas aman dalam 6 jam ke depan.`,
-              action: `Periksa dan sesuaikan ${forecast.metric.toLowerCase()} dalam beberapa jam ke depan.`,
-              urgency: 'medium'
+              type: type,
+              title: `⚠️ ${forecast.metric} Diprediksi ${forecast.risk.includes('di luar batas aman') ? 'Keluar Batas Aman' : 'Berpotensi Keluar Batas Aman'}`,
+              message: forecast.summary || `${forecast.metric} diprediksi ${forecast.risk.includes('di luar batas aman') ? 'keluar batas aman' : 'berpotensi keluar batas aman'} dalam 6 jam ke depan.`,
+              action: `Periksa dan sesuaikan ${forecast.metric.toLowerCase()} dalam beberapa jam ke depan sesuai threshold yang tersimpan.`,
+              urgency: urgency
             });
           }
         });
@@ -2039,13 +1949,159 @@
       }, 2000);
     }
     
-    async function loadMonitoring(){
+    async function loadMonitoring(forceRefresh = false){
       sensorGrid.innerHTML = '<div class="loading-overlay">Memuat data sensor...</div>';
       try {
-        const res = await fetch('/api/monitoring/tools?t=' + Date.now(), { headers:{ 'Accept':'application/json' } });
+        // Ambil profile yang dipilih dari localStorage (jika ada), atau gunakan 'default'
+        const selectedProfile = localStorage.getItem('selectedThresholdProfile') || 'default';
+        const res = await fetch(`/api/monitoring/tools?t=${Date.now()}&profile=${selectedProfile}`, { 
+          headers:{ 'Accept':'application/json' } 
+        });
         if (!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
-        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta } = data;
+        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta, thresholds } = data;
+        
+        // Log informasi ML Status (Random Forest) untuk debugging
+        console.log('=== ML STATUS INFORMATION (Random Forest) ===');
+        console.log('Status Label:', status?.label || 'not set');
+        console.log('Status Confidence:', status?.confidence || 'not set');
+        console.log('Status Probability:', status?.probability || 'not set');
+        if (status?.probability) {
+          console.log('  - BAIK:', (status.probability.BAIK * 100).toFixed(1) + '%');
+          console.log('  - PERHATIAN:', (status.probability.PERHATIAN * 100).toFixed(1) + '%');
+          console.log('  - BURUK:', (status.probability.BURUK * 100).toFixed(1) + '%');
+        }
+        console.log('ML Metadata:', ml_metadata || 'not set');
+        if (ml_metadata) {
+          console.log('  - Model Name:', ml_metadata.model_name || 'not set');
+          console.log('  - Model Version:', ml_metadata.model_version || 'not set');
+          console.log('  - Source:', ml_metadata.source || 'not set');
+          console.log('  - Accuracy:', ml_metadata.accuracy ? (ml_metadata.accuracy * 100).toFixed(2) + '%' : 'N/A');
+          console.log('  - Prediction Time:', ml_metadata.prediction_time ? ml_metadata.prediction_time + 'ms' : 'N/A');
+          // Note: ml_metadata.confidence adalah string ("medium"/"low"/"high") dari ML service
+          // Confidence yang benar (angka 0-1) ada di status.confidence yang sudah di-adjust
+          console.log('  - Confidence (from ML service, string):', ml_metadata.confidence || 'N/A');
+          console.log('  - Confidence (adjusted, numeric):', status?.confidence ? (status.confidence * 100).toFixed(1) + '%' : 'N/A');
+        }
+        console.log('ML Source (from meta):', meta?.ml_source || 'not set');
+        console.log('ML Connected:', meta?.ml_connected || false);
+        console.log('==========================================');
+        
+        // Update global thresholds dengan data dari API (REPLACE, bukan merge)
+        if (thresholds) {
+          // Replace seluruh threshold dengan data dari API
+          // IMPORTANT: Convert string to number untuk perbandingan yang benar
+          if (thresholds.temperature) {
+            globalThresholds.temperature = {
+              ideal_min: parseFloat(thresholds.temperature.ideal_min) || globalThresholds.temperature.ideal_min,
+              ideal_max: parseFloat(thresholds.temperature.ideal_max) || globalThresholds.temperature.ideal_max,
+              danger_low: parseFloat(thresholds.temperature.danger_low) || globalThresholds.temperature.danger_low,
+              danger_high: parseFloat(thresholds.temperature.danger_high) || globalThresholds.temperature.danger_high
+            };
+          }
+          if (thresholds.humidity) {
+            globalThresholds.humidity = {
+              ideal_min: parseFloat(thresholds.humidity.ideal_min) || globalThresholds.humidity.ideal_min,
+              ideal_max: parseFloat(thresholds.humidity.ideal_max) || globalThresholds.humidity.ideal_max,
+              warn_low: parseFloat(thresholds.humidity.warn_low) || globalThresholds.humidity.warn_low,
+              warn_high: parseFloat(thresholds.humidity.warn_high) || globalThresholds.humidity.warn_high,
+              danger_high: parseFloat(thresholds.humidity.danger_high) || globalThresholds.humidity.danger_high
+            };
+          }
+          if (thresholds.ammonia) {
+            globalThresholds.ammonia = {
+              ideal_max: parseFloat(thresholds.ammonia.ideal_max) || globalThresholds.ammonia.ideal_max,
+              warn_max: parseFloat(thresholds.ammonia.warn_max) || globalThresholds.ammonia.warn_max,
+              danger_max: parseFloat(thresholds.ammonia.danger_max) || globalThresholds.ammonia.danger_max
+            };
+          }
+          if (thresholds.light) {
+            globalThresholds.light = {
+              ideal_low: parseFloat(thresholds.light.ideal_low) || globalThresholds.light.ideal_low,
+              ideal_high: parseFloat(thresholds.light.ideal_high) || globalThresholds.light.ideal_high,
+              warn_low: parseFloat(thresholds.light.warn_low) || globalThresholds.light.warn_low,
+              warn_high: parseFloat(thresholds.light.warn_high) || globalThresholds.light.warn_high
+            };
+          }
+          
+          // Debug log untuk memastikan threshold ter-update
+          console.log('Thresholds updated from API (as numbers):', globalThresholds);
+          console.log('Using profile:', selectedProfile);
+        }
+        
+        // Validasi dan log forecast_summary untuk memastikan menggunakan threshold yang benar
+        if (forecast_summary_6h && forecast_summary_6h.length > 0) {
+          console.log('Forecast Summary 6h from backend:', forecast_summary_6h);
+          // Pastikan forecast_summary menggunakan threshold yang benar
+          // Jika tidak, regenerate menggunakan globalThresholds
+          const needsRegeneration = forecast_summary_6h.some(f => {
+            // Cek apakah forecast summary sesuai dengan threshold
+            if (f.metric === 'Suhu') {
+              const expectedMin = globalThresholds.temperature.ideal_min;
+              const expectedMax = globalThresholds.temperature.ideal_max;
+              // Extract range dari summary
+              const rangeMatch = f.summary.match(/\(([\d.]+)–([\d.]+)/);
+              if (rangeMatch) {
+                const min = parseFloat(rangeMatch[1]);
+                const max = parseFloat(rangeMatch[2]);
+                // Cek apakah risk sesuai dengan threshold
+                const shouldBeSafe = min >= expectedMin && max <= expectedMax;
+                const isSafe = f.risk === 'dalam kisaran aman';
+                return shouldBeSafe !== isSafe;
+              }
+            }
+            return false;
+          });
+          
+          if (needsRegeneration) {
+            console.warn('Forecast summary tidak sesuai threshold, regenerating...');
+            // Regenerate forecast summary menggunakan globalThresholds
+            const sum = (series, metric, unit, low, high) => {
+              const min = Math.min(...series), max = Math.max(...series);
+              const trend = series[series.length-1] - series[0];
+              const dir = trend>0.5?'meningkat':(trend<-0.5?'menurun':'stabil');
+              const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
+              return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
+            };
+            forecast_summary_6h = [
+              sum(prediction_6h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+              sum(prediction_6h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+              sum(prediction_6h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+              sum(prediction_6h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+            ];
+            forecast_summary_24h = [
+              sum(prediction_24h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+              sum(prediction_24h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+              sum(prediction_24h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+              sum(prediction_24h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+            ];
+            console.log('Forecast Summary regenerated with correct thresholds:', forecast_summary_6h);
+          }
+        } else {
+          // Jika forecast_summary tidak ada, generate menggunakan globalThresholds
+          console.log('Forecast summary tidak ada dari backend, generating with globalThresholds...');
+          const sum = (series, metric, unit, low, high) => {
+            const min = Math.min(...series), max = Math.max(...series);
+            const trend = series[series.length-1] - series[0];
+            const dir = trend>0.5?'meningkat':(trend<-0.5?'menurun':'stabil');
+            const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
+            return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
+          };
+          forecast_summary_6h = [
+            sum(prediction_6h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+            sum(prediction_6h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+            sum(prediction_6h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+            sum(prediction_6h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+          ];
+          forecast_summary_24h = [
+            sum(prediction_24h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+            sum(prediction_24h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+            sum(prediction_24h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+            sum(prediction_24h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+          ];
+        }
+        
+        // Pastikan threshold sudah ter-update sebelum membuat sensor cards
         buildBanner(latest, status, forecast_summary_6h, meta);
         sensorGrid.innerHTML = [
           createSensorCard('temperature','Suhu', latest.temperature,'°C', history, prediction_6h.temperature),
@@ -2054,6 +2110,7 @@
           createSensorCard('light','Cahaya', latest.light,'lux', history, prediction_6h.light)
         ].join('');
         buildChart(history, prediction_6h);
+        // Pastikan globalThresholds sudah ter-update sebelum render anomalies
         renderAnomalies(anomalies);
         
         // ========== URGENT ALERT SYSTEM ==========

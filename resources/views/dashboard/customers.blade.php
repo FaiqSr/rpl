@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,92 +24,6 @@
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
-    
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 100;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -251,49 +165,7 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-header">ChickPatrol Seller</div>
-    <div class="sidebar-profile">
-      <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}&background=22C55E&color=fff" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>{{ Auth::user()->name ?? 'Admin' }}</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    <div class="sidebar-menu">
-      <a href="/dashboard" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="/dashboard/products" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <a href="/dashboard/tools" class="sidebar-menu-item">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-      </a>
-      <a href="/dashboard/sales" class="sidebar-menu-item">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="/dashboard/chat" class="sidebar-menu-item">
-        <i class="fa-solid fa-comments"></i>
-        <span>Chat</span>
-      </a>
-      <a href="/dashboard/customers" class="sidebar-menu-item active">
-        <i class="fa-solid fa-users"></i>
-        <span>Pelanggan</span>
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <a href="/logout" class="sidebar-menu-item">
-        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </div>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <div class="main-content">

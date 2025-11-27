@@ -881,8 +881,77 @@ Route::middleware('auth.session')->group(function(){
 
 // Monitoring API dengan ML Integration (sensor + ML predictions + anomaly detection + status)
 Route::get('/api/monitoring/tools', function () {
+    // Set headers to prevent caching
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
     try {
         $mlService = new \App\Services\MachineLearningService();
+        
+        // Get threshold from database (ALWAYS FRESH - no cache)
+        // Prioritas: 1) Profile dari query parameter, 2) Default profile
+        $profileKey = request()->query('profile', 'default');
+        
+        // Force fresh query - clear any model cache
+        \App\Models\ThresholdProfile::clearBootedModels();
+        \App\Models\ThresholdValue::clearBootedModels();
+        
+        $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', $profileKey)
+            ->with('thresholdValues')
+            ->first();
+        
+        // Jika profile tidak ditemukan, gunakan default
+        if (!$thresholdProfile) {
+            $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', 'default')
+                ->with('thresholdValues')
+                ->first();
+        }
+        
+        $thresholds = [];
+        if ($thresholdProfile) {
+            foreach ($thresholdProfile->thresholdValues as $value) {
+                if ($value->sensor_type === 'amonia_ppm') {
+                    $thresholds['ammonia'] = [
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_max' => (float) $value->warn_max,
+                        'danger_max' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'suhu_c') {
+                    $thresholds['temperature'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'danger_low' => (float) $value->danger_min,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'kelembaban_rh') {
+                    $thresholds['humidity'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->ideal_min, // Use ideal_min as warn_low
+                        'warn_high' => (float) $value->warn_max,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'cahaya_lux') {
+                    $thresholds['light'] = [
+                        'ideal_low' => (float) $value->ideal_min,
+                        'ideal_high' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->warn_min,
+                        'warn_high' => (float) $value->warn_max,
+                    ];
+                }
+            }
+        }
+        
+        // Fallback to default thresholds if database is empty
+        if (empty($thresholds)) {
+            $thresholds = [
+                'temperature' => ['ideal_min' => 23, 'ideal_max' => 34, 'danger_low' => 20, 'danger_high' => 37],
+                'humidity' => ['ideal_min' => 50, 'ideal_max' => 70, 'warn_low' => 50, 'warn_high' => 80, 'danger_high' => 80],
+                'ammonia' => ['ideal_max' => 20, 'warn_max' => 35, 'danger_max' => 35],
+                'light' => ['ideal_low' => 20, 'ideal_high' => 40, 'warn_low' => 10, 'warn_high' => 60],
+            ];
+        }
     
     // Gunakan waktu realtime dengan timezone WIB
     $now = now()->setTimezone('Asia/Jakarta');
@@ -970,6 +1039,7 @@ Route::get('/api/monitoring/tools', function () {
     }
 
     $latest = end($history);
+    $latestSensor = $latest; // For threshold validation
 
     // Get ML predictions dengan error handling
     try {
@@ -977,8 +1047,343 @@ Route::get('/api/monitoring/tools', function () {
         $pred6 = $mlResults['prediction_6h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
         $pred24 = $mlResults['prediction_24h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
         $anomalies = $mlResults['anomalies'] ?? [];
-        $currentStatus = $mlResults['status'] ?? ['label' => 'tidak diketahui', 'severity' => 'warning', 'message' => 'Status tidak dapat ditentukan'];
+        $mlStatus = $mlResults['status'] ?? ['label' => 'tidak diketahui', 'severity' => 'warning', 'message' => 'Status tidak dapat ditentukan'];
         $mlMetadata = $mlResults['ml_metadata'] ?? [];
+        
+        // ============================================
+        // THRESHOLD VALIDATION & HYBRID DECISION
+        // ============================================
+        $currentStatus = $mlStatus; // Default: use ML status
+        
+        // Helper functions untuk hybrid decision
+        $calculateAgreement = function($mlStatus, $thresholdStatus, $mlConfidence) {
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            
+            $mlValue = $statusValue[$mlLabel] ?? 1;
+            $thresholdValue = $statusValue[$thresholdLabel] ?? 1;
+            
+            if ($mlValue == $thresholdValue) {
+                return 1.0;
+            }
+            
+            if (abs($mlValue - $thresholdValue) == 1) {
+                if ($thresholdValue > $mlValue) {
+                    return 0.3; // Threshold lebih kritis, agreement rendah
+                } else {
+                    return 0.6; // ML lebih kritis, agreement medium
+                }
+            }
+            
+            return 0.1; // Agreement sangat rendah
+        };
+        
+        $determineFinalStatus = function($mlStatus, $thresholdStatus, $agreementScore, $criticalIssues, $thresholdIssues) {
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            
+            // ✅ LOG INPUT
+            \Illuminate\Support\Facades\Log::info('=== FINAL STATUS DETERMINATION ===', [
+                'ml_status' => $mlLabel,
+                'threshold_status' => $thresholdLabel,
+                'agreement_score' => $agreementScore,
+                'critical_issues' => $criticalIssues,
+                'threshold_issues' => $thresholdIssues
+            ]);
+            
+            // PRIORITAS 1: Jika threshold validation BAIK dan 0 issues → HARUS BAIK
+            if ($thresholdLabel == 'BAIK' && $thresholdIssues == 0 && $criticalIssues == 0) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (hard override - semua sensor aman)');
+                return 'BAIK';
+            }
+            
+            // PRIORITAS 2: Jika 3+ critical issues → HARUS BURUK (safety first)
+            if ($criticalIssues >= 3) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (hard override - 3+ critical issues)');
+                return 'BURUK';
+            }
+            
+            // PRIORITAS 3: Jika 2 critical issues → BURUK
+            if ($criticalIssues >= 2) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (2 critical issues)');
+                return 'BURUK';
+            }
+            
+            // PRIORITAS 4: Jika threshold BAIK dan ML juga BAIK → BAIK
+            if ($thresholdLabel == 'BAIK' && $mlLabel == 'BAIK') {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (agreement)');
+                return 'BAIK';
+            }
+            
+            // PRIORITAS 5: Agreement tinggi → gunakan ML
+            if ($agreementScore >= 0.8) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: ' . $mlLabel . ' (high agreement)');
+                return $mlLabel;
+            }
+            
+            // PRIORITAS 6: Ambil yang lebih kritis
+            $finalStatus = ($statusValue[$thresholdLabel] ?? 1) > ($statusValue[$mlLabel] ?? 1)
+                ? $thresholdLabel
+                : $mlLabel;
+            
+            \Illuminate\Support\Facades\Log::info('→ Decision: ' . $finalStatus . ' (weighted - more critical)');
+            return $finalStatus;
+        };
+        
+        $calculateFinalConfidence = function($mlConfidence, $thresholdStatus, $mlStatus, $agreementScore, $criticalThresholdIssues, $finalStatus) {
+            $baseConfidence = $mlConfidence;
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            
+            // CRITICAL RULE: Jika ada 3+ critical issues
+            if ($criticalThresholdIssues >= 3) {
+                if ($finalStatus == 'BURUK') {
+                    return min(0.85, $baseConfidence + 0.2); // Boost confidence
+                } else {
+                    return max(0.3, $baseConfidence - 0.4); // Large penalty
+                }
+            }
+            
+            // Agreement bonus
+            if ($mlLabel == $thresholdLabel) {
+                $baseConfidence = min($baseConfidence + 0.05, 1.0);
+            }
+            
+            // Disagreement penalty
+            if ($mlLabel != $thresholdLabel) {
+                $penalty = 0.0;
+                
+                if (($statusValue[$thresholdLabel] ?? 1) > ($statusValue[$mlLabel] ?? 1)) {
+                    $penalty = 0.40; // Large penalty
+                } else {
+                    $penalty = 0.20; // Small penalty
+                }
+                
+                $baseConfidence = max($baseConfidence - $penalty, 0.1);
+            }
+            
+            // Critical issues boost
+            if ($criticalThresholdIssues >= 2) {
+                $baseConfidence = max($baseConfidence, 0.6);
+            }
+            
+            return round($baseConfidence, 2);
+        };
+        
+        // Apply threshold validation jika ada ML status dan threshold
+        if ($mlStatus && $latestSensor && !empty($thresholds)) {
+            // ============================================
+            // STEP 1: Log threshold yang digunakan
+            // ============================================
+            \Illuminate\Support\Facades\Log::info('=== THRESHOLD YANG DIGUNAKAN ===', [
+                'profile' => $profileKey,
+                'thresholds' => $thresholds
+            ]);
+            
+            // ============================================
+            // STEP 2: Validasi threshold (MENGIKUTI LOGIKA FRONTEND)
+            // ============================================
+            $temp = (float) ($latestSensor['temperature'] ?? 0);
+            $humid = (float) ($latestSensor['humidity'] ?? 0);
+            $ammonia = (float) ($latestSensor['ammonia'] ?? 0);
+            $light = (float) ($latestSensor['light'] ?? 0);
+            
+            // Ambil threshold values
+            $tempIdealMin = (float) ($thresholds['temperature']['ideal_min'] ?? 23);
+            $tempIdealMax = (float) ($thresholds['temperature']['ideal_max'] ?? 34);
+            $tempDangerLow = (float) ($thresholds['temperature']['danger_low'] ?? 20);
+            $tempDangerHigh = (float) ($thresholds['temperature']['danger_high'] ?? 37);
+            
+            $humidIdealMin = (float) ($thresholds['humidity']['ideal_min'] ?? 50);
+            $humidIdealMax = (float) ($thresholds['humidity']['ideal_max'] ?? 70);
+            $humidWarnLow = (float) ($thresholds['humidity']['warn_low'] ?? 50);
+            $humidWarnHigh = (float) ($thresholds['humidity']['warn_high'] ?? 80);
+            $humidDangerHigh = (float) ($thresholds['humidity']['danger_high'] ?? 80);
+            
+            $ammoniaIdealMax = (float) ($thresholds['ammonia']['ideal_max'] ?? 20);
+            $ammoniaWarnMax = (float) ($thresholds['ammonia']['warn_max'] ?? 35);
+            $ammoniaDangerMax = (float) ($thresholds['ammonia']['danger_max'] ?? 35);
+            
+            $lightIdealLow = (float) ($thresholds['light']['ideal_low'] ?? 20);
+            $lightIdealHigh = (float) ($thresholds['light']['ideal_high'] ?? 40);
+            $lightWarnLow = (float) ($thresholds['light']['warn_low'] ?? 10);
+            $lightWarnHigh = (float) ($thresholds['light']['warn_high'] ?? 60);
+            
+            // Validasi threshold (LOGIKA SAMA DENGAN FRONTEND)
+            $thresholdBasedLabel = 'baik';
+            $thresholdIssues = 0;
+            $criticalThresholdIssues = 0;
+            $warningThresholdIssues = 0;
+            $sensorIssues = [];
+            
+            // Suhu
+            if ($temp >= $tempIdealMin && $temp <= $tempIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($temp < $tempDangerLow || $temp > $tempDangerHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Suhu', 'value' => $temp, 'status' => 'critical'];
+            } else {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Suhu', 'value' => $temp, 'status' => 'warning'];
+            }
+            
+            // Kelembaban
+            if ($humid >= $humidIdealMin && $humid <= $humidIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($humid > $humidDangerHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Kelembaban', 'value' => $humid, 'status' => 'critical'];
+            } elseif ($humid < $humidWarnLow || ($humid > $humidIdealMax && $humid <= $humidWarnHigh)) {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Kelembaban', 'value' => $humid, 'status' => 'warning'];
+            }
+            
+            // Amoniak
+            if ($ammonia <= $ammoniaIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($ammonia > $ammoniaDangerMax) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Amoniak', 'value' => $ammonia, 'status' => 'critical'];
+            } elseif ($ammonia > $ammoniaWarnMax) {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Amoniak', 'value' => $ammonia, 'status' => 'warning'];
+            }
+            
+            // Cahaya (konversi dari ratusan ke puluhan)
+            $lightForCheck = $light / 10;
+            if ($lightForCheck >= $lightIdealLow && $lightForCheck <= $lightIdealHigh) {
+                // AMAN - tidak ada issue
+            } elseif ($lightForCheck < $lightWarnLow || $lightForCheck > $lightWarnHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Cahaya', 'value' => $lightForCheck, 'status' => 'critical'];
+            } else {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Cahaya', 'value' => $lightForCheck, 'status' => 'warning'];
+            }
+            
+            // Jika ada 3+ sensor di luar batas, pastikan status adalah BURUK
+            if ($thresholdIssues >= 3) {
+                $thresholdBasedLabel = 'buruk';
+            }
+            
+            // Normalisasi label
+            $mlLabel = strtolower($mlStatus['label'] ?? 'baik');
+            $thresholdLabel = strtolower($thresholdBasedLabel);
+            
+            // Log detail threshold validation
+            \Illuminate\Support\Facades\Log::info('=== THRESHOLD VALIDATION RESULT ===', [
+                'sensor_values' => [
+                    'temperature' => $temp,
+                    'humidity' => $humid,
+                    'ammonia' => $ammonia,
+                    'light' => $lightForCheck
+                ],
+                'thresholds_used' => [
+                    'temperature' => ['ideal_min' => $tempIdealMin, 'ideal_max' => $tempIdealMax, 'danger_low' => $tempDangerLow, 'danger_high' => $tempDangerHigh],
+                    'humidity' => ['ideal_min' => $humidIdealMin, 'ideal_max' => $humidIdealMax, 'danger_high' => $humidDangerHigh],
+                    'ammonia' => ['ideal_max' => $ammoniaIdealMax, 'danger_max' => $ammoniaDangerMax],
+                    'light' => ['ideal_low' => $lightIdealLow, 'ideal_high' => $lightIdealHigh, 'warn_low' => $lightWarnLow, 'warn_high' => $lightWarnHigh]
+                ],
+                'sensor_issues' => $sensorIssues,
+                'total_issues' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues,
+                'threshold_based_label' => $thresholdLabel,
+                'ml_label' => $mlLabel
+            ]);
+            
+            // Step 3: Calculate Agreement Score
+            $agreementScore = $calculateAgreement($mlStatus, $thresholdLabel, (float)($mlStatus['confidence'] ?? 0.7));
+            
+            // Step 4: Determine Final Status
+            $finalStatusLabel = $determineFinalStatus($mlStatus, $thresholdLabel, $agreementScore, $criticalThresholdIssues, $thresholdIssues);
+            
+            // Step 5: Calculate Final Confidence
+            $finalConfidence = $calculateFinalConfidence(
+                (float)($mlStatus['confidence'] ?? 0.7),
+                $thresholdLabel,
+                $mlStatus,
+                $agreementScore,
+                $criticalThresholdIssues,
+                $finalStatusLabel
+            );
+            
+            // Step 6: Determine if Manual Review Needed
+            $needsManualReview = (
+                $criticalThresholdIssues >= 3 ||
+                $agreementScore < 0.3 ||
+                ($finalStatusLabel != strtoupper($thresholdLabel) && $criticalThresholdIssues > 0) ||
+                $finalConfidence < 0.5
+            );
+            
+            // Step 7: Update current status
+            $currentStatus['label'] = $finalStatusLabel;
+            $currentStatus['confidence'] = $finalConfidence;
+            $currentStatus['agreement_score'] = $agreementScore;
+            $currentStatus['needs_manual_review'] = $needsManualReview;
+            
+            // Generate reasoning
+            if ($criticalThresholdIssues >= 3) {
+                $currentStatus['reasoning'] = "Terdapat {$criticalThresholdIssues} sensor dalam kondisi kritis. Kondisi ini membahayakan kesehatan ayam dan memerlukan tindakan segera.";
+            } else {
+                $reasoning = [];
+                if (strtoupper($mlLabel) == $finalStatusLabel) {
+                    $reasoning[] = "Model ML memprediksi kondisi ini berdasarkan pola historis.";
+                }
+                if (strtoupper($thresholdLabel) == $finalStatusLabel) {
+                    $reasoning[] = sprintf("Validasi threshold menunjukkan %d sensor di luar batas aman.", $thresholdIssues);
+                }
+                if ($mlLabel != $thresholdLabel) {
+                    $reasoning[] = "Terdapat perbedaan antara prediksi ML dan validasi threshold. Status dipilih berdasarkan kondisi yang lebih kritis.";
+                }
+                $currentStatus['reasoning'] = implode(' ', $reasoning);
+            }
+            
+            // Simpan original ML prediction
+            $currentStatus['ml_prediction'] = [
+                'status' => strtoupper($mlLabel),
+                'probabilities' => $mlStatus['probability'] ?? null,
+                'confidence' => (float)($mlStatus['confidence'] ?? 0.7)
+            ];
+            
+            $currentStatus['threshold_validation'] = [
+                'status' => strtoupper($thresholdLabel),
+                'issues_count' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues,
+                'sensor_issues' => $sensorIssues
+            ];
+            
+            // Log final decision
+            \Illuminate\Support\Facades\Log::info('=== HYBRID ML + THRESHOLD DECISION ===', [
+                'ml_prediction' => $currentStatus['ml_prediction'],
+                'threshold_validation' => $currentStatus['threshold_validation'],
+                'agreement_score' => $agreementScore,
+                'final_status' => $finalStatusLabel,
+                'final_confidence' => $finalConfidence,
+                'needs_manual_review' => $needsManualReview,
+                'reasoning' => $currentStatus['reasoning']
+            ]);
+        }
         
         // Pastikan pred6 dan pred24 adalah array dengan struktur yang benar
         if (!is_array($pred6) || !isset($pred6['temperature'])) {
@@ -1198,7 +1603,8 @@ Route::get('/api/monitoring/tools', function () {
         'forecast_summary_6h' => isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary,
         'forecast_summary_24h' => isset($mlResults) && isset($mlResults['forecast_summary_24h']) ? $mlResults['forecast_summary_24h'] : $forecast24Summary,
         'anomalies' => $anomalies,
-        'ml_metadata' => $mlMetadata
+        'ml_metadata' => $mlMetadata,
+        'thresholds' => $thresholds // Tambahkan thresholds dari database
     ]);
     
     } catch (\Exception $e) {
@@ -1212,6 +1618,187 @@ Route::get('/api/monitoring/tools', function () {
                 'ml_connected' => false,
                 'error' => true
             ]
+        ], 500);
+    }
+});
+
+// Debug endpoint untuk testing threshold validation
+Route::get('/api/debug/threshold-validation', function () {
+    try {
+        $profileKey = request()->query('profile', 'default');
+        
+        // Clear cache
+        \App\Models\ThresholdProfile::clearBootedModels();
+        \App\Models\ThresholdValue::clearBootedModels();
+        
+        // Get threshold from database
+        $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', $profileKey)
+            ->with('thresholdValues')
+            ->first();
+        
+        if (!$thresholdProfile) {
+            $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', 'default')
+                ->with('thresholdValues')
+                ->first();
+        }
+        
+        $thresholds = [];
+        if ($thresholdProfile) {
+            foreach ($thresholdProfile->thresholdValues as $value) {
+                if ($value->sensor_type === 'amonia_ppm') {
+                    $thresholds['ammonia'] = [
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_max' => (float) $value->warn_max,
+                        'danger_max' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'suhu_c') {
+                    $thresholds['temperature'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'danger_low' => (float) $value->danger_min,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'kelembaban_rh') {
+                    $thresholds['humidity'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->ideal_min,
+                        'warn_high' => (float) $value->warn_max,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'cahaya_lux') {
+                    $thresholds['light'] = [
+                        'ideal_low' => (float) $value->ideal_min,
+                        'ideal_high' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->warn_min,
+                        'warn_high' => (float) $value->warn_max,
+                    ];
+                }
+            }
+        }
+        
+        // Get latest sensor data
+        $latestSensor = \App\Models\SensorReading::orderBy('recorded_at', 'desc')->first();
+        
+        if (!$latestSensor) {
+            return response()->json([
+                'error' => 'No sensor data found'
+            ], 404);
+        }
+        
+        $temp = (float) ($latestSensor->temperature ?? 0);
+        $humid = (float) ($latestSensor->humidity ?? 0);
+        $ammonia = (float) ($latestSensor->ammonia ?? 0);
+        $light = (float) ($latestSensor->light ?? 0);
+        
+        // Validate thresholds (same logic as main route)
+        $thresholdBasedLabel = 'baik';
+        $thresholdIssues = 0;
+        $criticalThresholdIssues = 0;
+        $warningThresholdIssues = 0;
+        $sensorDetails = [];
+        
+        // Temperature
+        $tempIdealMin = (float) ($thresholds['temperature']['ideal_min'] ?? 23);
+        $tempIdealMax = (float) ($thresholds['temperature']['ideal_max'] ?? 34);
+        $tempDangerLow = (float) ($thresholds['temperature']['danger_low'] ?? 20);
+        $tempDangerHigh = (float) ($thresholds['temperature']['danger_high'] ?? 37);
+        
+        if ($temp >= $tempIdealMin && $temp <= $tempIdealMax) {
+            $sensorDetails['temperature'] = ['status' => 'aman', 'value' => $temp];
+        } elseif ($temp < $tempDangerLow || $temp > $tempDangerHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['temperature'] = ['status' => 'critical', 'value' => $temp];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['temperature'] = ['status' => 'warning', 'value' => $temp];
+        }
+        
+        // Humidity
+        $humidIdealMin = (float) ($thresholds['humidity']['ideal_min'] ?? 50);
+        $humidIdealMax = (float) ($thresholds['humidity']['ideal_max'] ?? 70);
+        $humidDangerHigh = (float) ($thresholds['humidity']['danger_high'] ?? 80);
+        
+        if ($humid >= $humidIdealMin && $humid <= $humidIdealMax) {
+            $sensorDetails['humidity'] = ['status' => 'aman', 'value' => $humid];
+        } elseif ($humid > $humidDangerHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['humidity'] = ['status' => 'critical', 'value' => $humid];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['humidity'] = ['status' => 'warning', 'value' => $humid];
+        }
+        
+        // Ammonia
+        $ammoniaIdealMax = (float) ($thresholds['ammonia']['ideal_max'] ?? 20);
+        $ammoniaDangerMax = (float) ($thresholds['ammonia']['danger_max'] ?? 35);
+        
+        if ($ammonia <= $ammoniaIdealMax) {
+            $sensorDetails['ammonia'] = ['status' => 'aman', 'value' => $ammonia];
+        } elseif ($ammonia > $ammoniaDangerMax) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['ammonia'] = ['status' => 'critical', 'value' => $ammonia];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['ammonia'] = ['status' => 'warning', 'value' => $ammonia];
+        }
+        
+        // Light
+        $lightForCheck = $light / 10;
+        $lightIdealLow = (float) ($thresholds['light']['ideal_low'] ?? 20);
+        $lightIdealHigh = (float) ($thresholds['light']['ideal_high'] ?? 40);
+        $lightWarnLow = (float) ($thresholds['light']['warn_low'] ?? 10);
+        $lightWarnHigh = (float) ($thresholds['light']['warn_high'] ?? 60);
+        
+        if ($lightForCheck >= $lightIdealLow && $lightForCheck <= $lightIdealHigh) {
+            $sensorDetails['light'] = ['status' => 'aman', 'value' => $lightForCheck];
+        } elseif ($lightForCheck < $lightWarnLow || $lightForCheck > $lightWarnHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['light'] = ['status' => 'critical', 'value' => $lightForCheck];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['light'] = ['status' => 'warning', 'value' => $lightForCheck];
+        }
+        
+        return response()->json([
+            'profile' => $profileKey,
+            'sensor_data' => [
+                'temperature' => $temp,
+                'humidity' => $humid,
+                'ammonia' => $ammonia,
+                'light' => $light,
+                'light_for_check' => $lightForCheck
+            ],
+            'thresholds' => $thresholds,
+            'validation_result' => [
+                'status' => strtoupper($thresholdBasedLabel),
+                'issues_count' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues
+            ],
+            'sensor_details' => $sensorDetails,
+            'timestamp' => now()->toDateTimeString()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });

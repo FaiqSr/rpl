@@ -82,12 +82,9 @@ Harus return:
 ## ⚠️ Catatan Penting
 
 ### 1. Version Warning (Tidak Critical)
-Ada warning tentang scikit-learn version mismatch. Ini **tidak critical**, model tetap bekerja. 
-
-Untuk menghilangkan warning (optional):
-```bash
-pip install --upgrade scikit-learn==1.5.1
-```
+✅ **scikit-learn sudah di-upgrade ke versi 1.7.2**
+- Warning version mismatch sudah teratasi
+- Model tetap bekerja dengan baik
 
 ### 2. Service Harus Running
 - Service harus tetap running di terminal

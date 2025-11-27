@@ -7,8 +7,8 @@
   <title>Pesanan Saya - ChickPatrol Store</title>
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- SweetAlert2 -->
@@ -168,6 +168,29 @@
       gap: 0.5rem !important;
       width: 100% !important;
       min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e0 #f8f9fa;
+    }
+    
+    /* Custom scrollbar for WebKit browsers (Chrome, Safari, Edge) */
+    #buyerChatMessages::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    #buyerChatMessages::-webkit-scrollbar-track {
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    
+    #buyerChatMessages::-webkit-scrollbar-thumb {
+      background: #cbd5e0;
+      border-radius: 4px;
+    }
+    
+    #buyerChatMessages::-webkit-scrollbar-thumb:hover {
+      background: #a0aec0;
     }
     
     #buyerChatMessages .chat-message {
@@ -338,13 +361,28 @@
                 <span class="text-muted">Belum dipilih</span>
               @endif
             </div>
-            @if($order->tracking_number)
+            @if($order->payment_status === 'paid' && $order->tracking_number)
               <div class="col-md-12">
                 <strong>Nomor Resi:</strong> 
                 <span class="text-primary">{{ $order->tracking_number }}</span>
                 <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
                   <i class="fa-solid fa-external-link me-1"></i>Cek Resi
                 </a>
+              </div>
+            @elseif($order->payment_status === 'paid' && !$order->tracking_number)
+              <div class="col-md-12">
+                <strong>Nomor Resi:</strong> 
+                <span class="text-muted">Resi akan muncul setelah pesanan dikirim</span>
+              </div>
+            @elseif($order->payment_status === 'processing')
+              <div class="col-md-12">
+                <strong>Nomor Resi:</strong> 
+                <span class="text-muted">Resi akan muncul setelah pembayaran diterima dan pesanan dikirim</span>
+              </div>
+            @else
+              <div class="col-md-12">
+                <strong>Nomor Resi:</strong> 
+                <span class="text-muted">Resi akan muncul setelah pembayaran diterima dan pesanan dikirim</span>
               </div>
             @endif
             @if($order->payment_status === 'paid')
@@ -355,6 +393,13 @@
                 @if($order->paid_at)
                   <small class="text-muted ms-2">Dibayar pada {{ $order->paid_at instanceof \Carbon\Carbon ? $order->paid_at->format('d M Y H:i') : \Carbon\Carbon::parse($order->paid_at)->format('d M Y H:i') }}</small>
                 @endif
+              </div>
+            @elseif($order->payment_status === 'processing')
+              <div class="col-md-12 mt-2">
+                <span class="badge bg-info">
+                  <i class="fa-solid fa-hourglass-half me-1"></i>Pembayaran di Proses
+                </span>
+                <small class="text-muted ms-2">Admin sedang memvalidasi pembayaran Anda</small>
               </div>
             @else
               <div class="col-md-12 mt-2">
@@ -407,14 +452,14 @@
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body p-0" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="modal-body p-0" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
           <div id="buyerChatMessages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f8f9fa; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0;">
             <div class="text-center p-4 text-gray-500">
               <i class="fa-solid fa-spinner fa-spin"></i> Memuat pesan...
             </div>
           </div>
-          <div class="p-3 border-top bg-white">
-            <div class="d-flex gap-2">
+          <div class="border-top p-3 bg-white">
+            <div class="input-group">
               <input type="text" id="buyerChatInput" class="form-control" placeholder="Ketik pesan disini..." onkeypress="if(event.key==='Enter') sendBuyerMessage()">
               <button class="btn btn-success" onclick="sendBuyerMessage()">
                 <i class="fa-solid fa-paper-plane"></i> Kirim

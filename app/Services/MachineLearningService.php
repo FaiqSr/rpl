@@ -168,7 +168,7 @@ class MachineLearningService
                 'light' => $predict24($lights)
             ],
             'anomalies' => $this->detectAnomalies($history),
-            'status' => $this->classifyStatus(end($history)),
+            'status' => $this->classifyStatus(end($history), []), // Threshold akan diupdate di routes/web.php
             'ml_metadata' => [
                 'model_name' => 'Simple Linear Extrapolation',
                 'model_version' => '1.0',
