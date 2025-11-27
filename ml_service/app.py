@@ -11,9 +11,44 @@ from tensorflow.keras.models import load_model
 import json
 import os
 from datetime import datetime
+import logging
+import time
+from functools import wraps
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS untuk Laravel
+
+# Setup Logging
+log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        RotatingFileHandler(
+            os.path.join(log_dir, 'ml_service.log'),
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5
+        ),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Metrics tracking
+prediction_metrics = {
+    'total_requests': 0,
+    'successful_predictions': 0,
+    'failed_predictions': 0,
+    'avg_processing_time': 0.0,
+    'model_performance': {
+        'lstm': {'count': 0, 'avg_time': 0.0},
+        'random_forest': {'count': 0, 'avg_time': 0.0},
+        'isolation_forest': {'count': 0, 'avg_time': 0.0}
+    }
+}
 
 # Konstanta
 SEQUENCE_LENGTH = 30  # Sesuaikan dengan model LSTM Anda
@@ -154,76 +189,147 @@ except Exception as e:
     SENSOR_STATS = None
 
 
+def log_performance(func):
+    """Decorator untuk log waktu eksekusi"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            execution_time = time.time() - start_time
+            
+            # Update metrics
+            model_name = func.__name__.replace('predict_', '').replace('_', '_')
+            if model_name in prediction_metrics['model_performance']:
+                metrics = prediction_metrics['model_performance'][model_name]
+                metrics['count'] += 1
+                metrics['avg_time'] = (
+                    (metrics['avg_time'] * (metrics['count'] - 1) + execution_time)
+                    / metrics['count']
+                )
+            
+            logger.info(f'{func.__name__} executed in {execution_time:.3f}s')
+            return result
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.error(f'{func.__name__} failed after {execution_time:.3f}s: {str(e)}', exc_info=True)
+            raise
+    return wrapper
+
+
+def predict_status_robust(sensor_data, model_rf, scaler_rf, threshold_config):
+    """
+    Prediksi status dengan logika threshold yang lebih robust
+    Input: sensor_data = [amonia, suhu, kelembaban, cahaya]
+    """
+    # Scale input
+    X = np.array([sensor_data])
+    X_scaled = scaler_rf.transform(X)
+    
+    # Get probabilities
+    proba = model_rf.predict_proba(X_scaled)[0]
+    
+    # Mapping classes: model bisa dilatih dengan classes [1, 2] atau [0, 1, 2]
+    # Cek classes yang dilatih
+    classes_trained = model_rf.classes_
+    
+    # Map probabilitas ke label
+    proba_dict = {}
+    for idx, class_label in enumerate(classes_trained):
+        proba_dict[class_label] = float(proba[idx])
+    
+    # Jika model hanya dilatih untuk [1, 2] (PERHATIAN, BURUK)
+    # BAIK = 1 - (PERHATIAN + BURUK)
+    if len(classes_trained) == 2 and 0 not in classes_trained:
+        # Classes: [1, 2] = PERHATIAN, BURUK
+        proba_perhatian = proba_dict.get(1, 0.0)
+        proba_buruk = proba_dict.get(2, 0.0)
+        proba_baik = max(0.0, 1.0 - (proba_perhatian + proba_buruk))
+    else:
+        # Classes: [0, 1, 2] = BAIK, PERHATIAN, BURUK
+        proba_baik = proba_dict.get(0, 0.0)
+        proba_perhatian = proba_dict.get(1, 0.0)
+        proba_buruk = proba_dict.get(2, 0.0)
+    
+    # Load threshold optimal
+    best_threshold = threshold_config.get('best_threshold', 0.55) if threshold_config else 0.55
+    
+    # LOGIKA PRIORITAS:
+    # 1. Jika probabilitas BURUK >= threshold → BURUK (prioritas tertinggi)
+    # 2. Jika probabilitas PERHATIAN > BURUK dan PERHATIAN > BAIK → PERHATIAN
+    # 3. Jika probabilitas BAIK tertinggi → BAIK
+    
+    if proba_buruk >= best_threshold:
+        status = 'BURUK'
+        status_code = 2
+    elif proba_perhatian > proba_buruk and proba_perhatian > proba_baik:
+        status = 'PERHATIAN'
+        status_code = 1
+    else:
+        status = 'BAIK'
+        status_code = 0
+    
+    return {
+        'status': status,
+        'status_code': status_code,
+        'probabilities': {
+            'BAIK': float(proba_baik),
+            'PERHATIAN': float(proba_perhatian),
+            'BURUK': float(proba_buruk)
+        },
+        'confidence': float(max(proba_baik, proba_perhatian, proba_buruk)),
+        'threshold_used': float(best_threshold)
+    }
+
+
+@log_performance
 def predict_sensor_classification(amonia, suhu, kelembaban, cahaya):
     """
     Klasifikasi status kandang dari data sensor (model v2)
     Input & model sekarang dalam skala ASLI (lux, ppm, °C, %)
-    Menggunakan threshold optimal dari threshold_config.json jika tersedia
+    Menggunakan fungsi predict_status_robust untuk logika yang lebih jelas
     """
-    X = np.array([[amonia, suhu, kelembaban, cahaya]])
-    X_scaled = scaler_rf.transform(X)
-    proba = model_rf.predict_proba(X_scaled)[0]
+    sensor_data = [amonia, suhu, kelembaban, cahaya]
+    result = predict_status_robust(sensor_data, model_rf, scaler_rf, threshold_config)
     
-    # Mapping sesuai metadata: classes_trained = [1, 2] -> PERHATIAN, BURUK
+    status_label = result['status'].lower()
+    probability_dict = result['probabilities']
+    
+    # Mapping untuk backward compatibility
     status_labels_map = {1: 'PERHATIAN', 2: 'BURUK'}
     colors = {0: '#2ecc71', 1: '#f39c12', 2: '#e74c3c'}
     
-    # Gunakan threshold optimal dari threshold_config.json jika tersedia
-    if threshold_config and 'best_threshold' in threshold_config:
-        best_threshold = threshold_config['best_threshold']
-        class_index = threshold_config.get('class_index', 2)  # Default untuk kelas BURUK (index 2)
-        
-        # Cari probabilitas untuk kelas yang sesuai dengan class_index
-        proba_dict = {}
-        for idx, class_label in enumerate(model_rf.classes_):
-            proba_dict[class_label] = float(proba[idx])
-        
-        # Jika probabilitas kelas BURUK >= threshold, klasifikasikan sebagai BURUK
-        if class_index in proba_dict and proba_dict[class_index] >= best_threshold:
-            status = class_index
-            status_label = status_labels_map.get(status, 'BURUK')
-        else:
-            # Cari kelas dengan probabilitas tertinggi
-            max_class = max(proba_dict.items(), key=lambda x: x[1])[0]
-            if max_class in status_labels_map:
-                status = max_class
-                status_label = status_labels_map[status]
-            else:
-                status = 0  # BAIK
-                status_label = 'BAIK'
+    # Generate message berdasarkan status
+    status_messages = {
+        'baik': 'Semua parameter lingkungan dalam kondisi optimal. Kandang siap untuk pertumbuhan ayam yang sehat.',
+        'perhatian': 'Beberapa parameter lingkungan perlu diperhatikan. Lakukan pengecekan ventilasi, suhu, dan kelembaban. Periksa juga ketersediaan pakan dan air minum.',
+        'buruk': 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam. Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan. Jika perlu, hubungi dokter hewan.'
+    }
+    
+    severity_map = {
+        'baik': 'normal',
+        'perhatian': 'warning',
+        'buruk': 'critical'
+    }
+    
+    confidence = result['confidence']
+    if confidence >= 0.8:
+        confidence_desc = 'Sangat yakin'
+    elif confidence >= 0.6:
+        confidence_desc = 'Cukup yakin'
     else:
-        # Fallback: gunakan prediksi standar
-        status = model_rf.predict(X_scaled)[0]
-        if status not in status_labels_map:
-            status = 0  # BAIK
-            status_label = 'BAIK'
-        else:
-            status_label = status_labels_map[status]
+        confidence_desc = 'Perlu verifikasi manual'
     
-    probability_dict = {}
-    for idx, class_label in enumerate(model_rf.classes_):
-        if class_label in status_labels_map:
-            probability_dict[status_labels_map[class_label]] = float(proba[idx])
-    
-    # Hitung probabilitas BAIK (1 - sum probabilitas lainnya)
-    # Karena model hanya dilatih untuk PERHATIAN dan BURUK
-    other_probs = sum(probability_dict.values())
-    probability_dict['BAIK'] = max(0.0, 1.0 - other_probs)
-    
-    # Pastikan semua label ada
-    for label in ['BAIK', 'PERHATIAN', 'BURUK']:
-        if label not in probability_dict:
-            probability_dict[label] = 0.0
-    
-    # Confidence adalah max dari probabilitas yang ada
-    confidence = max(proba) if len(proba) > 0 else probability_dict.get(status_label, 0.0)
+    message = f"{status_messages.get(status_label, 'Status tidak dapat ditentukan')} (Tingkat keyakinan sistem: {confidence_desc})"
     
     return {
-        'status': status_label,
-        'status_code': int(status),
-        'color': colors.get(status, '#555'),
+        'label': status_label,
+        'status': result['status'],  # BAIK, PERHATIAN, BURUK (uppercase)
+        'severity': severity_map.get(status_label, 'normal'),
+        'message': message,
+        'confidence': confidence,
         'probability': probability_dict,
-        'confidence': float(confidence)
+        'threshold_used': result['threshold_used']
     }
 
 
@@ -641,6 +747,7 @@ def predict_next_sensor_values(recent_history):
     }
 
 
+@log_performance
 def predict_multiple_steps(recent_history, steps=6):
     """
     Prediksi beberapa langkah ke depan (untuk 6 jam dan 24 jam)
@@ -711,84 +818,230 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'ok' if MODELS_LOADED else 'error',
-        'models_loaded': MODELS_LOADED,
-        'timestamp': datetime.now().isoformat()
-    })
+    """Health check endpoint dengan informasi model yang lebih detail"""
+    try:
+        # Cek apakah semua model loaded
+        models_loaded = {
+            'lstm': model_lstm is not None or (model_lstm_ensemble and len(model_lstm_ensemble) > 0),
+            'random_forest': model_rf is not None,
+            'isolation_forest': model_if is not None
+        }
+        
+        all_loaded = all(models_loaded.values())
+        status = 'healthy' if all_loaded else 'degraded'
+        
+        return jsonify({
+            'status': status,
+            'models_loaded': models_loaded,
+            'all_models_loaded': all_loaded,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        logger.error(f'Health check error: {str(e)}', exc_info=True)
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
+@app.route('/metrics', methods=['GET'])
+def get_metrics():
+    """Endpoint untuk melihat metrics"""
+    try:
+        return jsonify({
+            'metrics': prediction_metrics,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        logger.error(f'Metrics error: {str(e)}', exc_info=True)
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
     """
-    Main prediction endpoint
+    Main prediction endpoint dengan error handling dan validasi yang komprehensif
     Expected format sesuai ML_INTEGRATION.md
     """
+    start_time = time.time()
+    prediction_metrics['total_requests'] += 1
+    
+    # 1. VALIDASI: Cek apakah models loaded
     if not MODELS_LOADED:
+        prediction_metrics['failed_predictions'] += 1
+        logger.error('Prediction failed: Models not loaded')
         return jsonify({
             'error': 'Models not loaded',
             'message': 'Please check model files'
         }), 500
     
     try:
-        data = request.json
-        history = data.get('history', [])
-        
-        if len(history) < SEQUENCE_LENGTH:
+        # 2. VALIDASI: Cek request body
+        if not request.is_json:
+            prediction_metrics['failed_predictions'] += 1
+            logger.warning('Prediction failed: Content-Type must be application/json')
             return jsonify({
-                'error': f'Insufficient history data. Need at least {SEQUENCE_LENGTH} data points'
+                'error': 'Content-Type must be application/json'
             }), 400
         
-        # Get latest sensor reading
-        latest = history[-1]
-        amonia = latest.get('ammonia', latest.get('amonia_ppm', 0))
-        suhu = latest.get('temperature', latest.get('suhu_c', 0))
-        kelembaban = latest.get('humidity', latest.get('kelembaban_rh', 0))
-        cahaya = latest.get('light', latest.get('cahaya_lux', 0))
+        data = request.get_json()
+        if not data:
+            prediction_metrics['failed_predictions'] += 1
+            logger.warning('Prediction failed: Request body is empty')
+            return jsonify({
+                'error': 'Request body is empty'
+            }), 400
         
-        # Convert history to format expected by LSTM
-        # Format: [[amonia, suhu, kelembaban, cahaya], ...]
+        # 3. VALIDASI: Cek field 'history'
+        if 'history' not in data:
+            prediction_metrics['failed_predictions'] += 1
+            logger.warning('Prediction failed: Missing required field: history')
+            return jsonify({
+                'error': 'Missing required field: history'
+            }), 400
+        
+        history = data.get('history', [])
+        
+        # 4. VALIDASI: Cek jumlah data history
+        if not isinstance(history, list):
+            prediction_metrics['failed_predictions'] += 1
+            logger.warning('Prediction failed: History must be a list/array')
+            return jsonify({
+                'error': 'History must be a list/array'
+            }), 400
+        
+        if len(history) < SEQUENCE_LENGTH:
+            prediction_metrics['failed_predictions'] += 1
+            logger.warning(f'Prediction failed: Insufficient history data. Need at least {SEQUENCE_LENGTH} data points, received {len(history)}')
+            return jsonify({
+                'error': f'History must contain at least {SEQUENCE_LENGTH} data points',
+                'received': len(history),
+                'required': SEQUENCE_LENGTH
+            }), 400
+        
+        # 5. VALIDASI: Cek format setiap data point
         history_array = []
-        for h in history:
-            history_array.append([
-                h.get('ammonia', h.get('amonia_ppm', 0)),
-                h.get('temperature', h.get('suhu_c', 0)),
-                h.get('humidity', h.get('kelembaban_rh', 0)),
-                h.get('light', h.get('cahaya_lux', 0))
-            ])
+        for i, h in enumerate(history):
+            if not isinstance(h, (list, dict)):
+                prediction_metrics['failed_predictions'] += 1
+                logger.warning(f'Prediction failed: History entry {i} must be a list or dict')
+                return jsonify({
+                    'error': f'History entry {i} must be a list or dict',
+                    'entry': h
+                }), 400
+            
+            # Convert dict to list jika perlu
+            if isinstance(h, dict):
+                # Support multiple key formats for backward compatibility
+                amonia_val = h.get('ammonia', h.get('amonia_ppm', 0))
+                suhu_val = h.get('temperature', h.get('suhu_c', 0))
+                kelembaban_val = h.get('humidity', h.get('kelembaban_rh', 0))
+                cahaya_val = h.get('light', h.get('cahaya_lux', 0))
+                
+                # Cek tipe data (harus numeric)
+                try:
+                    amonia_val = float(amonia_val)
+                    suhu_val = float(suhu_val)
+                    kelembaban_val = float(kelembaban_val)
+                    cahaya_val = float(cahaya_val)
+                except (ValueError, TypeError) as e:
+                    prediction_metrics['failed_predictions'] += 1
+                    logger.warning(f'Prediction failed: History entry {i} contains non-numeric values')
+                    return jsonify({
+                        'error': f'History entry {i} contains non-numeric values',
+                        'entry': h,
+                        'details': str(e)
+                    }), 400
+                
+                history_array.append([amonia_val, suhu_val, kelembaban_val, cahaya_val])
+            else:
+                # List format
+                if len(h) != 4:
+                    prediction_metrics['failed_predictions'] += 1
+                    logger.warning(f'Prediction failed: History entry {i} must have exactly 4 sensor values')
+                    return jsonify({
+                        'error': f'History entry {i} must have exactly 4 sensor values',
+                        'received': len(h)
+                    }), 400
+                
+                # Cek tipe data (harus numeric)
+                try:
+                    history_array.append([float(v) for v in h])
+                except (ValueError, TypeError) as e:
+                    prediction_metrics['failed_predictions'] += 1
+                    logger.warning(f'Prediction failed: History entry {i} contains non-numeric values')
+                    return jsonify({
+                        'error': f'History entry {i} contains non-numeric values',
+                        'entry': h,
+                        'details': str(e)
+                    }), 400
+        
+        # 6. VALIDASI: Convert ke numpy array
+        try:
+            history_array = np.array(history_array[-SEQUENCE_LENGTH:], dtype=np.float32)
+        except (ValueError, TypeError) as e:
+            prediction_metrics['failed_predictions'] += 1
+            logger.error(f'Prediction failed: Failed to convert history to array: {str(e)}')
+            return jsonify({
+                'error': 'Failed to convert history to array',
+                'details': str(e)
+            }), 400
+        
+        # 7. VALIDASI: Cek range nilai (optional, tapi recommended)
+        if np.any(history_array < 0):
+            logger.warning(f'Negative values detected in history: {history_array[history_array < 0]}')
+        
+        # 8. Get latest sensor reading
+        latest = history[-1]
+        if isinstance(latest, dict):
+            amonia = float(latest.get('ammonia', latest.get('amonia_ppm', 0)))
+            suhu = float(latest.get('temperature', latest.get('suhu_c', 0)))
+            kelembaban = float(latest.get('humidity', latest.get('kelembaban_rh', 0)))
+            cahaya = float(latest.get('light', latest.get('cahaya_lux', 0)))
+        else:
+            amonia = float(latest[0])
+            suhu = float(latest[1])
+            kelembaban = float(latest[2])
+            cahaya = float(latest[3])
         
         # CRITICAL: Ensure the last entry in history_array matches the latest values
-        # This ensures predictions are based on the actual current state
         if len(history_array) > 0:
             history_array[-1] = [amonia, suhu, kelembaban, cahaya]
         
-        # Predictions
-        import time
-        start_time = time.time()
-        
-        # Predict 6 hours ahead
-        pred_6h = predict_multiple_steps(history_array, steps=6)
-        
-        # Predict 24 hours ahead
-        pred_24h = predict_multiple_steps(history_array, steps=24)
-        
-        # Classify current status
-        status_result = predict_sensor_classification(amonia, suhu, kelembaban, cahaya)
-        
-        # Detect anomalies in history
-        # Gunakan semua 30 data points yang dikirim (sesuai dengan LSTM sequence length)
-        # Konsisten dengan input model dan memanfaatkan semua data yang tersedia
-        anomalies = []
-        for h in history:  # Check all history data (30 data points)
-            amonia_val = h.get('ammonia', h.get('amonia_ppm', 0))
-            suhu_val = h.get('temperature', h.get('suhu_c', 0))
-            kelembaban_val = h.get('humidity', h.get('kelembaban_rh', 0))
-            cahaya_val = h.get('light', h.get('cahaya_lux', 0))
+        # 9. PREDIKSI dengan error handling
+        try:
+            # Predict 6 hours ahead
+            pred_6h = predict_multiple_steps(history_array, steps=6)
             
-            anomaly_result = detect_anomaly(amonia_val, suhu_val, kelembaban_val, cahaya_val)
+            # Predict 24 hours ahead
+            pred_24h = predict_multiple_steps(history_array, steps=24)
             
-            if anomaly_result['is_anomaly']:
+            # Classify current status
+            status_result = predict_sensor_classification(amonia, suhu, kelembaban, cahaya)
+        
+            # Detect anomalies in history
+            # Gunakan semua 30 data points yang dikirim (sesuai dengan LSTM sequence length)
+            anomalies = []
+            for h in history:  # Check all history data (30 data points)
+                # Extract values dengan error handling
+                if isinstance(h, dict):
+                    amonia_val = float(h.get('ammonia', h.get('amonia_ppm', 0)))
+                    suhu_val = float(h.get('temperature', h.get('suhu_c', 0)))
+                    kelembaban_val = float(h.get('humidity', h.get('kelembaban_rh', 0)))
+                    cahaya_val = float(h.get('light', h.get('cahaya_lux', 0)))
+                else:
+                    amonia_val = float(h[0])
+                    suhu_val = float(h[1])
+                    kelembaban_val = float(h[2])
+                    cahaya_val = float(h[3])
+                
+                anomaly_result = detect_anomaly(amonia_val, suhu_val, kelembaban_val, cahaya_val)
+                
+                if anomaly_result['is_anomaly']:
                 # Gunakan detail dari detect_anomaly yang sudah diperbaiki
                 if anomaly_result.get('anomaly_details') and len(anomaly_result['anomaly_details']) > 0:
                     # Ambil detail pertama (atau semua jika perlu)
@@ -796,7 +1049,7 @@ def predict():
                         anomalies.append({
                             'type': detail['sensor'],
                             'value': float(detail['value']),
-                            'time': h.get('time', ''),
+                            'time': h_time,
                             'message': detail['message'],
                             'status': anomaly_result['status'],
                             'anomaly_score': float(anomaly_result['anomaly_score']),
@@ -825,18 +1078,21 @@ def predict():
                         'value': float(amonia_val if type_msg == 'ammonia' else 
                                       suhu_val if type_msg == 'temperature' else
                                       kelembaban_val if type_msg == 'humidity' else cahaya_val),
-                        'time': h.get('time', ''),
+                        'time': h_time,
                         'message': message,
                         'status': anomaly_result['status'],
                         'anomaly_score': float(anomaly_result['anomaly_score']),
                         'severity': 'critical' if anomaly_result['anomaly_score'] < -0.5 else 'warning'
                     })
         
-        # Check anomaly for latest reading (current data)
-        latest_anomaly_result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
-        if latest_anomaly_result['is_anomaly']:
-            # Gunakan detail dari detect_anomaly yang sudah diperbaiki
-            latest_time = latest.get('time', history[-1].get('time', ''))
+            # Check anomaly for latest reading (current data)
+            latest_anomaly_result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
+            if latest_anomaly_result['is_anomaly']:
+                # Gunakan detail dari detect_anomaly yang sudah diperbaiki
+                if isinstance(latest, dict):
+                    latest_time = latest.get('time', '')
+                else:
+                    latest_time = history[-1].get('time', '') if isinstance(history[-1], dict) else ''
             
             if latest_anomaly_result.get('anomaly_details') and len(latest_anomaly_result['anomaly_details']) > 0:
                 # Tambahkan semua detail anomali untuk latest reading
@@ -894,25 +1150,8 @@ def predict():
                         'anomaly_score': float(latest_anomaly_result['anomaly_score']),
                         'severity': 'critical' if latest_anomaly_result['anomaly_score'] < -0.5 else 'warning'
                     })
-        
-        prediction_time = int((time.time() - start_time) * 1000)  # in milliseconds
-        
-        # Map status to expected format (hanya: baik, perhatian, buruk)
-        status_map = {
-            'BAIK': {'label': 'baik', 'severity': 'normal'},
-            'PERHATIAN': {'label': 'perhatian', 'severity': 'warning'},
-            'BURUK': {'label': 'buruk', 'severity': 'critical'}
-        }
-        
-        status_info = status_map.get(status_result['status'], {
-            'label': 'tidak diketahui',
-            'severity': 'warning'
-        })
-        
-        # Check for anomaly in latest reading
-        latest_anomaly_result = detect_anomaly(amonia, suhu, kelembaban, cahaya)
-        
-        # Generate forecast summaries
+            
+            # Generate forecast summaries
         def qualitative_forecast(series, metric, unit, safe_low, safe_high):
             min_val = min(series)
             max_val = max(series)
@@ -1024,12 +1263,13 @@ def predict():
             'forecast_summary_24h': forecast_24h_summary,
             'anomalies': anomalies,
             'status': {
-                'label': status_info['label'],
-                'severity': status_info['severity'],
-                'status': status_result['status'],  # Original status label (BAIK, PERHATIAN, BURUK)
+                'label': status_result['label'],  # baik, perhatian, buruk (lowercase)
+                'severity': status_result['severity'],
+                'status': status_result['status'],  # BAIK, PERHATIAN, BURUK (uppercase)
                 'probability': status_result['probability'],  # Include probability dict
                 'confidence': float(status_result['confidence']),
-                'message': generate_status_message(status_result['status'], status_result['confidence'])
+                'message': status_result['message'],
+                'threshold_used': status_result.get('threshold_used', 0.55)
             },
             'anomaly': latest_anomaly_result,  # Include latest anomaly detection
             'ml_metadata': {
@@ -1045,14 +1285,46 @@ def predict():
             'accuracy': rf_info.get('accuracy', None),
             'prediction_time': prediction_time,
             'confidence': 'high' if status_result['confidence'] > 0.8 else 'medium' if status_result['confidence'] > 0.6 else 'low'
-        }
-        
-        return jsonify(response)
-        
+            }
+            
+            # 10. RESPONSE SUKSES dengan metrics
+            prediction_metrics['successful_predictions'] += 1
+            processing_time = time.time() - start_time
+            
+            # Update average processing time
+            total_success = prediction_metrics['successful_predictions']
+            prediction_metrics['avg_processing_time'] = (
+                (prediction_metrics['avg_processing_time'] * (total_success - 1) + processing_time)
+                / total_success
+            )
+            
+            logger.info(f'Prediction successful in {processing_time:.3f}s')
+            
+            # Add processing time to response
+            response['processing_time_ms'] = round(processing_time * 1000, 2)
+            response['metadata'] = {
+                'history_length': len(history),
+                'sequence_length_used': SEQUENCE_LENGTH
+            }
+            
+            return jsonify(response), 200
+            
+        except Exception as e:
+            # Error handling untuk prediksi
+            prediction_metrics['failed_predictions'] += 1
+            logger.error(f'Prediction error: {str(e)}', exc_info=True)
+            return jsonify({
+                'error': 'Prediction failed',
+                'details': str(e) if app.debug else 'Contact administrator'
+            }), 500
+            
     except Exception as e:
+        # Catch-all untuk error yang tidak terduga
+        prediction_metrics['failed_predictions'] += 1
+        logger.error(f'Unexpected error: {str(e)}', exc_info=True)
         return jsonify({
-            'error': str(e),
-            'message': 'Error during prediction'
+            'error': 'Internal server error',
+            'details': str(e) if app.debug else 'Contact administrator'
         }), 500
 
 

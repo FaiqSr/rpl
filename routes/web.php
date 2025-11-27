@@ -1051,9 +1051,169 @@ Route::get('/api/monitoring/tools', function () {
         $mlMetadata = $mlResults['ml_metadata'] ?? [];
         
         // ============================================
+        // PROBABILITY ADJUSTMENT BASED ON NEW THRESHOLDS
+        // ============================================
+        
+        // Helper function: Calculate threshold score berdasarkan threshold baru dari database
+        $calculateThresholdScore = function($sensorData, $thresholds) {
+            $issues = 0;
+            $criticalIssues = 0;
+            $warnings = 0;
+            
+            // Validasi setiap sensor dengan threshold BARU
+            // Suhu
+            $temp = $sensorData['temperature'] ?? $sensorData['suhu_c'] ?? 0;
+            $suhuTh = $thresholds['temperature'] ?? null;
+            if ($suhuTh) {
+                if ($temp < ($suhuTh['danger_low'] ?? 20) || $temp > ($suhuTh['danger_high'] ?? 37)) {
+                    $criticalIssues++;
+                } elseif ($temp < ($suhuTh['ideal_min'] ?? 23) || $temp > ($suhuTh['ideal_max'] ?? 34)) {
+                    $warnings++;
+                }
+            }
+            
+            // Kelembaban
+            $humidity = $sensorData['humidity'] ?? $sensorData['kelembaban_rh'] ?? 0;
+            $kelembabanTh = $thresholds['humidity'] ?? null;
+            if ($kelembabanTh) {
+                if ($humidity > ($kelembabanTh['danger_high'] ?? 80)) {
+                    $criticalIssues++;
+                } elseif ($humidity < ($kelembabanTh['ideal_min'] ?? 50) || $humidity > ($kelembabanTh['warn_high'] ?? 80)) {
+                    $warnings++;
+                }
+            }
+            
+            // Amonia
+            $amonia = $sensorData['ammonia'] ?? $sensorData['amonia_ppm'] ?? 0;
+            $amoniaTh = $thresholds['ammonia'] ?? null;
+            if ($amoniaTh) {
+                if ($amonia > ($amoniaTh['danger_max'] ?? 35)) {
+                    $criticalIssues++;
+                } elseif ($amonia >= ($amoniaTh['warn_max'] ?? 35)) {
+                    $warnings++;
+                }
+            }
+            
+            // Cahaya
+            $cahaya = $sensorData['light'] ?? $sensorData['cahaya_lux'] ?? 0;
+            $cahayaTh = $thresholds['light'] ?? null;
+            if ($cahayaTh) {
+                if ($cahaya < ($cahayaTh['warn_low'] ?? 10) || $cahaya > ($cahayaTh['warn_high'] ?? 60)) {
+                    $criticalIssues++;
+                } elseif ($cahaya < ($cahayaTh['ideal_low'] ?? 20) || $cahaya > ($cahayaTh['ideal_high'] ?? 40)) {
+                    $warnings++;
+                }
+            }
+            
+            // Hitung probability berdasarkan threshold validation
+            $thresholdProb = ['BAIK' => 0, 'PERHATIAN' => 0, 'BURUK' => 0];
+            
+            if ($criticalIssues >= 3) {
+                $thresholdProb['BURUK'] = 0.9;
+                $thresholdProb['PERHATIAN'] = 0.1;
+                $thresholdProb['BAIK'] = 0.0;
+            } elseif ($criticalIssues >= 2) {
+                $thresholdProb['BURUK'] = 0.7;
+                $thresholdProb['PERHATIAN'] = 0.3;
+                $thresholdProb['BAIK'] = 0.0;
+            } elseif ($criticalIssues >= 1 || $warnings >= 2) {
+                $thresholdProb['BURUK'] = 0.3;
+                $thresholdProb['PERHATIAN'] = 0.6;
+                $thresholdProb['BAIK'] = 0.1;
+            } elseif ($warnings >= 1) {
+                $thresholdProb['PERHATIAN'] = 0.8;
+                $thresholdProb['BAIK'] = 0.2;
+                $thresholdProb['BURUK'] = 0.0;
+            } else {
+                // Semua sensor dalam range ideal
+                $thresholdProb['BAIK'] = 0.95;
+                $thresholdProb['PERHATIAN'] = 0.05;
+                $thresholdProb['BURUK'] = 0.0;
+            }
+            
+            return $thresholdProb;
+        };
+        
+        // Helper function: Adjust probabilities berdasarkan threshold baru
+        $adjustProbabilitiesBasedOnThreshold = function($mlProbabilities, $thresholdScore, $sensorData, $thresholds) {
+            // Base probabilities dari ML model
+            $baseProb = [
+                'BAIK' => (float)($mlProbabilities['BAIK'] ?? 0),
+                'PERHATIAN' => (float)($mlProbabilities['PERHATIAN'] ?? 0),
+                'BURUK' => (float)($mlProbabilities['BURUK'] ?? 0)
+            ];
+            
+            // Combine ML probability dengan threshold score (weighted)
+            $mlWeight = 0.6;  // 60% dari ML
+            $thresholdWeight = 0.4;  // 40% dari threshold validation
+            
+            $adjustedProb = [
+                'BAIK' => ($baseProb['BAIK'] * $mlWeight) + ($thresholdScore['BAIK'] * $thresholdWeight),
+                'PERHATIAN' => ($baseProb['PERHATIAN'] * $mlWeight) + ($thresholdScore['PERHATIAN'] * $thresholdWeight),
+                'BURUK' => ($baseProb['BURUK'] * $mlWeight) + ($thresholdScore['BURUK'] * $thresholdWeight)
+            ];
+            
+            // Normalize (pastikan total = 1.0)
+            $total = array_sum($adjustedProb);
+            if ($total > 0) {
+                foreach ($adjustedProb as $key => $value) {
+                    $adjustedProb[$key] = $value / $total;
+                }
+            }
+            
+            return $adjustedProb;
+        };
+        
+        // Get ML probabilities (original dari model)
+        $mlProbabilities = $mlStatus['probability'] ?? [
+            'BAIK' => 0.0,
+            'PERHATIAN' => 0.0,
+            'BURUK' => 0.0
+        ];
+        
+        // Calculate threshold score berdasarkan threshold BARU dari database
+        // Jika thresholds kosong, gunakan default threshold score (semua BAIK)
+        if (empty($thresholds)) {
+            $thresholdScore = ['BAIK' => 0.95, 'PERHATIAN' => 0.05, 'BURUK' => 0.0];
+        } else {
+            $thresholdScore = $calculateThresholdScore($latestSensor, $thresholds);
+        }
+        
+        // Adjust probability (combine ML + Threshold)
+        // Jika thresholds kosong, gunakan ML probabilities saja (weight 100% ML)
+        if (empty($thresholds)) {
+            $adjustedProbabilities = $mlProbabilities;
+        } else {
+            $adjustedProbabilities = $adjustProbabilitiesBasedOnThreshold(
+                $mlProbabilities,
+                $thresholdScore,
+                $latestSensor,
+                $thresholds
+            );
+        }
+        
+        // Determine final status dari adjusted probability
+        $finalStatusFromAdjustedProb = array_search(max($adjustedProbabilities), $adjustedProbabilities);
+        $finalConfidenceFromAdjustedProb = max($adjustedProbabilities);
+        
+        // Log untuk debugging
+        \Illuminate\Support\Facades\Log::info('=== PROBABILITY ADJUSTMENT ===', [
+            'ml_probabilities_original' => $mlProbabilities,
+            'threshold_score' => $thresholdScore,
+            'adjusted_probabilities' => $adjustedProbabilities,
+            'final_status_from_adjusted' => $finalStatusFromAdjustedProb,
+            'final_confidence_from_adjusted' => $finalConfidenceFromAdjustedProb
+        ]);
+        
+        // Update ML status dengan adjusted probabilities
+        $mlStatus['probability'] = $adjustedProbabilities;
+        $mlStatus['ml_probabilities_original'] = $mlProbabilities; // Simpan original untuk reference
+        $mlStatus['threshold_score'] = $thresholdScore; // Simpan threshold score untuk debugging
+        
+        // ============================================
         // THRESHOLD VALIDATION & HYBRID DECISION
         // ============================================
-        $currentStatus = $mlStatus; // Default: use ML status
+        $currentStatus = $mlStatus; // Default: use ML status (dengan adjusted probabilities)
         
         // Helper functions untuk hybrid decision
         $calculateAgreement = function($mlStatus, $thresholdStatus, $mlConfidence) {
@@ -1315,31 +1475,122 @@ Route::get('/api/monitoring/tools', function () {
             $agreementScore = $calculateAgreement($mlStatus, $thresholdLabel, (float)($mlStatus['confidence'] ?? 0.7));
             
             // Step 4: Determine Final Status
-            $finalStatusLabel = $determineFinalStatus($mlStatus, $thresholdLabel, $agreementScore, $criticalThresholdIssues, $thresholdIssues);
+            // PRIORITAS: Gunakan adjusted probabilities sebagai primary source
+            // Tapi tetap lakukan safety checks dengan threshold validation
+            $adjustedStatusLabel = strtoupper($finalStatusFromAdjustedProb ?? 'BAIK');
+            
+            // Safety override: Jika ada 3+ critical issues, HARUS BURUK
+            if ($criticalThresholdIssues >= 3) {
+                $finalStatusLabel = 'BURUK';
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (safety override - 3+ critical issues)');
+            } 
+            // Safety override: Jika semua sensor aman (0 issues), HARUS BAIK
+            elseif ($thresholdIssues == 0 && $criticalThresholdIssues == 0) {
+                $finalStatusLabel = 'BAIK';
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (safety override - semua sensor aman)');
+            }
+            // Gunakan adjusted probability sebagai primary decision
+            else {
+                $finalStatusLabel = $adjustedStatusLabel;
+                \Illuminate\Support\Facades\Log::info('→ Decision: ' . $finalStatusLabel . ' (from adjusted probabilities)');
+            }
             
             // Step 5: Calculate Final Confidence
-            $finalConfidence = $calculateFinalConfidence(
-                (float)($mlStatus['confidence'] ?? 0.7),
-                $thresholdLabel,
-                $mlStatus,
-                $agreementScore,
-                $criticalThresholdIssues,
-                $finalStatusLabel
-            );
+            // ============================================
+            // KEYAKINAN (CONFIDENCE) DITENTUKAN BERDASARKAN:
+            // 1. Adjusted probability tertinggi (dari kombinasi ML + Threshold)
+            // 2. Agreement antara ML prediction dan threshold validation
+            // 3. Jumlah issues dari sensor
+            // ============================================
+            
+            // Base confidence: probabilitas tertinggi dari adjusted probabilities
+            $baseConfidence = $finalConfidenceFromAdjustedProb;
+            
+            // BOOST 1: Jika adjusted probability sesuai dengan threshold validation
+            if (strtoupper($thresholdLabel) == $finalStatusLabel) {
+                $baseConfidence = min($baseConfidence + 0.15, 1.0); // Boost lebih besar
+            }
+            
+            // BOOST 2: Untuk status BAIK dengan semua sensor aman (0 issues)
+            // Ini meningkatkan keyakinan karena semua sensor menunjukkan kondisi optimal
+            if ($finalStatusLabel === 'BAIK' && $thresholdIssues == 0 && $criticalThresholdIssues == 0) {
+                $baseConfidence = min($baseConfidence + 0.25, 1.0); // Boost besar untuk BAIK
+            }
+            
+            // BOOST 3: Agreement tinggi antara ML dan threshold
+            if ($agreementScore >= 0.8) {
+                $baseConfidence = min($baseConfidence + 0.1, 1.0);
+            }
+            
+            // PENALTY: Hanya untuk critical cases yang berbeda dengan threshold validation
+            if (strtoupper($thresholdLabel) != $finalStatusLabel && $criticalThresholdIssues >= 2) {
+                $baseConfidence = max($baseConfidence - 0.2, 0.3);
+            }
+            
+            // PENALTY: Agreement sangat rendah
+            if ($agreementScore < 0.2) {
+                $baseConfidence = max($baseConfidence - 0.15, 0.3);
+            }
+            
+            $finalConfidence = round($baseConfidence, 2);
             
             // Step 6: Determine if Manual Review Needed
-            $needsManualReview = (
-                $criticalThresholdIssues >= 3 ||
-                $agreementScore < 0.3 ||
-                ($finalStatusLabel != strtoupper($thresholdLabel) && $criticalThresholdIssues > 0) ||
-                $finalConfidence < 0.5
-            );
+            // ============================================
+            // LOGIKA: Hanya perlu manual review untuk kasus yang benar-benar meragukan
+            // Jangan terlalu ketat untuk status BAIK dengan confidence tinggi
+            // ============================================
+            $needsManualReview = false;
+            
+            // KONDISI 1: Status BURUK dengan confidence rendah (< 60%)
+            // Ini perlu manual review karena status kritis tapi tidak yakin
+            if ($finalStatusLabel === 'BURUK' && $finalConfidence < 0.6) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: BURUK dengan confidence rendah');
+            }
+            // KONDISI 2: Ada 3+ critical issues (safety override)
+            // Ini perlu manual review karena kondisi sangat kritis
+            elseif ($criticalThresholdIssues >= 3) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: 3+ critical issues');
+            }
+            // KONDISI 3: Agreement sangat rendah (< 0.2) DAN confidence rendah (< 50%)
+            // Ini perlu manual review karena ML dan threshold tidak setuju
+            elseif ($agreementScore < 0.2 && $finalConfidence < 0.5) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: Agreement sangat rendah');
+            }
+            // KONDISI 4: Status BAIK tapi confidence sangat rendah (< 40%)
+            // Ini perlu manual review karena seharusnya BAIK tapi tidak yakin
+            elseif ($finalStatusLabel === 'BAIK' && $finalConfidence < 0.4) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: BAIK dengan confidence sangat rendah');
+            }
+            // KONDISI 5: Status PERHATIAN dengan confidence rendah (< 50%) DAN ada critical issues
+            elseif ($finalStatusLabel === 'PERHATIAN' && $finalConfidence < 0.5 && $criticalThresholdIssues > 0) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: PERHATIAN dengan critical issues');
+            }
+            
+            // Jika tidak ada kondisi di atas, tidak perlu manual review
+            if (!$needsManualReview) {
+                \Illuminate\Support\Facades\Log::info('→ Tidak perlu manual review: Confidence cukup tinggi atau kondisi jelas');
+            }
             
             // Step 7: Update current status
             $currentStatus['label'] = $finalStatusLabel;
             $currentStatus['confidence'] = $finalConfidence;
             $currentStatus['agreement_score'] = $agreementScore;
             $currentStatus['needs_manual_review'] = $needsManualReview;
+            // ✅ Gunakan adjusted probabilities (bukan original dari model)
+            $currentStatus['probability'] = $adjustedProbabilities;
+            
+            // Update severity berdasarkan final status label (untuk warna banner)
+            $severityMap = [
+                'BAIK' => 'normal',
+                'PERHATIAN' => 'warning',
+                'BURUK' => 'critical'
+            ];
+            $currentStatus['severity'] = $severityMap[$finalStatusLabel] ?? 'normal';
             
             // Generate reasoning
             if ($criticalThresholdIssues >= 3) {
@@ -1358,12 +1609,16 @@ Route::get('/api/monitoring/tools', function () {
                 $currentStatus['reasoning'] = implode(' ', $reasoning);
             }
             
-            // Simpan original ML prediction
+            // Simpan original ML prediction (dari model yang dilatih dengan threshold lama)
             $currentStatus['ml_prediction'] = [
                 'status' => strtoupper($mlLabel),
-                'probabilities' => $mlStatus['probability'] ?? null,
+                'probabilities' => $mlStatus['ml_probabilities_original'] ?? $mlStatus['probability'] ?? null,
                 'confidence' => (float)($mlStatus['confidence'] ?? 0.7)
             ];
+            
+            // Simpan adjusted probabilities (sudah disesuaikan dengan threshold baru)
+            $currentStatus['adjusted_probabilities'] = $adjustedProbabilities;
+            $currentStatus['threshold_score'] = $thresholdScore;
             
             $currentStatus['threshold_validation'] = [
                 'status' => strtoupper($thresholdLabel),
@@ -1382,6 +1637,39 @@ Route::get('/api/monitoring/tools', function () {
                 'final_confidence' => $finalConfidence,
                 'needs_manual_review' => $needsManualReview,
                 'reasoning' => $currentStatus['reasoning']
+            ]);
+        } else {
+            // Jika threshold validation tidak tersedia, gunakan adjusted probabilities saja
+            // (probabilities sudah di-adjust sebelumnya)
+            $finalStatusLabelNoThreshold = strtoupper($finalStatusFromAdjustedProb ?? 'BAIK');
+            $currentStatus['label'] = $finalStatusLabelNoThreshold;
+            $currentStatus['confidence'] = $finalConfidenceFromAdjustedProb;
+            $currentStatus['probability'] = $adjustedProbabilities;
+            $currentStatus['ml_prediction'] = [
+                'status' => strtoupper($mlStatus['label'] ?? 'BAIK'),
+                'probabilities' => $mlStatus['ml_probabilities_original'] ?? $mlProbabilities,
+                'confidence' => (float)($mlStatus['confidence'] ?? 0.7)
+            ];
+            $currentStatus['adjusted_probabilities'] = $adjustedProbabilities;
+            $currentStatus['threshold_score'] = $thresholdScore;
+            
+            // Update severity berdasarkan final status label (untuk warna banner)
+            $severityMap = [
+                'BAIK' => 'normal',
+                'PERHATIAN' => 'warning',
+                'BURUK' => 'critical'
+            ];
+            $currentStatus['severity'] = $severityMap[$finalStatusLabelNoThreshold] ?? 'normal';
+            
+            // Set needs_manual_review untuk kasus tanpa threshold validation
+            // Hanya perlu manual review jika confidence sangat rendah
+            $currentStatus['needs_manual_review'] = ($finalConfidenceFromAdjustedProb < 0.4);
+            
+            \Illuminate\Support\Facades\Log::info('=== USING ADJUSTED PROBABILITIES (NO THRESHOLD VALIDATION) ===', [
+                'final_status' => $currentStatus['label'],
+                'adjusted_probabilities' => $adjustedProbabilities,
+                'ml_probabilities_original' => $mlProbabilities,
+                'severity' => $currentStatus['severity']
             ]);
         }
         

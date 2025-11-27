@@ -21,6 +21,14 @@ Route::prefix('sensor')->name('sensor.')->group(function () {
     Route::post('/analyze', [\App\Http\Controllers\SensorController::class, 'analyze'])->name('analyze');
 });
 
+// Threshold Management Routes
+Route::prefix('threshold')->name('threshold.')->group(function () {
+    Route::get('/profiles', [\App\Http\Controllers\ThresholdController::class, 'getProfiles'])->name('profiles');
+    Route::get('/profile/{profileKey}', [\App\Http\Controllers\ThresholdController::class, 'getProfile'])->name('profile');
+    Route::post('/profile/{profileKey}', [\App\Http\Controllers\ThresholdController::class, 'saveProfile'])->name('save');
+    Route::post('/profile/{profileKey}/reset', [\App\Http\Controllers\ThresholdController::class, 'resetToDefault'])->name('reset');
+});
+
 // Telegram Settings Routes
 Route::prefix('telegram')->name('telegram.')->group(function () {
     Route::post('/test', function (Request $request) {
