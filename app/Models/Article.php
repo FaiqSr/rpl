@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
 class Article extends BaseModel
@@ -18,7 +19,8 @@ class Article extends BaseModel
         'author_id',
         'category_id',
         'title',
-        'content'
+        'content',
+        'featured_image'
     ];
 
     protected static function boot()
@@ -36,7 +38,12 @@ class Article extends BaseModel
         return $this->belongsTo(User::class, 'author_id', 'user_id');
     }
 
-    public function comment(): HasMany
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'article_id', 'article_id')->whereNull('parent_id')->orderBy('created_at', 'desc');
+    }
+
+    public function allComments(): HasMany
     {
         return $this->hasMany(Comment::class, 'article_id', 'article_id');
     }
@@ -44,5 +51,11 @@ class Article extends BaseModel
     public function category(): BelongsTo
     {
         return $this->belongsTo(ArticleCategory::class, 'category_id', 'category_id');
+    }
+
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(ArticleCategory::class, 'article_article_category', 'article_id', 'category_id')
+            ->withTimestamps();
     }
 }

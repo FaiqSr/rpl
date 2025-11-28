@@ -18,14 +18,48 @@ class UserSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Admin User',
-                'password' => bcrypt('password'),
+                'password' => bcrypt('Admin@123'),
                 'role' => 'admin',
                 'phone' => '081234567890',
                 'address' => 'Jl. Admin No.1, Kota Contoh'
             ]
         );
 
-        // 2. Buat 10 pengguna biasa,
+        // 2. Tambahkan 3 admin baru
+        User::firstOrCreate(
+            ['email' => 'peternak@gmail.com'],
+            [
+                'name' => 'Peternak ChickPatrol',
+                'password' => bcrypt('Admin@123'),
+                'role' => 'admin',
+                'phone' => '081234567891',
+                'address' => 'Jl. Peternak No.1'
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'chickpblog@gmail.com'],
+            [
+                'name' => 'ChickPBlog',
+                'password' => bcrypt('Admin@123'),
+                'role' => 'admin',
+                'phone' => '081234567892',
+                'address' => 'Jl. Blog No.1'
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'chickseller@gmail.com'],
+            [
+                'name' => 'ChickPSeller',
+                'password' => bcrypt('Admin@123'),
+                'role' => 'admin',
+                'phone' => '081234567893',
+                'address' => 'Jl. Seller No.1'
+            ]
+        );
+
+        // 3. Buat 10 pengguna biasa,
         // dan untuk setiap pengguna, buat 1 atau 2 alamat
         // (Mengasumsikan ada relasi 'addresses' di model User)
         User::factory()

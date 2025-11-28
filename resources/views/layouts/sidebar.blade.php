@@ -17,7 +17,15 @@
   $isToolsActive = $isTools || $isToolsMonitoring || $isToolsInformation;
 @endphp
 
-<div class="sidebar">
+<!-- Sidebar Toggle Button (Mobile) -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarMobile()">
+  <i class="fa-solid fa-bars"></i>
+</button>
+
+<!-- Sidebar Overlay (Mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebarMobile()"></div>
+
+<div class="sidebar" id="sidebar">
   <div class="sidebar-header">ChickPatrol Seller</div>
   <div class="sidebar-profile">
     <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}&background=22C55E&color=fff" alt="Profile">
@@ -35,16 +43,6 @@
       <i class="fa-solid fa-box"></i>
       <span>Produk</span>
     </a>
-    <div class="sidebar-menu-item {{ $isToolsActive ? 'active' : '' }}" onclick="toggleSubmenu()" style="cursor: pointer;">
-      <i class="fa-solid fa-wrench"></i>
-      <span>Alat</span>
-      <i class="fa-solid fa-chevron-down chevron-icon {{ $isToolsActive ? 'rotate' : '' }}"></i>
-    </div>
-    <div class="sidebar-submenu {{ $isToolsActive ? 'show' : '' }}">
-      <a href="{{ route('dashboard.tools') }}" class="{{ $isTools ? 'active' : '' }}">Daftar alat</a>
-      <a href="{{ route('dashboard.tools.monitoring') }}" class="{{ $isToolsMonitoring ? 'active' : '' }}">Monitoring Alat</a>
-      <a href="{{ route('dashboard.tools.information') }}" class="{{ $isToolsInformation ? 'active' : '' }}">Manajemen Informasi</a>
-    </div>
     <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item {{ $isSales ? 'active' : '' }}">
       <i class="fa-solid fa-cart-shopping"></i>
       <span>Penjualan</span>
@@ -57,13 +55,23 @@
       <i class="fa-solid fa-users"></i>
       <span>Pelanggan</span>
     </a>
+    <div class="sidebar-menu-item {{ $isToolsActive ? 'active' : '' }}" onclick="toggleSubmenu()" style="cursor: pointer;">
+      <i class="fa-solid fa-wrench"></i>
+      <span>Alat</span>
+      <i class="fa-solid fa-chevron-down chevron-icon {{ $isToolsActive ? 'rotate' : '' }}"></i>
+    </div>
+    <div class="sidebar-submenu {{ $isToolsActive ? 'show' : '' }}">
+      <a href="{{ route('dashboard.tools') }}" class="{{ $isTools ? 'active' : '' }}">Daftar Alat</a>
+      <a href="{{ route('dashboard.tools.monitoring') }}" class="{{ $isToolsMonitoring ? 'active' : '' }}">Dashboard Monitoring</a>
+      <a href="{{ route('dashboard.tools.information') }}" class="{{ $isToolsInformation ? 'active' : '' }}">Pengaturan Monitoring</a>
+    </div>
     <a href="{{ route('dashboard.articles') }}" class="sidebar-menu-item {{ $isArticles ? 'active' : '' }}">
       <i class="fa-solid fa-newspaper"></i>
       <span>Konten Artikel</span>
     </a>
     <a href="{{ route('dashboard.homepage') }}" class="sidebar-menu-item {{ $isHomepage ? 'active' : '' }}">
       <i class="fa-solid fa-home"></i>
-      <span>Pengaturan Homestore</span>
+      <span>Manajemen Homestore</span>
     </a>
   </div>
   <div class="sidebar-footer">
@@ -75,6 +83,45 @@
 </div>
 
 <style>
+  .sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1001;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.25rem;
+    color: #2F2F2F;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+  }
+  
+  .sidebar-toggle:hover {
+    background: #f8f9fa;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .sidebar-overlay.show {
+    display: block;
+    opacity: 1;
+  }
+  
   .sidebar {
     width: 220px;
     background: white;
@@ -83,7 +130,27 @@
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 100;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+  }
+  
+  @media (max-width: 768px) {
+    .sidebar-toggle {
+      display: block;
+    }
+    
+    .sidebar {
+      transform: translateX(-100%);
+      box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+    }
+    
+    .sidebar.show {
+      transform: translateX(0);
+    }
+    
+    .sidebar-overlay.show {
+      display: block;
+    }
   }
   
   .sidebar-header {
@@ -207,4 +274,38 @@
       chevron.classList.toggle('rotate');
     }
   }
+  
+  // Toggle sidebar mobile
+  function toggleSidebarMobile() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const toggle = document.getElementById('sidebarToggle');
+    
+    if (sidebar && overlay && toggle) {
+      sidebar.classList.toggle('show');
+      overlay.classList.toggle('show');
+      const icon = toggle.querySelector('i');
+      if (icon) {
+        if (sidebar.classList.contains('show')) {
+          icon.classList.remove('fa-bars');
+          icon.classList.add('fa-times');
+        } else {
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        }
+      }
+    }
+  }
+  
+  // Close sidebar when clicking on menu item (mobile)
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebarLinks = document.querySelectorAll('.sidebar-menu-item, .sidebar-submenu a');
+    sidebarLinks.forEach(link => {
+      link.addEventListener('click', function() {
+        if (window.innerWidth <= 768) {
+          toggleSidebarMobile();
+        }
+      });
+    });
+  });
 </script>

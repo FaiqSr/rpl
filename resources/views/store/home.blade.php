@@ -44,6 +44,296 @@
     .card-border { border:1px solid #e6ebe7; transition: all 0.2s; }
     .card-border:hover { border-color: #F4C430; box-shadow: 0 2px 8px rgba(244, 196, 48, 0.15); }
     .footer-bg { background:#F5E6D3; }
+    .product-card { 
+      text-decoration: none !important; 
+      border-bottom: none !important;
+      outline: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100% !important;
+      min-height: 280px !important;
+    }
+    .product-card * { 
+      text-decoration: none !important; 
+      border-bottom: none !important;
+    }
+    .product-card:hover { 
+      text-decoration: none !important; 
+      border-bottom: none !important;
+    }
+    .product-card:focus { 
+      text-decoration: none !important; 
+      border-bottom: none !important;
+      outline: none !important;
+    }
+    .product-card a { 
+      text-decoration: none !important; 
+      border-bottom: none !important;
+    }
+    .product-card img {
+      width: 100% !important;
+      height: 144px !important;
+      object-fit: cover !important;
+      object-position: center !important;
+      flex-shrink: 0 !important;
+    }
+    .product-card-content {
+      display: flex !important;
+      flex-direction: column !important;
+      flex-grow: 1 !important;
+      justify-content: flex-start !important;
+      gap: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .product-card-content > div {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .product-card-content > div > * {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .product-card-content .flex.items-center {
+      padding: 0 !important;
+    }
+    .product-card-content .flex.items-center > * {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    /* Allow margin-top for rating - more specific selector */
+    .product-card-content > div > .flex.items-center.gap-1 {
+      margin: 0 !important;
+      margin-top: 28px !important;
+      padding: 0 !important;
+    }
+    .product-card-content .text-xs,
+    .product-card-content .text-sm,
+    .product-card-content .text-base {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    @media (min-width: 768px) {
+      #productGrid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      }
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      
+      /* Banner Section */
+      section[style*="width: 1205px"] {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100% !important;
+      }
+      
+      section[style*="width: 1205px"] > div {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+      }
+      
+      section[style*="width: 1205px"] > div > div[style*="width: 365px"] {
+        width: 100% !important;
+        height: 200px !important;
+      }
+      
+      section[style*="width: 1205px"] > div > div[style*="width: 836px"] {
+        width: 100% !important;
+        height: 200px !important;
+      }
+      
+      /* Categories Section */
+      section.mb-6[style*="margin-top: 2rem"] {
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
+      }
+      
+      .categories-container {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: flex-start !important;
+        width: 1205px !important;
+        max-width: 1205px !important;
+        margin: 0 auto 1.5rem auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+      }
+      
+      @media (max-width: 1200px) {
+        .categories-container {
+          max-width: 100% !important;
+          flex-wrap: wrap !important;
+        }
+      }
+      
+      .category-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        margin-bottom: 1rem !important;
+        width: 213px !important;
+        max-width: 213px !important;
+        flex: 0 0 213px !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+        margin-right: 35px !important;
+      }
+      
+      .category-item:nth-child(5n) {
+        margin-right: 0 !important;
+      }
+      
+      @media (min-width: 1200px) {
+        .categories-container {
+          flex-wrap: wrap !important;
+          justify-content: flex-start !important;
+        }
+        .category-item {
+          margin-right: 35px !important;
+        }
+        .category-item:nth-child(5n) {
+          margin-right: 0 !important;
+        }
+      }
+      
+      .category-image {
+        width: 213px !important;
+        height: 125px !important;
+        max-width: 213px !important;
+        max-height: 125px !important;
+        min-width: 213px !important;
+        min-height: 125px !important;
+        border-radius: 8px !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        margin-bottom: 0.75rem !important;
+        display: block !important;
+        flex-shrink: 0 !important;
+        box-sizing: border-box !important;
+      }
+      
+      .category-name {
+        width: 213px !important;
+        max-width: 213px !important;
+        word-wrap: break-word !important;
+        margin: 0 auto !important;
+        line-height: 1.4 !important;
+        font-size: 0.875rem !important;
+        text-align: center !important;
+        display: block !important;
+      }
+      
+      @media (min-width: 1200px) {
+        .categories-container {
+          justify-content: flex-start !important;
+          width: 1205px !important;
+          max-width: 1205px !important;
+          flex-wrap: nowrap !important;
+        }
+        .category-item {
+          width: 213px !important;
+          max-width: 213px !important;
+          flex: 0 0 213px !important;
+          min-width: 213px !important;
+          margin-right: 35px !important;
+        }
+        .category-item:nth-child(5n) {
+          margin-right: 0 !important;
+        }
+        .category-image {
+          width: 213px !important;
+          height: 125px !important;
+          max-width: 213px !important;
+          max-height: 125px !important;
+          min-width: 213px !important;
+          min-height: 125px !important;
+        }
+        .category-name {
+          width: 213px !important;
+          max-width: 213px !important;
+        }
+      }
+      
+      @media (min-width: 768px) and (max-width: 1199px) {
+        .categories-container {
+          justify-content: flex-start !important;
+          gap: 1rem !important;
+        }
+        .category-item {
+          width: calc(25% - 0.75rem) !important;
+          margin-right: 0 !important;
+        }
+        .category-image {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: 125px !important;
+        }
+        .category-name {
+          max-width: 100% !important;
+        }
+      }
+      
+      @media (max-width: 767px) {
+        .categories-container {
+          gap: 1rem !important;
+          justify-content: flex-start !important;
+        }
+        .category-item {
+          width: calc(50% - 0.5rem) !important;
+          margin-right: 0 !important;
+        }
+        .category-image {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: 100px !important;
+        }
+        .category-name {
+          max-width: 100% !important;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .category-item {
+          width: 100% !important;
+        }
+        .category-image {
+          height: 120px !important;
+        }
+      }
+      
+      /* Product Grid */
+      #productGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.75rem !important;
+      }
+      
+      .product-card {
+        min-height: 240px !important;
+      }
+      
+      .product-card img {
+        height: 120px !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      section.mb-6[style*="margin-top: 2rem"] > div[style*="width: 1205px"] > div {
+        width: 100% !important;
+      }
+      
+      #productGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 0.5rem !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -94,7 +384,7 @@
               </button>
               <button class="carousel-control-next" type="button" data-bs-target="#squareBannerCarousel" data-bs-slide="next" style="right: 5px;">
                 <span class="carousel-control-next-icon"></span>
-              </button>
+        </button>
               @endif
             </div>
           @else
@@ -144,8 +434,8 @@
             @else
               <div style="width: 836px; height: 180.5px; background: #f9fafb; border-radius: 8px;"></div>
             @endif
-          </div>
-          
+      </div>
+      
           <!-- Banner Persegi Panjang Bawah -->
           <div style="width: 836px; height: 180.5px; border-radius: 8px; overflow: hidden; position: relative;">
             @if($rectBottomBanners->count() > 0)
@@ -166,7 +456,7 @@
                       @if($banner->title)
                         <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); padding: 10px 16px; border-radius: 0 0 8px 8px;">
                           <h3 style="color: white; font-size: 15px; font-weight: 600; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{{ $banner->title }}</h3>
-                        </div>
+      </div>
                       @endif
                       @if($banner->link_url)
                         </a>
@@ -183,11 +473,11 @@
                 </button>
                 @endif
               </div>
-            @else
+        @else
               <div style="width: 836px; height: 180.5px; background: #f9fafb; border-radius: 8px;"></div>
-            @endif
-          </div>
-        </div>
+        @endif
+      </div>
+    </div>
       </div>
     </section>
     @endif
@@ -196,18 +486,18 @@
     @if(isset($homepageCategories) && $homepageCategories && $homepageCategories->count() > 0)
     <section class="mb-6" style="margin-top: 2rem; margin-bottom: 2rem;">
       <h2 class="text-sm font-semibold text-gray-700 mb-4">Kategori</h2>
-      <div class="flex flex-wrap items-center" style="width: 1205px; justify-content: space-between; margin-bottom: 1.5rem;">
-        @foreach($homepageCategories as $category)
-          <div class="flex flex-col items-center text-center cursor-pointer hover:opacity-80 transition-opacity" 
+      <div class="categories-container" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; width: 1205px !important; max-width: 1205px !important; margin: 0 auto 1.5rem auto !important; align-items: flex-start !important; justify-content: flex-start !important;">
+        @foreach($homepageCategories as $index => $category)
+          <div class="category-item" 
                onclick="filterByHomepageCategory('{{ $category->slug }}')"
-               style="cursor: pointer;">
+               style="cursor: pointer; width: 213px !important; flex: 0 0 213px !important; flex-shrink: 0 !important; margin-bottom: 1rem !important; margin-right: {{ ($loop->iteration % 5 == 0) ? '0' : '35' }}px !important; display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important;">
             <img src="{{ $category->image_url }}" 
                  alt="{{ $category->name }}" 
-                 class="object-cover border border-gray-200"
-                 style="width: 213px; height: 125px; border-radius: 8px; opacity: 1; margin-bottom: 0.75rem;"
+                 class="category-image"
+                 style="width: 213px !important; height: 125px !important; object-fit: cover !important; object-position: center !important; border-radius: 8px !important; border: 1px solid #e5e7eb !important; display: block !important; flex-shrink: 0 !important; max-width: 213px !important; max-height: 125px !important; margin-bottom: 0.75rem !important;"
                  onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMTMiIGhlaWdodD0iMTI1IiB2aWV3Qm94PSIwIDAgMjEzIDEyNSI+PHJlY3Qgd2lkdGg9IjIxMyIgaGVpZ2h0PSIxMjUiIGZpbGw9IiNmOGQ3ZGEiIHJ4PSI4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM3MjFjMjQiIGZvbnQtc2l6ZT0iMTRweCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='">
-            <span class="text-sm text-gray-700 font-medium" style="max-width: 213px; word-wrap: break-word; margin-bottom: 0.5rem;">{{ $category->name }}</span>
-      </div>
+            <span class="text-sm text-gray-700 font-medium category-name" style="width: 213px !important; text-align: center !important; margin: 0 auto !important;">{{ $category->name }}</span>
+          </div>
         @endforeach
       </div>
     </section>
@@ -215,30 +505,57 @@
 
     <!-- For You section -->
     <section class="mb-4">
-      <h2 class="text-sm font-semibold text-gray-700 mb-3">For You</h2>
+      <h2 class="text-lg font-bold text-gray-800 mb-4">For You</h2>
 
       <!-- Product grid -->
         @isset($products)
         @if($products->count() > 0)
-      <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+      <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             @foreach($products as $product)
-              <a href="{{ route('product.detail', $product->product_id) }}" class="product-card card-border bg-white rounded-lg p-2 block hover:shadow-md transition-shadow" data-name="{{ strtolower($product->name) }}" data-slug="{{ strtolower($product->slug ?? '') }}" data-category="{{ strtolower($product->category_id ?? '') }}">
-              @php($img = optional($product->images->first())->url ?? null)
+              <a href="{{ route('product.detail', $product->product_id) }}" class="product-card card-border bg-white rounded-lg p-3 block hover:shadow-md transition-all duration-200" data-name="{{ strtolower($product->name) }}" data-slug="{{ strtolower($product->slug ?? '') }}" data-category="{{ strtolower($product->category_id ?? '') }}">
+              @php
+                $img = optional($product->images->first())->url ?? null;
+              @endphp
               @if($img)
-                  <img src="{{ $img }}" alt="{{ $product->name }}" class="h-24 w-full object-cover rounded-md mb-2" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  <div class="skeleton h-24 rounded-md mb-2" style="display: none; align-items: center; justify-content: center; background: #f3f4f6;">
-                    <i class="fa-solid fa-image text-gray-400"></i>
+                  <img src="{{ $img }}" alt="{{ $product->name }}" class="rounded-md" style="width: 100%; height: 144px; object-fit: cover; object-position: center; flex-shrink: 0; margin: 0; margin-bottom: 0.5rem; padding: 0; display: block;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="skeleton rounded-md" style="display: none; width: 100%; height: 144px; align-items: center; justify-content: center; background: #f3f4f6; flex-shrink: 0; margin: 0; margin-bottom: 0.5rem; padding: 0;">
+                    <i class="fa-solid fa-image text-gray-400" style="font-size: 1.5rem;"></i>
                   </div>
               @else
-                  <div class="skeleton h-24 rounded-md mb-2 flex items-center justify-center" style="background: #f3f4f6;">
-                    <i class="fa-solid fa-image text-gray-400"></i>
+                  <div class="skeleton rounded-md flex items-center justify-center" style="width: 100%; height: 144px; background: #f3f4f6; flex-shrink: 0; margin: 0; margin-bottom: 0.5rem; padding: 0;">
+                    <i class="fa-solid fa-image text-gray-400" style="font-size: 1.5rem;"></i>
                   </div>
               @endif
-              <div class="text-[12px] font-medium text-gray-800 truncate" title="{{ $product->name }}">{{ $product->name }}</div>
-              <div class="text-[11px] text-gray-500 truncate">{{ $product->unit ?? '-' }}</div>
-              <div class="flex items-center justify-between text-[11px] mt-1">
-                <span class="text-emerald-700 font-semibold">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
-                <button onclick="event.preventDefault(); event.stopPropagation();" class="text-gray-500 hover:text-emerald-700" title="Favorit"><i class="fa-regular fa-heart"></i></button>
+              <div class="product-card-content" style="margin: 0; padding: 0;">
+                <div style="margin: 0; padding: 0;">
+                  <div class="text-sm font-semibold text-gray-900 line-clamp-2" style="min-height: 2.5rem; max-height: 2.5rem; margin: 0; padding: 0; text-decoration: none !important; border-bottom: none !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;" title="{{ $product->name }}">{{ $product->name }}</div>
+                  <div class="text-xs text-gray-600" style="margin: 0; padding: 0; text-decoration: none !important; border-bottom: none !important; line-height: 1.2; margin-top: 2px;">{{ $product->unit ?? '-' }}</div>
+                  <div class="flex items-center" style="margin: 0; padding: 0; margin-top: 4px;">
+                    <span class="text-base font-bold text-emerald-600" style="text-decoration: none !important; border-bottom: none !important; line-height: 1;">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
+                  </div>
+              @php
+                $avgRating = 0;
+                $totalReviews = 0;
+                if (isset($product->reviews) && $product->reviews->count() > 0) {
+                      // Only count top-level reviews (not replies) with rating > 0
+                      $topLevelReviews = $product->reviews->whereNull('parent_id')->where('rating', '>', 0);
+                      $totalReviews = $topLevelReviews->count();
+                      $avgRating = $topLevelReviews->count() > 0 ? $topLevelReviews->avg('rating') : 0;
+                }
+              @endphp
+              @if($totalReviews > 0)
+                  <div class="flex items-center gap-1" style="margin: 0 !important; margin-top: 20px !important; padding: 0;">
+                <div class="flex items-center" style="line-height: 1;">
+                  @for($i = 1; $i <= 5; $i++)
+                        <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid text-warning' : 'fa-regular text-gray-300' }}" style="font-size: 11px;"></i>
+                  @endfor
+                    </div>
+                    <span class="text-xs text-gray-600" style="line-height: 1;">({{ $totalReviews }})</span>
+                  </div>
+                  @else
+                  <div style="margin: 0; padding: 0; height: 1rem; margin-top: 32px;"></div>
+                  @endif
+                </div>
               </div>
             </a>
             @endforeach

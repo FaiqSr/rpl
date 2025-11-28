@@ -31,4 +31,35 @@ class Product extends BaseModel
     {
         return $this->hasMany(ProductImage::class, 'product_id', 'product_id');
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class, 'product_id', 'product_id')->orderBy('created_at', 'desc');
+    }
+
+    public function getAverageRatingAttribute(): float
+    {
+        // Only count top-level reviews (not replies) with rating > 0
+        // Use loaded relationship if available, otherwise query
+        if ($this->relationLoaded('reviews')) {
+            $topLevelReviews = $this->reviews->whereNull('parent_id')->where('rating', '>', 0);
+            if ($topLevelReviews->count() === 0) {
+                return 0.0;
+            }
+            $avg = $topLevelReviews->avg('rating');
+            return $avg !== null ? (float) $avg : 0.0;
+        }
+        $avg = $this->reviews()->whereNull('parent_id')->where('rating', '>', 0)->avg('rating');
+        return $avg !== null ? (float) $avg : 0.0;
+    }
+
+    public function getTotalReviewsAttribute(): int
+    {
+        // Only count top-level reviews (not replies) with rating > 0
+        // Use loaded relationship if available, otherwise query
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->whereNull('parent_id')->where('rating', '>', 0)->count();
+        }
+        return $this->reviews()->whereNull('parent_id')->where('rating', '>', 0)->count();
+    }
 }

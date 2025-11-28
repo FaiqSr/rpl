@@ -38,24 +38,13 @@
     }
     
     .article-title {
-      font-size: 1.25rem;
-      font-weight: 600;
+      font-size: 1.5rem;
+      font-weight: 700;
       color: #2F2F2F;
-      margin-bottom: 0.75rem;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    
-    .article-excerpt {
-      color: #6c757d;
-      font-size: 0.9rem;
-      line-height: 1.6;
       margin-bottom: 1rem;
-      flex-grow: 1;
+      line-height: 1.4;
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
@@ -63,24 +52,14 @@
     .article-meta {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      font-size: 0.85rem;
-      color: #9ca3af;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       margin-top: auto;
       padding-top: 1rem;
       border-top: 1px solid #f3f4f6;
-    }
-    
-    .article-author {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .article-date {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
     }
     
     .read-more {
@@ -144,6 +123,24 @@
       margin-bottom: 1rem;
       opacity: 0.5;
     }
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      .article-card {
+        padding: 1rem !important;
+      }
+      .article-title {
+        font-size: 1.25rem !important;
+      }
+      .article-image {
+        height: 200px !important;
+      }
+      .grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -169,32 +166,44 @@
         @foreach($articles as $article)
           <div class="col-md-6 col-lg-4">
             <div class="article-card">
+              @php
+                $imageUrl = null;
+                if ($article->featured_image) {
+                  if (strpos($article->featured_image, 'http') === 0 || strpos($article->featured_image, 'https') === 0) {
+                    $imageUrl = $article->featured_image;
+                  } else {
+                    // Handle both /storage/ and storage/ paths
+                    $path = ltrim($article->featured_image, '/');
+                    $imageUrl = asset($path);
+                  }
+                }
+              @endphp
+              @if($imageUrl)
+                <a href="/articles/{{ $article->article_id }}">
+                  <img src="{{ $imageUrl }}" alt="{{ $article->title }}" class="w-100 mb-2" style="height: 250px; object-fit: cover; border-radius: 8px;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div style="display: none; height: 250px; background: #f3f4f6; border-radius: 8px; align-items: center; justify-content: center; color: #9ca3af;">
+                    <i class="fa-solid fa-image fa-3x"></i>
+                  </div>
+                </a>
+              @endif
+              
+              @if($article->categories && $article->categories->count() > 0)
+                <div class="mb-3" style="margin-top: 0.5rem;">
+                  @foreach($article->categories as $category)
+                    <span class="badge bg-primary me-2" style="text-transform: uppercase; font-size: 0.7rem; padding: 0.4rem 0.8rem; font-weight: 600; letter-spacing: 0.5px; background-color: #3b82f6 !important; border: none;">{{ strtoupper($category->name) }}</span>
+                  @endforeach
+                </div>
+              @endif
+              
               <h3 class="article-title">
                 <a href="/articles/{{ $article->article_id }}" class="text-decoration-none text-dark">
                   {{ $article->title }}
                 </a>
               </h3>
-              <div class="article-excerpt">
-                {{ Str::limit(strip_tags($article->content), 150) }}
-              </div>
-              <a href="/articles/{{ $article->article_id }}" class="read-more">
-                Baca Selengkapnya <i class="fa-solid fa-arrow-right ms-1"></i>
-              </a>
-              <div class="article-meta">
-                @if($article->category)
-                  <div class="article-category" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fa-solid fa-tag"></i>
-                    <span>{{ $article->category->name }}</span>
-                  </div>
-                @endif
-                <div class="article-author">
-                  <i class="fa-solid fa-user"></i>
-                  <span>{{ $article->user->name ?? 'Admin' }}</span>
-                </div>
-                <div class="article-date">
-                  <i class="fa-solid fa-calendar"></i>
-                  <span>{{ $article->created_at->format('d M Y') }}</span>
-                </div>
+              <div class="article-meta" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-top: auto; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+                <span style="font-weight: 600;">BY {{ strtoupper($article->user->name ?? 'ADMIN') }}</span>
+                <span>•</span>
+                <span>{{ strtoupper($article->created_at->format('d M Y')) }}</span>
               </div>
             </div>
           </div>

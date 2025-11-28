@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Monitoring Alat - ChickPatrol Seller</title>
+  <title>Dashboard Monitoring - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -754,6 +754,9 @@
   
   <!-- Main Content -->
   <main class="main-content">
+    <div class="page-header">
+      <h1>Dashboard Monitoring</h1>
+    </div>
     <!-- Monitoring Summary Banner (dynamic) -->
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
       <span style="font-size: 2rem; opacity: 0.95;">📊</span>

@@ -19,6 +19,23 @@
     .section-title { font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:#6c757d; margin-top:1.5rem; }
     .btn-primary { background:#69B578; border:none; }
     .btn-primary:hover { background:#5aa267; }
+    
+    @media (max-width: 768px) {
+      .profile-card {
+        margin: 1rem !important;
+        padding: 1.5rem !important;
+      }
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+      .row {
+        margin: 0 !important;
+      }
+      .col-md-6 {
+        margin-bottom: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -51,7 +68,7 @@
         <input type="text" name="phone" class="form-control" value="{{ old('phone', auth()->user()->phone) }}" placeholder="08xxxxxxxxxx">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Email (Tidak bisa diubah)</label>
+        <label class="form-label">Email</label>
         <input type="email" class="form-control" value="{{ auth()->user()->email }}" disabled>
       </div>
       <div class="col-12">

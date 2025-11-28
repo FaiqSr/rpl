@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Pengaturan Homestore - ChickPatrol Seller</title>
+  <title>Manajemen Homestore - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -25,6 +25,65 @@
     .main-content {
       margin-left: 220px;
       padding: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .tab-nav {
+        flex-direction: column;
+        border-bottom: none;
+      }
+      
+      .tab-btn {
+        border-bottom: none;
+        border-left: 3px solid transparent;
+        border-radius: 0;
+      }
+      
+      .tab-btn.active {
+        border-left-color: #22C55E;
+        border-bottom: none;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+        overflow-x: auto;
+        display: block;
+      }
+      
+      .table thead,
+      .table tbody,
+      .table tr {
+        display: block;
+      }
+      
+      .table th,
+      .table td {
+        display: block;
+        padding: 0.5rem;
+        text-align: left;
+      }
+      
+      .table th {
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+      }
+      
+      .table td::before {
+        content: attr(data-label) ": ";
+        font-weight: 600;
+        display: inline-block;
+        width: 100px;
+      }
     }
     
     .page-header {
@@ -212,7 +271,7 @@
   
   <div class="main-content">
     <div class="page-header">
-      <h1><i class="fa-solid fa-home me-2"></i>Pengaturan Homestore</h1>
+      <h1><i class="fa-solid fa-home me-2"></i>Manajemen Homestore</h1>
     </div>
     
     <div class="content-card">
@@ -517,8 +576,8 @@
             
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Urutan</label>
-                <input type="number" class="form-control" id="categorySortOrder" name="sort_order" value="0" min="0">
+                <label class="form-label">Urutan <small class="text-muted">(Otomatis jika kosong)</small></label>
+                <input type="number" class="form-control" id="categorySortOrder" name="sort_order" value="" min="0" placeholder="Kosongkan untuk otomatis">
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Status</label>
@@ -811,7 +870,7 @@
             document.getElementById('categoryName').value = data.category.name;
             document.getElementById('categorySlug').value = data.category.slug;
             document.getElementById('categoryImageUrl').value = data.category.image_url || '';
-            document.getElementById('categorySortOrder').value = data.category.sort_order || 0;
+            document.getElementById('categorySortOrder').value = data.category.sort_order || '';
             document.getElementById('categoryIsActive').value = data.category.is_active ? '1' : '0';
             
             // Set image source to URL and show URL input
@@ -979,7 +1038,8 @@
       const imageSource = document.querySelector('input[name="imageSource"]:checked').value;
       const imageUrl = document.getElementById('categoryImageUrl').value;
       const imageFile = document.getElementById('categoryImageFile').files[0];
-      const sortOrder = parseInt(document.getElementById('categorySortOrder').value) || 0;
+      const sortOrderInput = document.getElementById('categorySortOrder').value;
+      const sortOrder = sortOrderInput && sortOrderInput.trim() !== '' ? parseInt(sortOrderInput) : null;
       const isActive = document.getElementById('categoryIsActive').value === '1';
       
       if (!name.trim()) {
@@ -1009,7 +1069,9 @@
         formData.append('name', name);
         if (slug) formData.append('slug', slug);
         formData.append('image_file', imageFile);
-        formData.append('sort_order', sortOrder);
+        if (sortOrder !== null) {
+          formData.append('sort_order', sortOrder);
+        }
         formData.append('is_active', isActive ? '1' : '0');
         
         fetch(url, {
@@ -1045,7 +1107,7 @@
             name: name,
             slug: slug || null,
             image_url: imageUrl,
-            sort_order: sortOrder,
+            sort_order: sortOrder !== null ? sortOrder : null,
             is_active: isActive
           })
         })

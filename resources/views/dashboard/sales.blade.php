@@ -30,6 +30,34 @@
       padding: 1.5rem;
     }
     
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+        overflow-x: auto;
+      }
+    }
+    
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -194,10 +222,22 @@
       gap: 1.5rem;
     }
     
+    .order-products-list {
+      margin-bottom: 1rem;
+    }
+    
     .order-product {
-      flex: 1;
       display: flex;
       gap: 1rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .order-product:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
     }
     
     .order-product-img {
@@ -220,9 +260,8 @@
     }
     
     .order-product-qty {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       color: #6c757d;
-      margin-bottom: 0.5rem;
     }
     
     .order-product-note {
@@ -374,12 +413,7 @@
       <div class="order-list">
         @forelse($orders as $order)
         @php
-          $detail = $order->orderDetail->first();
-          $product = $detail?->product;
           $qtyTotal = $order->orderDetail->sum('qty');
-          $unitPrice = $detail ? ($detail->price) : 0;
-          $productName = $product?->name ?? 'Produk';
-          $image = $product?->images?->first()?->url ?? null;
         @endphp
         <div class="order-item">
           <div class="order-header">
@@ -388,9 +422,9 @@
                 <i class="fa-solid fa-user"></i>
                 <span>{{ $order->buyer_name }}</span>
               </div>
-              <div class="order-date">
+              <div class="order-date" data-timestamp="{{ $order->created_at?->timestamp ?? time() }}">
                 <i class="fa-regular fa-clock"></i>
-                <span>{{ $order->created_at?->format('d M Y H:i') }} WIB</span>
+                <span class="order-time-text">{{ $order->created_at?->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span>
               </div>
             </div>
             <div class="order-header-right">
@@ -399,19 +433,28 @@
             </div>
           </div>
           <div class="order-body">
+            <div class="order-products-list">
+              @foreach($order->orderDetail as $detail)
+                @php
+                  $product = $detail->product;
+                  $productName = $product?->name ?? 'Produk';
+                  $image = $product?->images?->first()?->url ?? null;
+                @endphp
             <div class="order-product">
               @if($image)
-                <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=';">
+                    <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=';">
               @else
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=" class="order-product-img" />
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=" class="order-product-img" />
               @endif
               <div class="order-product-info">
                 <div class="order-product-name">{{ $productName }}</div>
-                <div class="order-product-qty">{{ $qtyTotal }} x Rp {{ number_format($unitPrice,0,',','.') }}</div>
+                    <div class="order-product-qty">{{ $detail->qty }} x Rp {{ number_format($detail->price,0,',','.') }} = Rp {{ number_format($detail->qty * $detail->price,0,',','.') }}</div>
+                  </div>
+                </div>
+              @endforeach
                 @if($order->notes)
-                  <div class="order-product-note">"{{ $order->notes }}"</div>
+                <div class="order-product-note mt-2">"{{ $order->notes }}"</div>
                 @endif
-              </div>
             </div>
             <div class="order-address">
               <div class="order-address-title">Alamat</div>
@@ -468,7 +511,7 @@
                   </span>
                 @endif
                 @if($order->status === 'pending')
-                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" style="{{ $order->payment_status !== 'paid' ? 'opacity: 0.7;' : '' }}">Kirim Pesanan</button>
+                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" {{ $order->payment_status !== 'paid' ? 'disabled title="Pesanan hanya bisa dikirim setelah pembayaran divalidasi"' : '' }}>Kirim Pesanan</button>
                 @elseif($order->status === 'dikirim')
                   <span class="badge bg-info">Pesanan Dikirim</span>
                 @elseif($order->status === 'selesai')
@@ -566,10 +609,14 @@
     async function shipOrder(orderId, paymentStatus) {
         // Check if payment is completed
         if (paymentStatus !== 'paid') {
+            let statusText = 'Menunggu Pembayaran';
+            if (paymentStatus === 'processing') {
+                statusText = 'Proses Pembayaran (Tunggu Validasi Admin)';
+            }
             await Swal.fire({
                 icon: 'warning',
-                title: 'Pesanan Belum Dibayar!',
-                html: '<p>Pesanan ini belum dibayar oleh pembeli. Anda tidak dapat mengirim pesanan sebelum pembayaran selesai.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> Menunggu Pembayaran</p>',
+                title: 'Pesanan Belum Lunas!',
+                html: '<p>Pesanan ini belum dibayar atau pembayaran belum divalidasi. Anda tidak dapat mengirim pesanan sebelum pembayaran divalidasi.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> ' + statusText + '</p>',
                 confirmButtonColor: '#FACC15',
                 confirmButtonText: 'Mengerti'
             });
@@ -644,6 +691,39 @@
     @if(session('error'))
         showError('{{ session('error') }}');
     @endif
+    
+    // Real-time time display with WIB timezone
+    function formatWIBTime(timestamp) {
+      const date = new Date(timestamp * 1000);
+      const wibOffset = 7 * 60; // WIB is UTC+7
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const wibTime = new Date(utc + (wibOffset * 60000));
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const day = String(wibTime.getDate()).padStart(2, '0');
+      const month = months[wibTime.getMonth()];
+      const year = wibTime.getFullYear();
+      const hours = String(wibTime.getHours()).padStart(2, '0');
+      const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+      
+      return `${day} ${month} ${year} ${hours}:${minutes} WIB`;
+    }
+    
+    function updateOrderTimes() {
+      document.querySelectorAll('.order-date[data-timestamp]').forEach(function(element) {
+        const timestamp = parseInt(element.getAttribute('data-timestamp'));
+        const timeText = element.querySelector('.order-time-text');
+        if (timeText) {
+          timeText.textContent = formatWIBTime(timestamp);
+        }
+      });
+    }
+    
+    // Update times on page load and every second
+    document.addEventListener('DOMContentLoaded', function() {
+      updateOrderTimes();
+      setInterval(updateOrderTimes, 1000);
+    });
   </script>
 </body>
 </html>

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 // Helper function untuk generate tracking number
@@ -45,9 +46,102 @@ if (!function_exists('getPaymentAccount')) {
     }
 }
 
+// Serve storage files (fix 403 Forbidden) - Must be before other routes
+Route::get('/storage/products/{filename}', function ($filename) {
+    try {
+        // Security: prevent directory traversal
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false) {
+            abort(403, 'Forbidden');
+        }
+        
+        $filePath = 'products/' . $filename;
+        
+        // Check if file exists using Storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            \Log::error("Storage file not found: {$filePath}");
+            abort(404, 'File not found');
+        }
+        
+        // Serve file using Storage response
+        return Storage::disk('public')->response($filePath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error serving storage file: " . $e->getMessage());
+        abort(500, 'Error serving file');
+    }
+})->name('storage.products');
+
+// Serve review images
+Route::get('/storage/reviews/{filename}', function ($filename) {
+    try {
+        // Security: prevent directory traversal
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false) {
+            abort(403, 'Forbidden');
+        }
+        
+        $filePath = 'reviews/' . $filename;
+        
+        // Check if file exists using Storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            \Log::error("Storage file not found: {$filePath}");
+            abort(404, 'File not found');
+        }
+        
+        // Serve file using Storage response
+        return Storage::disk('public')->response($filePath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error serving review image {$filename}: " . $e->getMessage());
+        abort(500, 'Error serving file');
+    }
+})->name('storage.reviews');
+
+// Serve other storage files
+Route::get('/storage/{path}', function ($path) {
+    // Decode path jika ada encoding
+    $path = urldecode($path);
+    
+    // Security: prevent directory traversal
+    if (strpos($path, '..') !== false) {
+        abort(403, 'Forbidden');
+    }
+    
+    $filePath = storage_path('app/public/' . $path);
+    
+    if (!file_exists($filePath) || !is_file($filePath)) {
+        abort(404, 'File not found');
+    }
+    
+    // Get MIME type
+    $mimeType = mime_content_type($filePath);
+    if (!$mimeType) {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+        ];
+        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+    }
+    
+    // Serve file with proper headers
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+})->where('path', '.*')->name('storage.serve');
+
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
-    $query = Product::with('images');
+    $query = Product::with(['images', 'reviews']);
     
     // Filter by search
     if (request('search')) {
@@ -135,7 +229,17 @@ Route::get('/', function () {
         })->values(),
     ];
     
-    $homepageCategories = \App\Models\HomepageCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    // Auto-fix sort_order for categories with missing or duplicate orders
+    $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+    $order = 1;
+    foreach ($allCategories as $cat) {
+        if ($cat->sort_order != $order) {
+            $cat->update(['sort_order' => $order]);
+        }
+        $order++;
+    }
+    
+    $homepageCategories = \App\Models\HomepageCategory::where('is_active', true)->orderBy('sort_order')->orderBy('created_at')->get();
     $articleCategories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
     return view('store.home', compact('products', 'banners', 'homepageCategories', 'articleCategories'));
 })->name('home');
@@ -151,7 +255,17 @@ Route::post('/register', function (\Illuminate\Http\Request $request) {
         'last_name' => 'required|string|max:50',
         'phone' => 'required|string|max:30',
         'email' => 'required|email|unique:users,email',
-        'password' => 'required|min:8|confirmed'
+        'password' => [
+            'required',
+            'min:8',
+            'confirmed',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+        ]
+    ], [
+        'password.required' => 'Password harus diisi',
+        'password.min' => 'Password minimal 8 karakter',
+        'password.confirmed' => 'Konfirmasi password tidak cocok',
+        'password.regex' => 'Password harus mengandung minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol',
     ]);
     $user = \App\Models\User::create([
         'user_id' => (string) Str::uuid(),
@@ -171,20 +285,28 @@ Route::get('/login', function () {
 Route::post('/login', function (\Illuminate\Http\Request $request) {
     try {
         $credentials = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|string',
             'password' => 'required'
         ]);
         
-        // Check if user exists
-        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        // Check if input is email or phone
+        $isEmail = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL);
+        
+        // Find user by email or phone
+        $user = null;
+        if ($isEmail) {
+            $user = \App\Models\User::where('email', $credentials['email'])->first();
+        } else {
+            $user = \App\Models\User::where('phone', $credentials['email'])->first();
+        }
         
         if (!$user) {
-            return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+            return back()->withErrors(['email' => 'Email/No. Telepon atau password salah'])->with('error', 'Login gagal');
         }
         
         // Verify password manually (because User model uses user_id as primary key, not id)
         if (!\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
-            return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
+            return back()->withErrors(['email' => 'Email/No. Telepon atau password salah'])->with('error', 'Login gagal');
         }
         
         // Regenerate session ID before login to prevent session fixation
@@ -214,10 +336,85 @@ Route::get('/logout', function (\Illuminate\Http\Request $request) {
     return redirect()->route('home')->with('success', 'Logout berhasil');
 })->name('logout');
 
+// Password Reset Routes (Tanpa Email - Verifikasi Data Pribadi)
+Route::get('/forgot-password', function () {
+    return view('auth.forgot-password');
+})->name('password.request');
+
+Route::post('/forgot-password/verify', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'email' => 'required|string',
+        'name' => 'required|string',
+        'phone' => 'required|string',
+    ]);
+    
+    // Cari user berdasarkan email atau phone
+    $user = \App\Models\User::where(function($query) use ($request) {
+        $query->where('email', $request->email)
+              ->orWhere('phone', $request->email);
+    })->first();
+    
+    if (!$user) {
+        return back()->withErrors(['email' => 'Email/No. Telepon tidak ditemukan'])->withInput();
+    }
+    
+    // Verifikasi nama dan phone
+    $nameMatch = strtolower(trim($user->name)) === strtolower(trim($request->name));
+    $phoneMatch = trim($user->phone) === trim($request->phone);
+    
+    if (!$nameMatch || !$phoneMatch) {
+        return back()->withErrors(['name' => 'Data verifikasi tidak cocok. Pastikan nama dan nomor telepon sesuai dengan data registrasi.'])->withInput();
+    }
+    
+    // Jika verifikasi berhasil, redirect ke halaman reset password
+    return redirect()->route('password.reset', ['user_id' => $user->user_id]);
+})->name('password.verify');
+
+Route::get('/reset-password/{user_id}', function (string $user_id) {
+    $user = \App\Models\User::find($user_id);
+    
+    if (!$user) {
+        return redirect()->route('password.request')->with('error', 'Link reset password tidak valid');
+    }
+    
+    return view('auth.reset-password', [
+        'user_id' => $user_id
+    ]);
+})->name('password.reset');
+
+Route::post('/reset-password', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'user_id' => 'required|string',
+        'password' => [
+            'required',
+            'min:8',
+            'confirmed',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+        ],
+    ], [
+        'password.required' => 'Password harus diisi',
+        'password.min' => 'Password minimal 8 karakter',
+        'password.confirmed' => 'Konfirmasi password tidak cocok',
+        'password.regex' => 'Password harus mengandung minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol',
+    ]);
+    
+    $user = \App\Models\User::find($request->user_id);
+    
+    if (!$user) {
+        return back()->withErrors(['password' => 'User tidak ditemukan'])->withInput();
+    }
+    
+    // Update password
+    $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+    $user->save();
+    
+    return redirect()->route('login')->with('success', 'Password berhasil direset! Silakan login dengan password baru.');
+})->name('password.update');
+
 // Product Detail
 Route::get('/product/{id}', function ($id) {
     // Try to find by product_id first (database UUID), then by numeric id (localStorage)
-    $product = \App\Models\Product::with('images')->where('product_id', $id)->first();
+    $product = \App\Models\Product::with(['images', 'reviews.user', 'reviews.replies.user'])->where('product_id', $id)->first();
     
     // If not found and id is numeric, this might be a localStorage product
     if (!$product && is_numeric($id)) {
@@ -227,7 +424,29 @@ Route::get('/product/{id}', function ($id) {
     }
     
     if (!$product) abort(404);
-    return view('store.product-detail', compact('product'));
+    
+    $avgRating = $product->average_rating;
+    $totalReviews = $product->total_reviews;
+    // Only get top-level reviews (no parent_id)
+    $reviews = $product->reviews->whereNull('parent_id')->map(function($review) {
+        // Process review image URLs (support multiple images)
+        if ($review->image) {
+            $images = is_array($review->image) ? $review->image : [$review->image];
+            $review->image_urls = array_map(function($img) {
+                if ($img && !preg_match('/^(https?:\/\/|data:)/', $img)) {
+                    if (strpos($img, 'storage/reviews/') !== false) {
+                        return asset($img);
+                    } else {
+                        return asset('storage/' . $img);
+                    }
+                }
+                return $img;
+            }, array_filter($images));
+        }
+        return $review;
+    });
+    
+    return view('store.product-detail', compact('product', 'avgRating', 'totalReviews', 'reviews'));
 })->name('product.detail');
 
 // Order Payment Page
@@ -246,7 +465,7 @@ Route::get('/order/{id}/payment', function ($id) {
     return view('store.payment', compact('order', 'paymentAccount'));
 })->middleware('auth.session')->name('order.payment');
 
-// Confirm Payment (Manual confirmation for demo)
+// Confirm Payment (Buyer states they have paid - status becomes "processing")
 Route::post('/order/{id}/confirm-payment', function ($id) {
     if (!Auth::check()) {
         return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
@@ -263,13 +482,20 @@ Route::post('/order/{id}/confirm-payment', function ($id) {
         ], 400);
     }
     
-    $order->payment_status = 'paid';
-    $order->paid_at = now();
+    if ($order->payment_status === 'processing') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Pembayaran sedang diproses oleh admin'
+        ], 400);
+    }
+    
+    // Change status to "processing" - waiting for admin validation
+    $order->payment_status = 'processing';
     $order->save();
     
     return response()->json([
         'success' => true,
-        'message' => 'Pembayaran berhasil dikonfirmasi',
+        'message' => 'Pembayaran Anda sedang diproses. Admin akan memvalidasi pembayaran Anda.',
         'redirect' => route('orders')
     ]);
 })->middleware('auth.session')->name('order.confirm-payment');
@@ -394,7 +620,7 @@ Route::middleware(['auth.session','admin'])->group(function() {
         return view('dashboard.seller');
     })->name('dashboard');
     Route::get('/dashboard/products', function () {
-        $products = Product::with('images')->orderByDesc('created_at')->get();
+        $products = Product::with(['images', 'reviews'])->orderByDesc('created_at')->get();
         return view('dashboard.products', compact('products'));
     })->name('dashboard.products');
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
@@ -791,20 +1017,36 @@ Route::middleware(['auth.session','admin'])->group(function() {
                 $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
             }
             
+            // Auto-generate sort_order if not provided or is 0
+            if (empty($validated['sort_order']) || $validated['sort_order'] == 0) {
+                $maxOrder = \App\Models\HomepageCategory::max('sort_order') ?? 0;
+                $validated['sort_order'] = $maxOrder + 1;
+            }
+            
             $category = \App\Models\HomepageCategory::create([
                 'category_id' => (string) \Illuminate\Support\Str::uuid(),
                 'name' => $validated['name'],
                 'slug' => $validated['slug'],
                 'image_url' => $imageUrl,
                 'link_url' => null, // Tidak digunakan lagi, kategori digunakan untuk filter
-                'sort_order' => $validated['sort_order'] ?? 0,
+                'sort_order' => $validated['sort_order'],
                 'is_active' => $validated['is_active'] ?? true
             ]);
+            
+            // Reorder all categories to ensure sequential order
+            $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($allCategories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
             
             return response()->json([
                 'success' => true,
                 'message' => 'Kategori berhasil dibuat',
-                'category' => $category
+                'category' => $category->fresh()
             ]);
         } catch (\Exception $e) {
             \Log::error('Error creating category: ' . $e->getMessage());
@@ -853,16 +1095,32 @@ Route::middleware(['auth.session','admin'])->group(function() {
                 $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
             }
             
+            // Auto-generate sort_order if not provided or is 0
+            if (empty($validated['sort_order']) || $validated['sort_order'] == 0) {
+                $maxOrder = \App\Models\HomepageCategory::where('category_id', '!=', $id)->max('sort_order') ?? 0;
+                $validated['sort_order'] = $maxOrder + 1;
+            }
+            
             // Remove link_url from update (not used anymore)
             unset($validated['link_url']);
             $validated['link_url'] = null;
             
             $category->update($validated);
             
+            // Reorder all categories to ensure sequential order
+            $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($allCategories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Kategori berhasil diperbarui',
-                'category' => $category
+                'category' => $category->fresh()
             ]);
         } catch (\Exception $e) {
             \Log::error('Error updating category: ' . $e->getMessage());
@@ -877,6 +1135,16 @@ Route::middleware(['auth.session','admin'])->group(function() {
         try {
             $category = \App\Models\HomepageCategory::where('category_id', $id)->firstOrFail();
             $category->delete();
+            
+            // Reorder remaining categories
+            $categories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($categories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
             
             return response()->json([
                 'success' => true,
@@ -893,13 +1161,13 @@ Route::middleware(['auth.session','admin'])->group(function() {
     
     // Articles Management
     Route::get('/dashboard/articles', function () {
-        $articles = \App\Models\Article::with(['user', 'category'])->orderByDesc('created_at')->get();
+        $articles = \App\Models\Article::with(['user', 'categories'])->orderByDesc('created_at')->get();
         $categories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
         return view('dashboard.articles', compact('articles', 'categories'));
     })->name('dashboard.articles');
     
     Route::get('/dashboard/articles/{id}', function ($id) {
-        $article = \App\Models\Article::findOrFail($id);
+        $article = \App\Models\Article::with('categories')->findOrFail($id);
         return response()->json([
             'success' => true,
             'article' => $article
@@ -910,22 +1178,50 @@ Route::middleware(['auth.session','admin'])->group(function() {
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'category_id' => 'required|exists:article_categories,category_id',
-                'content' => 'required|string'
+                'category_ids' => 'required|string', // JSON string from FormData
+                'content' => 'required|string',
+                'featured_image_url' => 'nullable|url',
+                'featured_image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120'
             ]);
+            
+            $categoryIds = json_decode($validated['category_ids'], true);
+            if (!is_array($categoryIds) || count($categoryIds) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pilih minimal satu kategori'
+                ], 422);
+            }
+            
+            // Handle image upload
+            $featuredImage = null;
+            if ($request->hasFile('featured_image_file')) {
+                $file = $request->file('featured_image_file');
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $directory = public_path('storage/articles');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $file->move($directory, $filename);
+                $featuredImage = 'storage/articles/' . $filename;
+            } elseif ($request->filled('featured_image_url')) {
+                $featuredImage = $validated['featured_image_url'];
+            }
             
             $article = \App\Models\Article::create([
                 'article_id' => (string) \Illuminate\Support\Str::uuid(),
                 'author_id' => Auth::user()->user_id,
-                'category_id' => $validated['category_id'],
                 'title' => $validated['title'],
-                'content' => $validated['content']
+                'content' => $validated['content'],
+                'featured_image' => $featuredImage
             ]);
+            
+            // Attach categories
+            $article->categories()->attach($categoryIds);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Artikel berhasil dibuat',
-                'article' => $article
+                'article' => $article->load('categories')
             ]);
         } catch (\Exception $e) {
             \Log::error('Error creating article: ' . $e->getMessage());
@@ -942,20 +1238,55 @@ Route::middleware(['auth.session','admin'])->group(function() {
             
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'category_id' => 'required|exists:article_categories,category_id',
-                'content' => 'required|string'
+                'category_ids' => 'required|string', // JSON string from FormData
+                'content' => 'required|string',
+                'featured_image_url' => 'nullable|url',
+                'featured_image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120'
             ]);
+            
+            $categoryIds = json_decode($validated['category_ids'], true);
+            if (!is_array($categoryIds) || count($categoryIds) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pilih minimal satu kategori'
+                ], 422);
+            }
+            
+            // Handle image upload
+            $featuredImage = $article->featured_image; // Keep existing if not updated
+            if ($request->hasFile('featured_image_file')) {
+                // Delete old image if exists
+                if ($article->featured_image && (strpos($article->featured_image, 'storage/') === 0 || strpos($article->featured_image, '/storage/') === 0)) {
+                    $oldPath = strpos($article->featured_image, '/') === 0 ? public_path($article->featured_image) : public_path($article->featured_image);
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+                $file = $request->file('featured_image_file');
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $directory = public_path('storage/articles');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $file->move($directory, $filename);
+                $featuredImage = 'storage/articles/' . $filename;
+            } elseif ($request->filled('featured_image_url')) {
+                $featuredImage = $validated['featured_image_url'];
+            }
             
             $article->update([
                 'title' => $validated['title'],
-                'category_id' => $validated['category_id'],
-                'content' => $validated['content']
+                'content' => $validated['content'],
+                'featured_image' => $featuredImage
             ]);
+            
+            // Sync categories
+            $article->categories()->sync($categoryIds);
             
             return response()->json([
                 'success' => true,
                 'message' => 'Artikel berhasil diperbarui',
-                'article' => $article
+                'article' => $article->load('categories')
             ]);
         } catch (\Exception $e) {
             \Log::error('Error updating article: ' . $e->getMessage());
@@ -1051,11 +1382,36 @@ Route::middleware('auth.session')->group(function() {
             
             // Save image if provided
             if (!empty($validated['image'])) {
+                $imageUrl = $validated['image'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    // Decode base64 image
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    
+                    // Generate unique filename
+                    $filename = Str::uuid() . '.' . $extension;
+                    $destinationPath = storage_path('app/public/products');
+                    
+                    // Create directory if it doesn't exist
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    
+                    // Save file
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    
+                    // Use asset URL
+                    $imageUrl = asset('storage/products/' . $filename);
+                }
+                
                 \App\Models\ProductImage::create([
                     'product_image_id' => (string) Str::uuid(),
                     'product_id' => $product->product_id,
                     'name' => $product->name . '.jpg',
-                    'url' => $validated['image'],
+                    'url' => $imageUrl,
                 ]);
             }
             
@@ -1112,15 +1468,50 @@ Route::middleware('auth.session')->group(function() {
             
             // Update image if provided
             if (!empty($validated['image'])) {
+                $imageUrl = $validated['image'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    // Decode base64 image
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    
+                    // Generate unique filename
+                    $filename = Str::uuid() . '.' . $extension;
+                    $destinationPath = storage_path('app/public/products');
+                    
+                    // Create directory if it doesn't exist
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    
+                    // Delete old image file if exists
+                    $existingImage = $product->images->first();
+                    if ($existingImage && $existingImage->url && strpos($existingImage->url, 'storage/products/') !== false) {
+                        $oldFilename = basename($existingImage->url);
+                        $oldPath = $destinationPath . '/' . $oldFilename;
+                        if (file_exists($oldPath)) {
+                            @unlink($oldPath);
+                        }
+                    }
+                    
+                    // Save file
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    
+                    // Use asset URL
+                    $imageUrl = asset('storage/products/' . $filename);
+                }
+                
                 $existingImage = $product->images->first();
                 if ($existingImage) {
-                    $existingImage->update(['url' => $validated['image']]);
+                    $existingImage->update(['url' => $imageUrl]);
                 } else {
                     \App\Models\ProductImage::create([
                         'product_image_id' => (string) Str::uuid(),
                         'product_id' => $product->product_id,
                         'name' => $product->name . '.jpg',
-                        'url' => $validated['image'],
+                        'url' => $imageUrl,
                     ]);
                 }
             }
@@ -1163,6 +1554,36 @@ Route::middleware('auth.session')->group(function() {
     })->name('dashboard.products.delete');
     
     // Order Management API
+    // Validate Payment (Admin confirms payment received)
+    Route::post('/dashboard/orders/{id}/validate-payment', function ($id) {
+        try {
+            $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
+            
+            if ($order->payment_status !== 'processing') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pesanan tidak dalam status proses pembayaran'
+                ], 400);
+            }
+            
+            // Admin validates payment - change status to "paid"
+            $order->payment_status = 'paid';
+            $order->paid_at = now();
+            $order->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil divalidasi. Status pesanan sekarang "Lunas".'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error validating payment: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memvalidasi pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.orders.validate-payment');
+    
     Route::post('/dashboard/orders/{id}/ship', function ($id) {
         try {
             $order = \App\Models\Order::with('orderDetail.product')->where('order_id', $id)->firstOrFail();
@@ -1178,8 +1599,13 @@ Route::middleware('auth.session')->group(function() {
             if ($order->payment_status !== 'paid') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Pesanan belum dibayar. Tidak dapat mengirim pesanan sebelum pembayaran selesai.'
+                    'message' => 'Pesanan belum dibayar atau pembayaran belum divalidasi. Tidak dapat mengirim pesanan sebelum pembayaran divalidasi.'
                 ], 400);
+            }
+            
+            // Generate tracking number when shipping (only if not exists)
+            if (empty($order->tracking_number)) {
+                $order->tracking_number = generateTrackingNumber($order->shipping_service);
             }
             
             // Update order status to "dikirim" (not "selesai" yet)
@@ -1197,7 +1623,7 @@ Route::middleware('auth.session')->group(function() {
             
             return response()->json([
                 'success' => true,
-                'message' => 'Pesanan berhasil dikirim dan stok telah dikurangi'
+                'message' => 'Pesanan berhasil dikirim dan stok telah dikurangi. Nomor resi: ' . $order->tracking_number
             ]);
         } catch (\Exception $e) {
             \Log::error('Error shipping order: ' . $e->getMessage());
@@ -1239,14 +1665,12 @@ Route::middleware('auth.session')->group(function() {
 
 // Other Pages
 Route::get('/articles', function () {
-    $query = \App\Models\Article::with(['user', 'category'])->whereHas('category', function($q) {
-        $q->where('is_active', true);
-    });
+    $query = \App\Models\Article::with(['user', 'categories']);
     
     // Filter by category slug
     if (request('category')) {
         $categorySlug = request('category');
-        $query->whereHas('category', function($q) use ($categorySlug) {
+        $query->whereHas('categories', function($q) use ($categorySlug) {
             $q->where('slug', $categorySlug)->where('is_active', true);
         });
     }
@@ -1258,9 +1682,47 @@ Route::get('/articles', function () {
 
 // Article Detail Page
 Route::get('/articles/{id}', function ($id) {
-    $article = \App\Models\Article::with(['user', 'category'])->findOrFail($id);
+    $article = \App\Models\Article::with(['user', 'categories', 'comments.user', 'comments.replies.user'])->findOrFail($id);
     return view('article-detail', compact('article'));
 })->name('article.detail');
+
+// Article Comments API
+Route::middleware('auth.session')->group(function() {
+    // Post comment
+    Route::post('/api/articles/{id}/comments', function ($id, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'content' => 'required|string|max:1000',
+            'parent_id' => 'nullable|uuid|exists:article_comments,comment_id'
+        ]);
+        
+        $article = \App\Models\Article::findOrFail($id);
+        
+        $comment = \App\Models\Comment::create([
+            'article_id' => $article->article_id,
+            'user_id' => Auth::user()->user_id,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'content' => $validated['content']
+        ]);
+        
+        $comment->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'comment' => $comment
+        ]);
+    })->name('api.article.comment');
+    
+    // Delete comment (only own comment)
+    Route::delete('/api/comments/{id}', function ($id) {
+        $comment = \App\Models\Comment::where('comment_id', $id)
+            ->where('user_id', Auth::user()->user_id)
+            ->firstOrFail();
+        
+        $comment->delete();
+        
+        return response()->json(['success' => true]);
+    })->name('api.comment.delete');
+});
 
 Route::get('/marketplace', function () {
     return view('marketplace');
@@ -1282,6 +1744,10 @@ Route::middleware('auth.session')->group(function(){
     // Cart Routes
     // Cart Page
     Route::get('/cart', function () {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk melihat keranjang');
+        }
+        
         $user = Auth::user();
         $cartItems = \App\Models\Cart::with(['product.images'])
             ->where('user_id', $user->user_id)
@@ -1542,15 +2008,193 @@ Route::middleware('auth.session')->group(function(){
         ]);
     })->name('cart.checkout');
     
+    // Checkout Page (GET) - Show checkout form
+    Route::get('/checkout', function () {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu');
+        }
+        
+        $user = Auth::user();
+        $selectedCartIds = request()->get('items', []);
+        
+        if (empty($selectedCartIds)) {
+            return redirect()->route('cart')->with('error', 'Pilih produk terlebih dahulu');
+        }
+        
+        $cartItems = \App\Models\Cart::with(['product.images'])
+            ->where('user_id', $user->user_id)
+            ->whereIn('cart_id', $selectedCartIds)
+            ->get();
+        
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart')->with('error', 'Tidak ada produk yang dipilih');
+        }
+        
+        // Calculate totals
+        $subtotal = 0;
+        foreach ($cartItems as $item) {
+            $subtotal += $item->product->price * $item->qty;
+        }
+        
+        // Shipping cost (default)
+        $shippingCost = 10000;
+        $total = $subtotal + $shippingCost;
+        
+        return view('store.checkout', compact('cartItems', 'subtotal', 'shippingCost', 'total', 'selectedCartIds'));
+    })->middleware('auth.session')->name('checkout');
+    
     // Buyer Orders Page
     Route::get('/orders', function () {
         $user = Auth::user();
-        $orders = \App\Models\Order::with(['orderDetail.product.images'])
+        $orders = \App\Models\Order::with(['orderDetail.product.images', 'orderDetail.product.reviews' => function($q) use ($user) {
+            $q->where('user_id', $user->user_id);
+        }])
             ->where('user_id', $user->user_id)
             ->orderByDesc('created_at')
             ->get();
         return view('store.orders', compact('orders'));
     })->name('orders');
+    
+    // Product Review API
+    Route::post('/api/products/{id}/reviews', function ($id, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'order_id' => 'required|uuid|exists:orders,order_id',
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'removed_images' => 'nullable|array'
+        ]);
+        
+        $product = \App\Models\Product::findOrFail($id);
+        $user = Auth::user();
+        
+        // Check if order belongs to user and contains this product
+        $order = \App\Models\Order::where('order_id', $validated['order_id'])
+            ->where('user_id', $user->user_id)
+            ->where('status', 'selesai')
+            ->firstOrFail();
+        
+        $orderDetail = \App\Models\OrderDetail::where('order_id', $order->order_id)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        // Check if review already exists
+        $existingReview = \App\Models\ProductReview::where('product_id', $product->product_id)
+            ->where('user_id', $user->user_id)
+            ->where('order_id', $order->order_id)
+            ->first();
+        
+        // Handle removed images
+        $removedImages = $validated['removed_images'] ?? [];
+        $finalImages = [];
+        
+        // If editing existing review, start with existing images
+        if ($existingReview && $existingReview->image) {
+            $oldImages = is_array($existingReview->image) ? $existingReview->image : [$existingReview->image];
+            // Keep images that are not in removed_images list
+            foreach ($oldImages as $oldImage) {
+                if ($oldImage && !in_array($oldImage, $removedImages)) {
+                    $finalImages[] = $oldImage;
+                } else if ($oldImage && in_array($oldImage, $removedImages)) {
+                    // Delete removed image from storage
+                    $oldPath = str_replace('storage/', '', $oldImage);
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                    }
+                }
+            }
+        }
+        
+        // Handle new image uploads
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $filename = \Illuminate\Support\Str::uuid() . '.' . $image->getClientOriginalExtension();
+                $path = $image->storeAs('reviews', $filename, 'public');
+                $finalImages[] = 'storage/' . $path;
+            }
+        }
+        
+        $updateData = [
+                'rating' => $validated['rating'],
+                'review' => $validated['review']
+        ];
+        
+        // Update images (can be empty array if all removed)
+        $updateData['image'] = !empty($finalImages) ? $finalImages : null;
+        
+        if ($existingReview) {
+            $existingReview->update($updateData);
+            $review = $existingReview;
+        } else {
+            $review = \App\Models\ProductReview::create([
+                'product_id' => $product->product_id,
+                'user_id' => $user->user_id,
+                'order_id' => $order->order_id,
+                'rating' => $validated['rating'],
+                'review' => $validated['review'],
+                'image' => !empty($imagePaths) ? $imagePaths : null
+            ]);
+        }
+        
+        $review->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'review' => $review
+        ]);
+    })->name('api.product.review');
+    
+    // Reply to Review API
+    Route::post('/api/products/{id}/reviews/{reviewId}/reply', function ($id, $reviewId, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $product = \App\Models\Product::findOrFail($id);
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::create([
+            'product_id' => $product->product_id,
+            'user_id' => $user->user_id,
+            'parent_id' => $parentReview->review_id,
+            'rating' => 0, // Replies don't have ratings
+            'review' => $validated['reply']
+        ]);
+        
+        $reply->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'reply' => $reply
+        ]);
+    })->name('api.product.review.reply');
+    
+    // Delete Reply API
+    Route::delete('/api/products/{id}/reviews/{reviewId}/reply/{replyId}', function ($id, $reviewId, $replyId, \Illuminate\Http\Request $request) {
+        $product = \App\Models\Product::findOrFail($id);
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::where('review_id', $replyId)
+            ->where('parent_id', $parentReview->review_id)
+            ->where('user_id', $user->user_id) // Only allow user to delete their own reply
+            ->firstOrFail();
+        
+        $reply->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Balasan berhasil dihapus'
+        ]);
+    })->name('api.product.review.reply.delete');
 });
 
 // Monitoring API dengan ML Integration (sensor + ML predictions + anomaly detection + status)

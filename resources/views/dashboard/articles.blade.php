@@ -30,6 +30,29 @@
       padding: 1.5rem;
     }
     
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+        overflow-x: auto;
+      }
+    }
+    
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -219,7 +242,13 @@
                 <div class="article-title">{{ $article->title }}</div>
               </td>
               <td>
-                <span class="badge bg-secondary">{{ $article->category->name ?? 'Tidak ada kategori' }}</span>
+                @if($article->categories && $article->categories->count() > 0)
+                  @foreach($article->categories as $category)
+                    <span class="badge bg-secondary me-1">{{ $category->name }}</span>
+                  @endforeach
+                @else
+                  <span class="badge bg-secondary">Tidak ada kategori</span>
+                @endif
               </td>
               <td>
                 <div class="article-excerpt">{{ Str::limit(strip_tags($article->content), 100) }}</div>
@@ -266,13 +295,38 @@
             </div>
             
             <div class="mb-3">
+              <label class="form-label">Foto Artikel (Featured Image)</label>
+              <div class="mb-2">
+                <input type="radio" name="image_source" value="url" id="imageUrl" checked onchange="toggleImageSource()">
+                <label for="imageUrl" class="ms-1 me-3">URL</label>
+                <input type="radio" name="image_source" value="upload" id="imageUpload" onchange="toggleImageSource()">
+                <label for="imageUpload" class="ms-1">Upload File</label>
+              </div>
+              <div id="imageUrlInput">
+                <input type="url" class="form-control" id="articleImageUrl" name="featured_image_url" placeholder="https://example.com/image.jpg">
+              </div>
+              <div id="imageUploadInput" style="display: none;">
+                <input type="file" class="form-control" id="articleImageFile" name="featured_image_file" accept="image/*" onchange="previewImage(this)">
+                <small class="text-muted">Format: JPG, PNG, GIF. Maksimal 5MB</small>
+                <div id="imagePreview" class="mt-2" style="display: none;">
+                  <img id="previewImg" src="" alt="Preview" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #e9ecef;">
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
               <label class="form-label">Kategori Artikel *</label>
-              <select class="form-select" id="articleCategory" name="category_id" required>
-                <option value="">Pilih Kategori</option>
+              <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                 @foreach($categories as $category)
-                  <option value="{{ $category->category_id }}">{{ $category->name }}</option>
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="category_ids[]" value="{{ $category->category_id }}" id="category_{{ $category->category_id }}">
+                    <label class="form-check-label" for="category_{{ $category->category_id }}">
+                      {{ $category->name }}
+                    </label>
+                  </div>
                 @endforeach
-              </select>
+              </div>
+              <small class="text-muted">Pilih satu atau lebih kategori</small>
             </div>
             
             <div class="mb-3">
@@ -326,8 +380,34 @@
       document.getElementById('modalTitle').textContent = 'Buat Artikel Baru';
       document.getElementById('articleForm').reset();
       document.getElementById('articleId').value = '';
+      document.getElementById('articleImageUrl').value = '';
+      document.getElementById('articleImageFile').value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      document.getElementById('imageUrl').checked = true;
+      toggleImageSource();
+      document.querySelectorAll('input[name="category_ids[]"]').forEach(cb => cb.checked = false);
       quill.setContents([]);
       articleModal.show();
+    }
+    
+    function toggleImageSource() {
+      const imageUrl = document.getElementById('imageUrl').checked;
+      document.getElementById('imageUrlInput').style.display = imageUrl ? 'block' : 'none';
+      document.getElementById('imageUploadInput').style.display = imageUrl ? 'none' : 'block';
+      if (imageUrl) {
+        document.getElementById('imagePreview').style.display = 'none';
+      }
+    }
+    
+    function previewImage(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('previewImg').src = e.target.result;
+          document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
     }
     
     function editArticle(articleId) {
@@ -340,7 +420,17 @@
           if (data.success) {
             document.getElementById('articleId').value = data.article.article_id;
             document.getElementById('articleTitle').value = data.article.title;
-            document.getElementById('articleCategory').value = data.article.category_id || '';
+            document.getElementById('articleImageUrl').value = data.article.featured_image || '';
+            
+            // Clear and set checkboxes for categories
+            document.querySelectorAll('input[name="category_ids[]"]').forEach(cb => cb.checked = false);
+            if (data.article.categories && data.article.categories.length > 0) {
+              data.article.categories.forEach(cat => {
+                const checkbox = document.getElementById('category_' + cat.category_id);
+                if (checkbox) checkbox.checked = true;
+              });
+            }
+            
             quill.root.innerHTML = data.article.content;
             articleModal.show();
           } else {
@@ -396,17 +486,19 @@
       e.preventDefault();
       
       const title = document.getElementById('articleTitle').value;
-      const categoryId = document.getElementById('articleCategory').value;
       const content = quill.root.innerHTML;
       const articleId = document.getElementById('articleId').value;
+      
+      // Get selected categories
+      const selectedCategories = Array.from(document.querySelectorAll('input[name="category_ids[]"]:checked')).map(cb => cb.value);
       
       if (!title.trim()) {
         Swal.fire('Error', 'Judul artikel harus diisi', 'error');
         return;
       }
       
-      if (!categoryId) {
-        Swal.fire('Error', 'Kategori artikel harus dipilih', 'error');
+      if (selectedCategories.length === 0) {
+        Swal.fire('Error', 'Pilih minimal satu kategori', 'error');
         return;
       }
       
@@ -419,19 +511,38 @@
       const url = isEditMode 
         ? `/dashboard/articles/${articleId}`
         : '/dashboard/articles';
-      const method = isEditMode ? 'PUT' : 'POST';
+      const method = isEditMode ? 'POST' : 'POST'; // Use POST for both, Laravel will handle PUT via _method
+      
+      // Use FormData for file upload
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('content', content);
+      formData.append('category_ids', JSON.stringify(selectedCategories));
+      
+      if (isEditMode) {
+        formData.append('_method', 'PUT');
+      }
+      
+      // Handle image
+      const imageSource = document.querySelector('input[name="image_source"]:checked').value;
+      if (imageSource === 'url') {
+        const imageUrl = document.getElementById('articleImageUrl').value;
+        if (imageUrl) {
+          formData.append('featured_image_url', imageUrl);
+        }
+      } else {
+        const imageFile = document.getElementById('articleImageFile').files[0];
+        if (imageFile) {
+          formData.append('featured_image_file', imageFile);
+        }
+      }
       
       fetch(url, {
-        method: method,
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrfToken
         },
-        body: JSON.stringify({
-          title: title,
-          category_id: categoryId,
-          content: content
-        })
+        body: formData
       })
       .then(res => res.json())
       .then(data => {

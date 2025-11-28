@@ -10,6 +10,7 @@
   @vite(['resources/css/app.css'])
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
     body { background:#FAFAF8; font-family: 'Inter', -apple-system, sans-serif; }
     .payment-card {
@@ -59,20 +60,42 @@
       font-weight: 600;
       color: #856404;
     }
+    
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      .payment-card {
+        padding: 1rem !important;
+      }
+      .account-box {
+        padding: 1rem !important;
+      }
+      .account-number {
+        font-size: 1.25rem !important;
+        letter-spacing: 1px !important;
+      }
+      .qris-placeholder {
+        width: 150px !important;
+        height: 150px !important;
+      }
+      .timer-box {
+        padding: 0.75rem !important;
+      }
+      .timer-text {
+        font-size: 1rem !important;
+      }
+      .row {
+        margin: 0 !important;
+      }
+      .col-lg-8 {
+        padding: 0 !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- Navbar -->
-  <nav class="navbar bg-white border-bottom">
-    <div class="container">
-      <a href="{{ route('home') }}" class="navbar-brand text-decoration-none fw-bold">ChickPatrol</a>
-      <div class="ms-auto">
-        <a href="{{ route('home') }}" class="text-gray-600 text-decoration-none">
-          <i class="fa-solid fa-arrow-left me-2"></i>Kembali
-        </a>
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <main class="container py-5">
     <div class="row justify-content-center">
@@ -90,25 +113,42 @@
             </div>
             <div class="col-6 text-end">
               <small class="text-muted">Tanggal</small>
-              <div class="fw-bold">{{ $order->created_at->format('d M Y H:i') }}</div>
+              <div class="fw-bold">{{ $order->created_at->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</div>
             </div>
           </div>
           <hr>
-          @php
-            $detail = $order->orderDetail->first();
-            $product = $detail?->product;
-            $qtyTotal = $order->orderDetail->sum('qty');
-          @endphp
-          <div class="d-flex gap-3 mb-3">
-            @if($product && $product->images->first())
-              <img src="{{ $product->images->first()->url }}" alt="{{ $product->name }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
-            @endif
-            <div class="flex-grow-1">
-              <div class="fw-bold">{{ $product->name ?? 'Produk' }}</div>
-              <div class="text-muted">{{ $qtyTotal }} x Rp {{ number_format($detail->price ?? 0, 0, ',', '.') }}</div>
+          @foreach($order->orderDetail as $detail)
+            @php
+              $product = $detail->product;
+              $imageObj = $product?->images?->first();
+              $imageUrl = null;
+              if ($imageObj) {
+                $imageUrl = $imageObj->url;
+                // Jika URL tidak dimulai dengan http atau data:, tambahkan asset()
+                if ($imageUrl && !preg_match('/^(https?:\/\/|data:)/', $imageUrl)) {
+                  // Jika sudah ada storage/products, gunakan asset
+                  if (strpos($imageUrl, 'storage/products/') !== false) {
+                    $imageUrl = asset($imageUrl);
+                  } else {
+                    $imageUrl = asset('storage/' . $imageUrl);
+                  }
+                }
+              }
+            @endphp
+            <div class="d-flex gap-3 mb-3">
+              @if($imageUrl)
+                <img src="{{ $imageUrl }}" alt="{{ $product->name }}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4='; this.style.display='block';">
+              @else
+                <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                  <i class="fa-solid fa-image text-gray-400"></i>
+                </div>
+              @endif
+              <div class="flex-grow-1">
+                <div class="fw-bold">{{ $product->name ?? 'Produk' }}</div>
+                <div class="text-muted">{{ $detail->qty }} x Rp {{ number_format($detail->price ?? 0, 0, ',', '.') }} = Rp {{ number_format($detail->qty * $detail->price, 0, ',', '.') }}</div>
+              </div>
             </div>
-            <div class="fw-bold">Rp {{ number_format($order->total_price, 0, ',', '.') }}</div>
-          </div>
+          @endforeach
           <hr>
           <div class="d-flex justify-content-between">
             <span class="fw-bold">Total Pembayaran</span>
@@ -177,6 +217,11 @@
             <i class="fa-solid fa-check-circle me-2"></i>
             <strong>Pembayaran Diterima!</strong> Pesanan Anda sedang diproses.
           </div>
+        @elseif($order->payment_status === 'processing')
+          <div class="alert alert-info">
+            <i class="fa-solid fa-hourglass-half me-2"></i>
+            <strong>Pembayaran Sedang Diproses</strong> Admin sedang memvalidasi pembayaran Anda. Mohon tunggu.
+          </div>
         @else
           <div class="payment-card">
             <button class="btn btn-success btn-lg w-100" onclick="confirmPayment('{{ $order->order_id }}')">
@@ -185,7 +230,7 @@
             </button>
             <div class="text-center mt-3">
               <small class="text-muted">
-                Klik tombol ini setelah Anda melakukan transfer atau scan QRIS
+                Klik tombol ini setelah Anda melakukan transfer atau scan QRIS. Admin akan memvalidasi pembayaran Anda.
               </small>
             </div>
           </div>
@@ -220,6 +265,7 @@
         String(seconds).padStart(2, '0');
     }
     
+    // Update countdown every second
     setInterval(updateCountdown, 1000);
     updateCountdown();
     
@@ -313,6 +359,79 @@
         }
       }
     }
+    
+    // Update cart and chat badge count
+    @if(Auth::check())
+    function updateCartCount() {
+      fetch('{{ route("cart.count") }}')
+        .then(res => res.json())
+        .then(data => {
+          const badge = document.getElementById('cartBadge');
+          if (badge) {
+            if (data.count > 0) {
+              badge.textContent = data.count;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error loading cart count:', err);
+        });
+    }
+    
+    function updateChatCount() {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+      }
+      
+      fetch('/api/chat/unread-count', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken.content
+        },
+        credentials: 'same-origin'
+      })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return res.json();
+        })
+        .then(data => {
+          const badge = document.getElementById('chatBadge');
+          if (badge) {
+            const unreadCount = data.unread_count || 0;
+            if (unreadCount > 0) {
+              badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+              badge.style.display = 'inline-block';
+            } else {
+              badge.style.display = 'none';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error loading chat count:', err);
+          const badge = document.getElementById('chatBadge');
+          if (badge) {
+            badge.style.display = 'none';
+          }
+        });
+    }
+    
+    // Update cart and chat count on page load and every 30 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCartCount();
+      updateChatCount();
+      setInterval(updateCartCount, 30000);
+      setInterval(updateChatCount, 30000);
+    });
+    @endif
   </script>
 </body>
 </html>

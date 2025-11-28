@@ -31,6 +31,62 @@
       padding: 1.5rem;
     }
     
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .filter-right {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .search-box {
+        width: 100%;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+      }
+      
+      .table th,
+      .table td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .product-info {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .product-img {
+        width: 48px !important;
+        height: 48px !important;
+      }
+    }
+    
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -163,9 +219,9 @@
     }
     
     .product-table td {
-      padding: 1rem 1.5rem;
+      padding: 1.25rem 1.5rem;
       border-bottom: 1px solid #f8f9fa;
-      font-size: 0.875rem;
+      font-size: 0.95rem;
       color: #2F2F2F;
       vertical-align: middle;
     }
@@ -173,24 +229,26 @@
     .product-info {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
     }
     
     .product-img {
-      width: 50px;
-      height: 50px;
+      width: 64px;
+      height: 64px;
       border-radius: 8px;
       object-fit: cover;
       background: #f8f9fa;
     }
     
     .product-name {
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1rem;
       color: #2F2F2F;
+      margin-bottom: 0.25rem;
     }
     
     .product-weight {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       color: #6c757d;
       margin-top: 0.25rem;
     }
@@ -216,16 +274,6 @@
     .status-badge.inactive {
       background: #f0f0f0;
       color: #6c757d;
-    }
-    
-    .checkbox-cell {
-      width: 40px;
-    }
-    
-    .checkbox-cell input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
     }
     
     .product-table tbody tr {
@@ -267,7 +315,7 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Daftar Produk</h1>
+      <h1>Produk</h1>
       <button class="btn-add" onclick="addProduct()">
         <i class="fa-solid fa-plus"></i>
         Tambah Produk
@@ -293,9 +341,6 @@
       <table class="product-table">
         <thead>
           <tr>
-            <th class="checkbox-cell">
-              <input type="checkbox" id="selectAll">
-            </th>
             <th>Info Produk</th>
             <th>Rating</th>
             <th>Harga</th>
@@ -304,81 +349,7 @@
           </tr>
         </thead>
         <tbody id="productTableBody">
-          <!-- Product Row 1 -->
-          <tr data-product-id="1" data-status="active">
-            <td class="checkbox-cell">
-              <input type="checkbox" class="product-checkbox">
-            </td>
-            <td>
-              <div class="product-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="product-img">
-                <div>
-                  <div class="product-name">Daging segar</div>
-                  <div class="product-weight">kg</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="rating-stars">
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-              </div>
-            </td>
-            <td>Rp 40.000</td>
-            <td>15</td>
-            <td>
-              <span class="status-badge active">Aktif</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(1)" title="Edit">
-                <i class="fa-solid fa-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(1)" title="Hapus">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-          
-          <!-- Product Row 2 -->
-          <tr data-product-id="2" data-status="inactive">
-            <td class="checkbox-cell">
-              <input type="checkbox" class="product-checkbox">
-            </td>
-            <td>
-              <div class="product-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="product-img">
-                <div>
-                  <div class="product-name">Daging segar</div>
-                  <div class="product-weight">kg</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="rating-stars">
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-              </div>
-            </td>
-            <td>Rp 40.000</td>
-            <td>15</td>
-            <td>
-              <span class="status-badge inactive">Tidak Aktif</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(2)" title="Edit">
-                <i class="fa-solid fa-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(2)" title="Hapus">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </td>
-          </tr>
+          <!-- Product rows will be loaded dynamically -->
         </tbody>
       </table>
     </div>
@@ -463,7 +434,37 @@
     @php
         $productsData = $products->map(function($product) {
             $firstImage = $product->images->first();
-            $imageUrl = $firstImage ? $firstImage->url : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E";
+            $imageUrl = null;
+            
+            if ($firstImage && $firstImage->url) {
+                $imageUrl = $firstImage->url;
+                // Jika URL tidak dimulai dengan http atau data:, tambahkan asset()
+                if ($imageUrl && !preg_match('/^(https?:\/\/|data:)/', $imageUrl)) {
+                    // Jika sudah ada storage/products, gunakan asset
+                    if (strpos($imageUrl, 'storage/products/') !== false) {
+                        // Pastikan menggunakan URL lengkap
+                        if (strpos($imageUrl, '/') !== 0) {
+                            $imageUrl = '/' . $imageUrl;
+                        }
+                        $imageUrl = asset($imageUrl);
+                    } elseif (strpos($imageUrl, 'storage/') !== false) {
+                        if (strpos($imageUrl, '/') !== 0) {
+                            $imageUrl = '/' . $imageUrl;
+                        }
+                        $imageUrl = asset($imageUrl);
+                    } else {
+                        $imageUrl = asset('storage/' . $imageUrl);
+                    }
+                }
+            }
+            
+            // Fallback ke placeholder jika tidak ada gambar
+            if (!$imageUrl) {
+                $imageUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4=";
+            }
+            
+            $avgRating = $product->average_rating;
+            $totalReviews = $product->total_reviews;
             
             return [
                 'id' => $product->product_id,
@@ -472,7 +473,8 @@
                 'price' => (float)$product->price,
                 'stock' => (int)$product->stock,
                 'unit' => $product->unit ?? 'kg',
-                'rating' => 0,
+                'rating' => round($avgRating, 1),
+                'total_reviews' => $totalReviews,
                 'description' => $product->description ?? '',
                 'image' => $imageUrl
             ];
@@ -673,32 +675,40 @@
     function renderProducts() {
         const tbody = document.getElementById('productTableBody');
         
+        if (!products || products.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Tidak ada produk</td></tr>';
+            return;
+        }
+        
         tbody.innerHTML = products.map(product => {
+            const rating = product.rating || 0;
+            const totalReviews = product.total_reviews || 0;
             const stars = Array(5).fill(0).map((_, i) => 
-                i < product.rating 
-                    ? '<i class="fa-solid fa-star"></i>'
-                    : '<i class="fa-regular fa-star"></i>'
+                i < Math.round(rating)
+                    ? '<i class="fa-solid fa-star text-warning"></i>'
+                    : '<i class="fa-regular fa-star text-gray-300"></i>'
             ).join('');
+            
+            const ratingDisplay = totalReviews > 0 
+                ? `<div class="rating-stars">${stars}</div><small class="text-muted">${rating.toFixed(1)} (${totalReviews})</small>`
+                : '<div class="rating-stars"><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i></div><small class="text-muted">Belum ada rating</small>';
             
             return `
                 <tr data-product-id="${product.id}">
-                    <td class="checkbox-cell">
-                        <input type="checkbox" class="product-checkbox">
-                    </td>
                     <td>
                         <div class="product-info">
-                            <img src="${product.image}" alt="Product" class="product-img">
+                            <img src="${product.image || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4='}" alt="Product" class="product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4='; this.style.display='block';">
                             <div>
                                 <div class="product-name">${product.name}</div>
-                                <div class="product-weight">${product.unit}</div>
+                                <div class="product-weight">${product.unit || '-'}</div>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="rating-stars">${stars}</div>
+                        ${ratingDisplay}
                     </td>
-                    <td>Rp ${product.price.toLocaleString('id-ID')}</td>
-                    <td>${product.stock}</td>
+                    <td style="font-weight: 600; color: #22C55E; font-size: 1rem;">Rp ${product.price.toLocaleString('id-ID')}</td>
+                    <td style="font-weight: 500;">${product.stock || 0}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${product.id}')" title="Edit">
                             <i class="fa-solid fa-edit"></i>
@@ -736,13 +746,6 @@
         rows.forEach(row => {
             const productName = row.querySelector('.product-name').textContent.toLowerCase();
             row.style.display = productName.includes(searchTerm) ? '' : 'none';
-        });
-    });
-    
-    // Select all checkbox
-    document.getElementById('selectAll').addEventListener('change', function() {
-        document.querySelectorAll('.product-checkbox').forEach(cb => {
-            cb.checked = this.checked;
         });
     });
     

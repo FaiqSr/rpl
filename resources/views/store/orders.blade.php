@@ -242,6 +242,40 @@
     .message-right .message-time {
       text-align: right;
     }
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      .order-card {
+        padding: 1rem !important;
+      }
+      .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      .order-product {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .order-product-img {
+        width: 100% !important;
+        height: 200px !important;
+      }
+      .order-product-info {
+        width: 100% !important;
+      }
+      .order-actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      .order-actions button {
+        width: 100%;
+      }
+      .review-form {
+        padding: 0.75rem !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -261,9 +295,9 @@
         <div class="order-header">
           <div>
             <div class="order-id">Pesanan #{{ substr($order->order_id, 0, 8) }}</div>
-            <div class="order-date">
+            <div class="order-date" data-timestamp="{{ $order->created_at?->timestamp ?? time() }}">
               <i class="fa-regular fa-clock me-1"></i>
-              {{ $order->created_at?->format('d M Y H:i') }} WIB
+              <span class="order-time-text">{{ $order->created_at?->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span>
             </div>
           </div>
           <div>
@@ -288,18 +322,138 @@
             @endphp
             <div class="order-product mb-2">
               @if($image)
-                <img src="{{ $image }}" alt="{{ $product->name }}" class="order-product-img" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="order-product-img d-flex align-items-center justify-content-center" style="display: none;">
-                  <i class="fa-solid fa-image text-gray-400"></i>
-                </div>
+                <img src="{{ $image }}" alt="{{ $product->name }}" class="order-product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=';">
               @else
-                <div class="order-product-img d-flex align-items-center justify-content-center">
+                <div class="order-product-img d-flex align-items-center justify-content-center" style="background: #f3f4f6;">
                   <i class="fa-solid fa-image text-gray-400"></i>
                 </div>
               @endif
-              <div class="order-product-info">
+              <div class="order-product-info" style="flex: 1;">
                 <div class="order-product-name">{{ $product->name }}</div>
                 <div class="order-product-qty">{{ $detail->qty }} x Rp {{ number_format($detail->price,0,',','.') }} = Rp {{ number_format($detail->qty * $detail->price,0,',','.') }}</div>
+                
+                @if($order->status === 'selesai')
+                  @php
+                    $userReview = $product->reviews->where('user_id', Auth::id())->where('order_id', $order->order_id)->first();
+                  @endphp
+                  <div class="mt-2" id="reviewSection-{{ $detail->order_detail_id }}">
+                    @if($userReview)
+                      <div class="review-display" style="background: #f0f9f2; padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                          <div class="rating-display">
+                            @for($i = 1; $i <= 5; $i++)
+                              <i class="fa-star {{ $i <= $userReview->rating ? 'fa-solid text-warning' : 'fa-regular text-muted' }}"></i>
+                            @endfor
+                          </div>
+                          <small class="text-muted">{{ $userReview->created_at->format('d M Y') }}</small>
+                        </div>
+                        @if($userReview->review)
+                          <p class="mb-0" style="font-size: 0.875rem; color: #2F2F2F;">{{ $userReview->review }}</p>
+                        @endif
+                        @if($userReview->image)
+                          @php
+                            // Handle both array (new format) and string (old format)
+                            $images = is_array($userReview->image) ? $userReview->image : [$userReview->image];
+                            $processedImages = [];
+                            foreach ($images as $img) {
+                              if ($img && is_string($img)) {
+                                if (!preg_match('/^(https?:\/\/|data:)/', $img)) {
+                                  if (strpos($img, 'storage/reviews/') !== false) {
+                                    $processedImages[] = asset($img);
+                                  } else {
+                                    $processedImages[] = asset('storage/' . $img);
+                                  }
+                                } else {
+                                  $processedImages[] = $img;
+                                }
+                              }
+                            }
+                          @endphp
+                          @if(count($processedImages) > 0)
+                            <div class="mt-2 d-flex flex-wrap gap-2">
+                              @foreach($processedImages as $imgUrl)
+                                <img src="{{ $imgUrl }}" alt="Review Image" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: cover; cursor: pointer;" onclick="window.open('{{ $imgUrl }}', '_blank')" onerror="this.onerror=null; this.style.display='none';">
+                              @endforeach
+                            </div>
+                          @endif
+                        @endif
+                        <button class="btn btn-sm btn-link p-0 mt-1" onclick="editReview('{{ $product->product_id }}', '{{ $order->order_id }}', '{{ $detail->order_detail_id }}')" style="font-size: 0.75rem;">
+                          <i class="fa-solid fa-edit me-1"></i> Edit Ulasan
+                        </button>
+                      </div>
+                    @else
+                      <button class="btn btn-sm btn-outline-primary" onclick="showReviewForm('{{ $product->product_id }}', '{{ $order->order_id }}', '{{ $detail->order_detail_id }}')" style="font-size: 0.75rem; margin-top: 0.5rem;">
+                        <i class="fa-solid fa-star me-1"></i> Beri Rating & Ulasan
+                      </button>
+                    @endif
+                    
+                    <!-- Review Form (hidden by default) -->
+                    <div id="reviewForm-{{ $detail->order_detail_id }}" class="review-form" style="display: none; background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; margin-top: 0.75rem;">
+                      <form onsubmit="submitReview(event, '{{ $product->product_id }}', '{{ $order->order_id }}', '{{ $detail->order_detail_id }}')">
+                        <div class="mb-2">
+                          <label class="form-label" style="font-size: 0.875rem; font-weight: 500;">Rating:</label>
+                          <div class="rating-input">
+                            @php
+                              $currentRating = isset($userReview) && $userReview ? $userReview->rating : 5;
+                            @endphp
+                            @for($i = 1; $i <= 5; $i++)
+                              <i class="fa-star {{ $i <= $currentRating ? 'fa-solid' : 'fa-regular' }} rating-star" data-rating="{{ $i }}" onclick="setRating({{ $i }}, '{{ $detail->order_detail_id }}')" style="cursor: pointer; font-size: 1.25rem; color: #ffc107; margin-right: 0.25rem;"></i>
+                            @endfor
+                            <input type="hidden" name="rating" id="rating-{{ $detail->order_detail_id }}" value="{{ $currentRating }}" required>
+                          </div>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label" style="font-size: 0.875rem; font-weight: 500;">Ulasan (opsional):</label>
+                          <textarea name="review" id="reviewText-{{ $detail->order_detail_id }}" class="form-control" rows="3" placeholder="Bagikan pengalaman Anda..." style="font-size: 0.875rem; resize: none;" maxlength="1000">{{ isset($userReview) && $userReview ? $userReview->review : '' }}</textarea>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label" style="font-size: 0.875rem; font-weight: 500;">Foto (opsional, maks 5 foto):</label>
+                          <input type="file" name="review_images[]" id="reviewImages-{{ $detail->order_detail_id }}" accept="image/*" multiple class="form-control" style="font-size: 0.875rem;" onchange="previewReviewImages('{{ $detail->order_detail_id }}', this)">
+                          <div id="reviewImagesPreview-{{ $detail->order_detail_id }}" class="mt-2">
+                            <div class="d-flex flex-wrap gap-2" id="reviewImagesList-{{ $detail->order_detail_id }}">
+                              @if(isset($userReview) && $userReview && $userReview->image)
+                                @php
+                                  $existingImages = is_array($userReview->image) ? $userReview->image : [$userReview->image];
+                                  $processedExistingImages = [];
+                                  foreach ($existingImages as $img) {
+                                    if ($img && is_string($img)) {
+                                      $originalPath = $img; // Keep original path for removal tracking
+                                      if (!preg_match('/^(https?:\/\/|data:)/', $img)) {
+                                        if (strpos($img, 'storage/reviews/') !== false) {
+                                          $displayUrl = asset($img);
+                                        } else {
+                                          $displayUrl = asset('storage/' . $img);
+                                        }
+                                      } else {
+                                        $displayUrl = $img;
+                                      }
+                                      $processedExistingImages[] = [
+                                        'original' => $originalPath,
+                                        'display' => $displayUrl
+                                      ];
+                                    }
+                                  }
+                                @endphp
+                                @foreach($processedExistingImages as $idx => $imgData)
+                                  <div class="position-relative existing-image-container" data-original-path="{{ $imgData['original'] }}" style="display: inline-block; margin-right: 8px; margin-bottom: 8px;">
+                                    <img src="{{ $imgData['display'] }}" alt="Existing Image" style="max-width: 100px; max-height: 100px; border-radius: 8px; object-fit: cover;">
+                                    <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: -5px; right: -5px; padding: 2px 6px; border-radius: 50%; font-size: 10px;" onclick="removeExistingReviewImage('{{ $detail->order_detail_id }}', '{{ $imgData['original'] }}', this)" title="Hapus foto">
+                                      <i class="fa-solid fa-times"></i>
+                                    </button>
+                                  </div>
+                                @endforeach
+                              @endif
+                            </div>
+                          </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="hideReviewForm('{{ $detail->order_detail_id }}')">Batal</button>
+                          <button type="submit" class="btn btn-sm btn-primary" style="background: var(--primary-green); border: none;">Kirim</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                @endif
               </div>
             </div>
           @endforeach
@@ -342,12 +496,12 @@
             @elseif($order->payment_status === 'processing')
               <div class="col-md-12">
                 <strong>Nomor Resi:</strong> 
-                <span class="text-muted">Resi akan muncul setelah pembayaran diterima dan pesanan dikirim</span>
+                <span class="text-muted">Resi akan muncul setelah pembayaran divalidasi admin dan pesanan dikirim</span>
               </div>
             @else
               <div class="col-md-12">
                 <strong>Nomor Resi:</strong> 
-                <span class="text-muted">Resi akan muncul setelah pembayaran diterima dan pesanan dikirim</span>
+                <span class="text-muted">Resi akan muncul setelah pembayaran divalidasi admin dan pesanan dikirim</span>
               </div>
             @endif
             @if($order->payment_status === 'paid')
@@ -356,7 +510,7 @@
                   <i class="fa-solid fa-check-circle me-1"></i>Pembayaran Diterima
                 </span>
                 @if($order->paid_at)
-                  <small class="text-muted ms-2">Dibayar pada {{ $order->paid_at instanceof \Carbon\Carbon ? $order->paid_at->format('d M Y H:i') : \Carbon\Carbon::parse($order->paid_at)->format('d M Y H:i') }}</small>
+                  <small class="text-muted ms-2">Dibayar pada <span class="paid-time-text" data-timestamp="{{ $order->paid_at instanceof \Carbon\Carbon ? $order->paid_at->timestamp : \Carbon\Carbon::parse($order->paid_at)->timestamp }}">{{ $order->paid_at instanceof \Carbon\Carbon ? $order->paid_at->setTimezone('Asia/Jakarta')->format('d M Y H:i') : \Carbon\Carbon::parse($order->paid_at)->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span></small>
                 @endif
               </div>
             @elseif($order->payment_status === 'processing')
@@ -531,6 +685,209 @@
         confirmButtonText: 'OK'
       });
     @endif
+    
+    // Review functions
+    function showReviewForm(productId, orderId, detailId) {
+      document.getElementById(`reviewForm-${detailId}`).style.display = 'block';
+      const btn = document.getElementById(`reviewSection-${detailId}`).querySelector('.btn');
+      if (btn) btn.style.display = 'none';
+    }
+    
+    function hideReviewForm(detailId) {
+      document.getElementById(`reviewForm-${detailId}`).style.display = 'none';
+      const btn = document.getElementById(`reviewSection-${detailId}`).querySelector('.btn');
+      if (btn) btn.style.display = 'inline-block';
+    }
+    
+    function setRating(rating, detailId) {
+      document.getElementById(`rating-${detailId}`).value = rating;
+      const stars = document.querySelectorAll(`#reviewForm-${detailId} .rating-star`);
+      stars.forEach((star, index) => {
+        if (index < rating) {
+          star.classList.remove('fa-regular');
+          star.classList.add('fa-solid');
+        } else {
+          star.classList.remove('fa-solid');
+          star.classList.add('fa-regular');
+        }
+      });
+    }
+    
+    function previewReviewImages(detailId, input) {
+      const files = input.files;
+      const previewContainer = document.getElementById(`reviewImagesPreview-${detailId}`);
+      const imagesList = document.getElementById(`reviewImagesList-${detailId}`);
+      
+      if (files.length > 5) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Terlalu banyak foto',
+          text: 'Maksimal 5 foto yang dapat diupload',
+          confirmButtonColor: '#69B578'
+        });
+        input.value = '';
+        previewContainer.style.display = 'none';
+        imagesList.innerHTML = '';
+        return;
+      }
+      
+      imagesList.innerHTML = '';
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const imgDiv = document.createElement('div');
+          imgDiv.className = 'position-relative';
+          imgDiv.style.cssText = 'display: inline-block; margin-right: 8px; margin-bottom: 8px;';
+          imgDiv.innerHTML = `
+            <img src="${e.target.result}" style="max-width: 100px; max-height: 100px; border-radius: 8px; object-fit: cover;">
+            <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: -5px; right: -5px; padding: 2px 6px; border-radius: 50%; font-size: 10px;" onclick="removeReviewImageFromPreview('${detailId}', ${i})">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          `;
+          imagesList.appendChild(imgDiv);
+        };
+        reader.readAsDataURL(file);
+      }
+      
+      if (files.length > 0) {
+        previewContainer.style.display = 'block';
+      }
+    }
+    
+    function removeReviewImageFromPreview(detailId, index) {
+      const input = document.getElementById(`reviewImages-${detailId}`);
+      const dt = new DataTransfer();
+      const files = Array.from(input.files);
+      
+      files.splice(index, 1);
+      files.forEach(file => dt.items.add(file));
+      input.files = dt.files;
+      
+      previewReviewImages(detailId, input);
+    }
+    
+    async function submitReview(e, productId, orderId, detailId) {
+      e.preventDefault();
+      const form = e.target;
+      const rating = form.querySelector('input[name="rating"]').value;
+      const review = form.querySelector('textarea[name="review"]').value.trim();
+      const imageInput = form.querySelector('input[name="review_images[]"]');
+      
+      // Get CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('order_id', orderId);
+      formData.append('rating', parseInt(rating));
+      formData.append('review', review);
+      
+      // Add new images
+      if (imageInput && imageInput.files.length > 0) {
+        for (let i = 0; i < imageInput.files.length; i++) {
+          formData.append('images[]', imageInput.files[i]);
+        }
+      }
+      
+      // Add removed images
+      const removedInput = document.getElementById(`removedImages-${detailId}`);
+      if (removedInput && removedInput.value) {
+        const removedImages = removedInput.value.split(',');
+        removedImages.forEach(imgPath => {
+          if (imgPath.trim()) {
+            formData.append('removed_images[]', imgPath.trim());
+          }
+        });
+      }
+      
+      try {
+        const response = await fetch(`/api/products/${productId}/reviews`, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': csrfToken
+          },
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: 'Rating dan ulasan berhasil dikirim',
+            confirmButtonColor: '#69B578',
+            timer: 2000
+          }).then(() => {
+            location.reload();
+          });
+        } else {
+          throw new Error(result.message || 'Gagal mengirim review');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: error.message || 'Terjadi kesalahan saat mengirim review',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    }
+    
+    function editReview(productId, orderId, detailId) {
+      showReviewForm(productId, orderId, detailId);
+      // Show existing images preview if any
+      const previewContainer = document.getElementById(`reviewImagesPreview-${detailId}`);
+      if (previewContainer) {
+        const imagesList = document.getElementById(`reviewImagesList-${detailId}`);
+        if (imagesList && imagesList.querySelectorAll('.existing-image-container').length > 0) {
+          previewContainer.style.display = 'block';
+        }
+      }
+    }
+    
+    // Real-time time display with WIB timezone
+    function formatWIBTime(timestamp) {
+      const date = new Date(timestamp * 1000);
+      const wibOffset = 7 * 60; // WIB is UTC+7
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const wibTime = new Date(utc + (wibOffset * 60000));
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const day = String(wibTime.getDate()).padStart(2, '0');
+      const month = months[wibTime.getMonth()];
+      const year = wibTime.getFullYear();
+      const hours = String(wibTime.getHours()).padStart(2, '0');
+      const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+      
+      return `${day} ${month} ${year} ${hours}:${minutes} WIB`;
+    }
+    
+    function updateOrderTimes() {
+      // Update order creation times
+      document.querySelectorAll('.order-date[data-timestamp]').forEach(function(element) {
+        const timestamp = parseInt(element.getAttribute('data-timestamp'));
+        const timeText = element.querySelector('.order-time-text');
+        if (timeText) {
+          timeText.textContent = formatWIBTime(timestamp);
+        }
+      });
+      
+      // Update paid times
+      document.querySelectorAll('.paid-time-text[data-timestamp]').forEach(function(element) {
+        const timestamp = parseInt(element.getAttribute('data-timestamp'));
+        element.textContent = formatWIBTime(timestamp);
+      });
+    }
+    
+    // Update times on page load and every second
+    document.addEventListener('DOMContentLoaded', function() {
+      updateOrderTimes();
+      setInterval(updateOrderTimes, 1000);
+    });
   </script>
 </body>
 </html>

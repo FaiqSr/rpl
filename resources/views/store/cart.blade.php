@@ -201,6 +201,41 @@
       color: #dc3545;
     }
     
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      .cart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem !important;
+      }
+      .cart-item {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem !important;
+      }
+      .cart-item-img {
+        width: 100% !important;
+        height: 200px !important;
+      }
+      .cart-item-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: space-between;
+      }
+      .cart-item-total {
+        min-width: auto;
+        text-align: left;
+      }
+      .cart-summary {
+        position: relative !important;
+        width: 100% !important;
+        margin-top: 1rem;
+      }
+    }
+    
     .cart-summary {
       background: white;
       border: 1px solid #e9ecef;
@@ -208,6 +243,31 @@
       padding: 1.5rem;
       position: sticky;
       top: 80px;
+      margin-top: 0;
+      align-self: flex-start;
+      width: 100%;
+    }
+    
+    /* Align cart-summary with cart-header */
+    @media (min-width: 992px) {
+      .col-lg-4 .cart-summary {
+        /* Will be set dynamically by JavaScript for perfect alignment */
+        margin-top: 0;
+      }
+    }
+    
+    @media (min-width: 992px) {
+      .row.g-0 {
+        align-items: flex-start;
+      }
+      
+      .row.g-0 .col-lg-8 {
+        padding-right: 0.75rem;
+      }
+      
+      .row.g-0 .col-lg-4 {
+        padding-left: 0.75rem;
+      }
     }
     
     .summary-row {
@@ -253,9 +313,9 @@
   @include('partials.navbar')
 
   <main class="container py-5">
-    <div class="row">
+    <div class="row g-0">
       <div class="col-lg-8">
-        <h2 class="mb-3">Keranjang</h2>
+        <h2 class="mb-3" style="margin-top: 0; line-height: 1.5;">Keranjang</h2>
         
         @if($cartItems->count() > 0)
         <div class="cart-header">
@@ -312,9 +372,6 @@
               <div class="cart-item-total" id="total-{{ $item->cart_id }}">
                 Rp {{ number_format($item->product->price * $item->qty, 0, ',', '.') }}
               </div>
-              <button class="cart-item-wishlist" title="Tambah ke Wishlist">
-                <i class="fa-regular fa-heart"></i>
-              </button>
               <button class="cart-item-delete" onclick="deleteItem('{{ $item->cart_id }}')" title="Hapus">
                 <i class="fa-solid fa-trash"></i>
               </button>
@@ -616,10 +673,14 @@
       }
       
       const selectedCartIds = Array.from(checkboxes).map(cb => cb.dataset.cartId);
-      window.selectedCartIds = selectedCartIds;
       
-      const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
-      modal.show();
+      // Redirect to checkout page with selected items
+      const params = new URLSearchParams();
+      selectedCartIds.forEach(id => {
+        params.append('items[]', id);
+      });
+      
+      window.location.href = '{{ route("checkout") }}?' + params.toString();
     }
     
     document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
@@ -674,6 +735,44 @@
     // Initialize selection on page load
     document.addEventListener('DOMContentLoaded', function() {
       updateSelection();
+      
+      // Align cart summary with cart header dynamically
+      function alignCartSummary() {
+        if (window.innerWidth >= 992) {
+          const cartHeader = document.querySelector('.cart-header');
+          const cartSummary = document.querySelector('.cart-summary');
+          const colLeft = document.querySelector('.col-lg-8');
+          const colRight = document.querySelector('.col-lg-4');
+          const h2Title = document.querySelector('.col-lg-8 h2');
+          
+          if (cartHeader && cartSummary && colLeft && colRight && h2Title) {
+            // Get the top position of cart-header relative to its column
+            // cart-header starts right after h2, so we need h2 height + margin
+            const h2Height = h2Title.offsetHeight;
+            const h2MarginBottom = parseInt(window.getComputedStyle(h2Title).marginBottom) || 0;
+            const headerTop = h2Height + h2MarginBottom;
+            
+            // Set cart-summary margin-top to match cart-header top position
+            cartSummary.style.marginTop = headerTop + 'px';
+          }
+        } else {
+          // Reset margin-top on mobile
+          const cartSummary = document.querySelector('.cart-summary');
+          if (cartSummary) {
+            cartSummary.style.marginTop = '0';
+          }
+        }
+      }
+      
+      // Align on load (wait a bit for layout to settle)
+      setTimeout(alignCartSummary, 50);
+      
+      // Re-align on window resize
+      let resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(alignCartSummary, 100);
+      });
     });
   </script>
 </body>

@@ -107,7 +107,7 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Dashboard Home</h1>
+      <h1>Home</h1>
     </div>
     
     <!-- Stats Grid -->

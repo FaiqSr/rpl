@@ -88,7 +88,8 @@
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" 
-                                   placeholder="••••••••" required minlength="8">
+                                   placeholder="Minimal 8 karakter: huruf kapital, kecil, angka, simbol" required minlength="8">
+                            <small class="form-text text-muted">Password harus minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol</small>
                             @error('password')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -139,6 +140,17 @@
         // Validate password length
         if (password.length < 8) {
             showError('Password minimal 8 karakter!');
+            return;
+        }
+        
+        // Validate password strength: must contain uppercase, lowercase, number, and symbol
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSymbol = /[@$!%*?&]/.test(password);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+            showError('Password harus mengandung huruf kapital, huruf kecil, angka, dan simbol!');
             return;
         }
         

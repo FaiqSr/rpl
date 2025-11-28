@@ -43,6 +43,12 @@
                        placeholder="Password" required>
             </div>
             
+            <div class="mb-3 text-end">
+                <a href="{{ route('password.request') }}" class="text-decoration-none" style="color: var(--primary-green); font-size: 0.875rem;">
+                    Lupa Password?
+                </a>
+            </div>
+            
             <button type="submit" class="btn btn-primary">
                 Masuk
             </button>
