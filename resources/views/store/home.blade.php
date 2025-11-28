@@ -497,7 +497,7 @@
                  style="width: 213px !important; height: 125px !important; object-fit: cover !important; object-position: center !important; border-radius: 8px !important; border: 1px solid #e5e7eb !important; display: block !important; flex-shrink: 0 !important; max-width: 213px !important; max-height: 125px !important; margin-bottom: 0.75rem !important;"
                  onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMTMiIGhlaWdodD0iMTI1IiB2aWV3Qm94PSIwIDAgMjEzIDEyNSI+PHJlY3Qgd2lkdGg9IjIxMyIgaGVpZ2h0PSIxMjUiIGZpbGw9IiNmOGQ3ZGEiIHJ4PSI4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM3MjFjMjQiIGZvbnQtc2l6ZT0iMTRweCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg=='">
             <span class="text-sm text-gray-700 font-medium category-name" style="width: 213px !important; text-align: center !important; margin: 0 auto !important;">{{ $category->name }}</span>
-          </div>
+      </div>
         @endforeach
       </div>
     </section>

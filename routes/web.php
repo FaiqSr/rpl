@@ -295,7 +295,7 @@ Route::post('/login', function (\Illuminate\Http\Request $request) {
         // Find user by email or phone
         $user = null;
         if ($isEmail) {
-            $user = \App\Models\User::where('email', $credentials['email'])->first();
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
         } else {
             $user = \App\Models\User::where('phone', $credentials['email'])->first();
         }
@@ -3298,13 +3298,24 @@ Route::get('/api/monitoring/tools', function () {
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Error in monitoring API: ' . $e->getMessage());
         \Illuminate\Support\Facades\Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        // Check if it's a connection error to ML service
+        $isMLConnectionError = (
+            strpos($e->getMessage(), 'ML Service') !== false ||
+            strpos($e->getMessage(), 'Connection') !== false ||
+            strpos($e->getMessage(), 'timeout') !== false ||
+            strpos($e->getMessage(), 'Failed to connect') !== false
+        );
+        
         return response()->json([
             'error' => 'Internal server error',
             'message' => $e->getMessage(),
+            'ml_connection_error' => $isMLConnectionError,
             'meta' => [
                 'generated_at' => now()->toDateTimeString(),
                 'ml_connected' => false,
-                'error' => true
+                'error' => true,
+                'error_type' => $isMLConnectionError ? 'ml_connection' : 'general'
             ]
         ], 500);
     }

@@ -52,7 +52,7 @@ return new class extends Migration
             
             // Re-add unique constraint if it existed
             if ($hasUnique) {
-                Schema::table('tools', function (Blueprint $table) {
+        Schema::table('tools', function (Blueprint $table) {
                     $table->unique('tool_id');
                 });
             }
@@ -119,7 +119,7 @@ return new class extends Migration
             
             DB::statement('ALTER TABLE tools CHANGE tool_id robot_id VARCHAR(255)');
             
-            Schema::table('tools', function (Blueprint $table) {
+        Schema::table('tools', function (Blueprint $table) {
                 $table->unique('robot_id');
             });
             

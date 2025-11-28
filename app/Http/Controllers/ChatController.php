@@ -66,7 +66,7 @@ class ChatController extends Controller
         } else {
             // Jika belum ada chat, pilih admin dengan chat paling sedikit
             $seller = $this->getAdminWithLeastChats();
-            $sellerId = $seller->user_id;
+        $sellerId = $seller->user_id;
         }
         
         // SOLUSI: Selalu gunakan general chat (tanpa order_id) untuk memastikan semua chat terhubung
@@ -114,7 +114,7 @@ class ChatController extends Controller
         $chat = Chat::where('buyer_id', $buyerId)
             ->whereNull('order_id') // Hanya general chat
             ->first();
-        
+
         // Jika tidak ada chat, buat chat baru dengan admin yang memiliki chat paling sedikit
         if (!$chat) {
             $seller = $this->getAdminWithLeastChats();

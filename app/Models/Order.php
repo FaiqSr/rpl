@@ -82,17 +82,17 @@ class Order extends BaseModel
                     }
                 }
                 
-                // Check if chat already exists for this order
-                $existingChat = \App\Models\Chat::where('order_id', $order->order_id)->first();
-                
-                if (!$existingChat) {
-                    \App\Models\Chat::create([
-                        'buyer_id' => $order->user_id,
+                    // Check if chat already exists for this order
+                    $existingChat = \App\Models\Chat::where('order_id', $order->order_id)->first();
+                    
+                    if (!$existingChat) {
+                        \App\Models\Chat::create([
+                            'buyer_id' => $order->user_id,
                         'seller_id' => $sellerId,
-                        'order_id' => $order->order_id,
-                        'last_message' => 'Pesanan baru telah dibuat',
-                        'last_message_at' => now(),
-                    ]);
+                            'order_id' => $order->order_id,
+                            'last_message' => 'Pesanan baru telah dibuat',
+                            'last_message_at' => now(),
+                        ]);
                 }
             } catch (\Exception $e) {
                 // Log error but don't fail order creation

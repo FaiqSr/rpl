@@ -1070,7 +1070,7 @@
         if (slug) formData.append('slug', slug);
         formData.append('image_file', imageFile);
         if (sortOrder !== null) {
-          formData.append('sort_order', sortOrder);
+        formData.append('sort_order', sortOrder);
         }
         formData.append('is_active', isActive ? '1' : '0');
         

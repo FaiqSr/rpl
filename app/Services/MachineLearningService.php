@@ -22,7 +22,8 @@ class MachineLearningService
 
     public function __construct()
     {
-        $this->mlServiceUrl = env('ML_SERVICE_URL', null);
+        // Default to http://localhost:5000 if ML_SERVICE_URL is not set in .env
+        $this->mlServiceUrl = env('ML_SERVICE_URL', 'http://localhost:5000');
     }
 
     /**
@@ -296,8 +297,12 @@ class MachineLearningService
             $response = Http::timeout(5)->get($this->mlServiceUrl . '/health');
             if ($response->successful()) {
                 $data = $response->json();
-                return isset($data['status']) && $data['status'] === 'ok' && 
-                       isset($data['models_loaded']) && $data['models_loaded'] === true;
+                // Accept both 'ok' and 'healthy' as valid status
+                $statusOk = isset($data['status']) && ($data['status'] === 'ok' || $data['status'] === 'healthy');
+                // Check models_loaded (boolean) or all_models_loaded (boolean)
+                $modelsLoaded = (isset($data['models_loaded']) && $data['models_loaded'] === true) ||
+                               (isset($data['all_models_loaded']) && $data['all_models_loaded'] === true);
+                return $statusOk && $modelsLoaded;
             }
             return false;
         } catch (\Exception $e) {

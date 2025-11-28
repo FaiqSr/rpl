@@ -257,7 +257,7 @@
         <div class="empty-state">
           <i class="fa-solid fa-box-open"></i>
           <p class="mb-0">Belum ada data produk terpopuler</p>
-        </div>
+      </div>
       @endif
     </div>
   </main>

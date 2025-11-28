@@ -979,13 +979,18 @@
               <div style="flex:1; min-width:0;">
                 <div style="font-size:.85rem; font-weight:700; color:#2F2F2F; margin-bottom:.4rem; display:flex; align-items:center; gap:.5rem;">
                   <i class="fa-solid fa-bell" style="color:#22C55E;"></i>
-                  Kirim Notifikasi Setiap 5 Menit
+                  Notifikasi Otomatis
                 </div>
                 <div style="font-size:.75rem; color:#6c757d; line-height:1.5; margin-bottom:.5rem;">
-                  Notifikasi akan dikirim otomatis ke Telegram setiap 5 menit sekali, bahkan saat membuka halaman dashboard lain.
+                  Notifikasi akan dikirim otomatis ke Telegram berdasarkan kondisi kandang (1 jam untuk kondisi BAIK, 5 menit untuk PERHATIAN/BURUK).
                 </div>
-                <div id="notificationStatus" style="font-size:.7rem; color:#6c757d; padding:.5rem; background:#fff; border-radius:6px; border:1px solid #e9ecef; margin-top:.5rem;">
-                  <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...
+                <div style="display:flex; align-items:center; gap:.5rem;">
+                  <div id="notificationStatus" style="flex:1; font-size:.7rem; color:#6c757d; padding:.5rem; background:#fff; border-radius:6px; border:1px solid #e9ecef;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...
+                  </div>
+                  <button onclick="loadNotificationStatus()" title="Refresh status" style="padding:.4rem .6rem; background:#fff; border:1px solid #e9ecef; border-radius:6px; cursor:pointer; transition:all 0.2s;">
+                    <i class="fa-solid fa-sync-alt" style="font-size:.7rem; color:#6c757d;"></i>
+                  </button>
                 </div>
               </div>
               <div style="flex-shrink:0; display:flex; align-items:center; padding-top:.25rem;">
@@ -998,6 +1003,9 @@
               </div>
             </div>
             <small style="font-size:.7rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.75rem; padding:.5rem; background:#fff3cd; border-radius:6px; border-left:3px solid #facc15;">
+              <i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i>
+              <span><strong>Penting:</strong> Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.1rem .3rem; border-radius:3px; font-family:monospace;">php artisan schedule:work</code></span>
+            </small>
               <i class="fa-solid fa-info-circle" style="color:#856404;"></i>
               <span>Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.15rem .4rem; border-radius:4px; font-size:.65rem;">php artisan schedule:work</code></span>
             </small>
@@ -1668,11 +1676,14 @@
       }
       
       try {
-        const response = await fetch('/api/telegram/notification-status', {
+        // Add cache busting parameter
+        const cacheBuster = Date.now();
+        const response = await fetch(`/api/telegram/notification-status?_=${cacheBuster}`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
           },
           cache: 'no-cache'
         });
@@ -1692,7 +1703,7 @@
         }
         
         // Handle response
-        if (data && typeof data === 'object') {
+        if (data && typeof data === 'object' && data.success) {
           const enabled = data.enabled === true || data.enabled === 'true' || data.enabled === 1;
           
           const toggle = document.getElementById('telegramNotificationsEnabled');
@@ -1703,7 +1714,7 @@
           // Update status display
           if (statusEl) {
             if (enabled) {
-              statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim setiap 5 menit';
+              statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim otomatis';
               statusEl.style.color = '#155724';
               statusEl.style.background = '#d4edda';
               statusEl.style.borderColor = '#c3e6cb';
@@ -1726,10 +1737,8 @@
           statusEl.style.borderColor = '#ffeaa7';
         }
         
-        // Retry after 2 seconds
-        setTimeout(() => {
-          loadNotificationStatus();
-        }, 2000);
+        // DON'T auto-retry - just show error
+        // User can refresh manually if needed
       }
     }
     

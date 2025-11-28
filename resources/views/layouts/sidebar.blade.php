@@ -55,7 +55,7 @@
       <i class="fa-solid fa-users"></i>
       <span>Pelanggan</span>
     </a>
-    <div class="sidebar-menu-item {{ $isToolsActive ? 'active' : '' }}" onclick="toggleSubmenu()" style="cursor: pointer;">
+    <div class="sidebar-menu-item sidebar-menu-dropdown {{ $isToolsActive ? 'active' : '' }}" onclick="toggleSubmenu()" style="cursor: pointer;">
       <i class="fa-solid fa-wrench"></i>
       <span>Alat</span>
       <i class="fa-solid fa-chevron-down chevron-icon {{ $isToolsActive ? 'rotate' : '' }}"></i>
@@ -132,6 +132,7 @@
     top: 0;
     z-index: 1000;
     transition: transform 0.3s ease;
+    overflow-x: hidden;
   }
   
   @media (max-width: 768px) {
@@ -217,6 +218,30 @@
     color: #22C55E;
   }
   
+  /* Special styling for Alat dropdown - icon and text should be black when expanded, not green */
+  .sidebar-menu-dropdown {
+    color: #2F2F2F !important;
+  }
+  
+  .sidebar-menu-dropdown i.fa-wrench {
+    color: #2F2F2F !important;
+  }
+  
+  .sidebar-menu-dropdown.active {
+    color: #2F2F2F !important;
+    background: #f8f9fa;
+    border-left: none;
+    padding-left: 1rem;
+  }
+  
+  .sidebar-menu-dropdown.active i.fa-wrench {
+    color: #2F2F2F !important;
+  }
+  
+  .sidebar-menu-dropdown.active .chevron-icon {
+    color: #6c757d !important;
+  }
+  
   .sidebar-menu-item i {
     width: 20px;
     text-align: center;
@@ -225,8 +250,11 @@
   .sidebar-submenu {
     display: none;
     padding-left: 2.5rem;
+    padding-right: 0.5rem;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .sidebar-submenu.show {
@@ -242,6 +270,10 @@
     transition: all 0.2s;
     border-radius: 4px;
     margin: 0.125rem 0;
+    white-space: nowrap;
+    word-wrap: normal;
+    overflow: visible;
+    line-height: 1.5;
   }
   
   .sidebar-submenu a:hover {

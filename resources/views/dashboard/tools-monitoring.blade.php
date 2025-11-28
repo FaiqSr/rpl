@@ -1960,9 +1960,30 @@
         const res = await fetch(`/api/monitoring/tools?t=${Date.now()}&profile=${selectedProfile}`, { 
           headers:{ 'Accept':'application/json' } 
         });
-        if (!res.ok) throw new Error('HTTP '+res.status);
+        
+        // Check if response is ok
+        if (!res.ok) {
+          let errorMessage = 'HTTP ' + res.status;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            console.error('API Error:', errorData);
+          } catch (e) {
+            const errorText = await res.text();
+            console.error('API Error (text):', errorText);
+            errorMessage = errorText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        
         const data = await res.json();
-        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta, thresholds } = data;
+        
+        // Check if response has error
+        if (data.error) {
+          throw new Error(data.message || data.error || 'Unknown error');
+        }
+        // Use let instead of const for forecast_summary variables since they may be reassigned
+        let { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta, thresholds } = data;
         
         // Log informasi ML Status (Random Forest) untuk debugging
         console.log('=== ML STATUS INFORMATION (Random Forest) ===');
@@ -2182,25 +2203,51 @@
         // Data Preview panel
       } catch (e){
         console.error('Error loading monitoring data:', e);
-        sensorGrid.innerHTML = '<div class="alert alert-danger">Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</div>';
+        
+        // Get error message
+        const errorMessage = e.message || 'Unknown error';
+        const isMLConnectionError = errorMessage.includes('ML Service') || 
+                                     errorMessage.includes('Connection') || 
+                                     errorMessage.includes('timeout') ||
+                                     errorMessage.includes('Failed to connect') ||
+                                     errorMessage.includes('Connection refused');
+        
+        sensorGrid.innerHTML = `<div class="alert alert-danger">
+          <strong>Error:</strong> ${errorMessage}
+          <br><small>Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</small>
+        </div>`;
         
         // Tampilkan pesan error yang jelas
         const errorBanner = document.getElementById('predictionBanner');
         if (errorBanner) {
           errorBanner.style.display = 'block';
           errorBanner.style.background = '#EF4444';
-          errorBanner.innerHTML = `
-            <i class="fa-solid fa-exclamation-triangle"></i>
-            <div>
-              <h5>Error Memuat Data</h5>
-              <p>Gagal terhubung ke ML Service. Pastikan:</p>
-              <ul style="margin:0.5rem 0; padding-left:1.5rem; font-size:0.9rem;">
-                <li>ML Service berjalan di http://localhost:5000</li>
-                <li>Service dapat diakses (test: curl http://localhost:5000/health)</li>
-                <li>Refresh halaman ini setelah service running</li>
-              </ul>
-            </div>
-        `;
+          
+          if (isMLConnectionError) {
+            errorBanner.innerHTML = `
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <div>
+                <h5>Error Memuat Data</h5>
+                <p>Gagal terhubung ke ML Service. Pastikan:</p>
+                <ul style="margin:0.5rem 0; padding-left:1.5rem; font-size:0.9rem;">
+                  <li>ML Service berjalan di http://localhost:5000</li>
+                  <li>Service dapat diakses (test: curl http://localhost:5000/health)</li>
+                  <li>Refresh halaman ini setelah service running</li>
+                </ul>
+                <p style="margin-top:0.5rem; font-size:0.85rem; color:#fee;"><strong>Detail Error:</strong> ${errorMessage}</p>
+              </div>
+            `;
+          } else {
+            errorBanner.innerHTML = `
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <div>
+                <h5>Error Memuat Data</h5>
+                <p>Terjadi kesalahan saat memuat data monitoring:</p>
+                <p style="margin:0.5rem 0; font-size:0.9rem;"><strong>${errorMessage}</strong></p>
+                <p style="margin-top:0.5rem; font-size:0.85rem;">Silakan refresh halaman atau hubungi administrator jika masalah berlanjut.</p>
+              </div>
+            `;
+          }
         }
         
         // Jangan tampilkan data preview jika error

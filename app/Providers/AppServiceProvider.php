@@ -26,11 +26,14 @@ class AppServiceProvider extends ServiceProvider
             ->withoutOverlapping()
             ->runInBackground();
         
-        // Schedule untuk mengirim notifikasi Telegram setiap 5 menit
-        // Menggunakan cron expression untuk lebih fleksibel: setiap 5 menit (0,5,10,15,20,25,30,35,40,45,50,55)
+        // Schedule untuk mengirim notifikasi Telegram
+        // TESTING MODE: Setiap 10 detik untuk testing (normal: everyMinute)
+        // - Kondisi BAIK: 30 detik sekali (TESTING MODE - normal: 1 jam)
+        // - Kondisi PERHATIAN/BURUK: 10 detik sekali (TESTING MODE - normal: 5 menit)
+        // NOTE: Untuk testing, gunakan command manual dengan loop atau ubah ke everyMinute() untuk production
         Schedule::command('telegram:send-monitoring')
-            ->cron('*/5 * * * *') // Setiap 5 menit: 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55
-            ->withoutOverlapping(4) // Max 4 menit overlap protection (kurang dari 5 menit interval)
+            ->everyMinute() // Scheduler check setiap menit, logic di command handle interval 10 detik
+            ->withoutOverlapping()
             ->runInBackground()
             ->appendOutputTo(storage_path('logs/telegram-scheduler.log')); // Log output untuk debugging
     }
