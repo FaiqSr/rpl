@@ -520,12 +520,22 @@ class TelegramNotificationService
         // Prediksi Kondisi
         $message .= "📈 *Prediksi Kondisi*\n\n";
         $message .= "⏳ *6 Jam ke Depan*\n\n";
-        foreach ($pred6Items as $item) {
-            $message .= "• {$item}\n";
+        // Sinkronisasi ringkasan prediksi 6 jam dengan dashboard
+        if (!empty($forecast_summary_6h) && is_array($forecast_summary_6h)) {
+            foreach ($forecast_summary_6h as $item) {
+                if (isset($item['summary'])) {
+                    $message .= "• {$item['summary']}\n";
+                }
+            }
+        } else {
+            foreach ($pred6Items as $item) {
+                $message .= "• {$item}\n";
+            }
         }
         $message .= "\n";
-        
-        $message .= "🕒 *24 Jam Terakhir*\n\n";
+
+        // Ganti label menjadi 24 Jam ke Depan
+        $message .= "🕒 *24 Jam ke Depan*\n\n";
         foreach ($history24Items as $item) {
             $message .= "• {$item}\n";
         }
