@@ -1321,6 +1321,15 @@ def predict():
                 'error': 'Prediction failed',
                 'details': str(e) if app.debug else 'Contact administrator'
             }), 500
+    
+    except Exception as e:
+        # Main exception handler for predict function
+        prediction_metrics['failed_predictions'] += 1
+        logger.error(f'Unexpected error in predict: {str(e)}', exc_info=True)
+        return jsonify({
+            'error': 'Internal server error',
+            'details': str(e) if app.debug else 'Contact administrator'
+        }), 500
 
 
 @app.route('/classify', methods=['POST'])
