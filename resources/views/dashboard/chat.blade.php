@@ -232,12 +232,13 @@
       background: #f8f9fa;
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
     }
     
     .chat-message {
       display: flex;
       flex-direction: column;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
       width: 100%;
     }
     
@@ -246,6 +247,8 @@
       align-self: flex-start;
       max-width: 70%;
       align-items: flex-start;
+      display: flex;
+      flex-direction: column;
     }
     
     /* WhatsApp Style: Message Right (Sent) */
@@ -253,6 +256,8 @@
       align-self: flex-end;
       max-width: 70%;
       align-items: flex-end;
+      display: flex;
+      flex-direction: column;
     }
     
     .message-sender-name {
@@ -261,6 +266,7 @@
       margin-bottom: 0.25rem;
       font-weight: 500;
       padding: 0 0.5rem;
+      text-align: left;
     }
     
     .message-bubble {
@@ -271,6 +277,7 @@
       word-wrap: break-word;
       max-width: 100%;
       display: inline-block;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
     
     /* Left message (received) - white background */
@@ -278,6 +285,7 @@
       background: #ffffff;
       color: #2F2F2F;
       border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 4px;
     }
     
     /* Right message (sent) - green background like WhatsApp */
@@ -285,6 +293,7 @@
       background: #dcf8c6;
       color: #2F2F2F;
       border: none;
+      border-bottom-right-radius: 4px;
     }
     
     .message-time {

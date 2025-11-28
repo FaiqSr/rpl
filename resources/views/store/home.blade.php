@@ -534,14 +534,9 @@
                     <span class="text-base font-bold text-emerald-600" style="text-decoration: none !important; border-bottom: none !important; line-height: 1;">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
                   </div>
               @php
-                $avgRating = 0;
-                $totalReviews = 0;
-                if (isset($product->reviews) && $product->reviews->count() > 0) {
-                      // Only count top-level reviews (not replies) with rating > 0
-                      $topLevelReviews = $product->reviews->whereNull('parent_id')->where('rating', '>', 0);
-                      $totalReviews = $topLevelReviews->count();
-                      $avgRating = $topLevelReviews->count() > 0 ? $topLevelReviews->avg('rating') : 0;
-                }
+                // Use accessor from Product model which already filters reviews with valid order_id
+                $avgRating = $product->average_rating;
+                $totalReviews = $product->total_reviews;
               @endphp
               @if($totalReviews > 0)
                   <div class="flex items-center gap-1" style="margin: 0 !important; margin-top: 20px !important; padding: 0;">

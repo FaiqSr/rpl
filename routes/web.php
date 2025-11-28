@@ -141,7 +141,7 @@ Route::get('/storage/{path}', function ($path) {
 
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
-    $query = Product::with(['images', 'reviews']);
+    $query = Product::with(['images', 'reviews.order']);
     
     // Filter by search
     if (request('search')) {
@@ -617,10 +617,92 @@ Route::post('/order/{id}/confirm-received', function ($id) {
 // Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
 Route::middleware(['auth.session','admin'])->group(function() {
     Route::get('/dashboard', function () {
-        return view('dashboard.seller');
+        // Get statistics from database
+        $today = now()->startOfDay();
+        $thisMonth = now()->startOfMonth();
+        
+        // Penjualan Hari Ini
+        $salesToday = \App\Models\Order::whereDate('created_at', $today)->count();
+        
+        // Penjualan Perbulan
+        $salesThisMonth = \App\Models\Order::where('created_at', '>=', $thisMonth)->count();
+        
+        // Produk Aktif (produk dengan stok > 0)
+        $activeProducts = \App\Models\Product::where('stock', '>', 0)->count();
+        
+        // Alat Aktif (tools yang aktif, bukan offline)
+        $activeTools = \App\Models\Tools::where('operational_status', '!=', 'offline')->count();
+        
+        // Ulasan Baru (dalam 7 hari terakhir)
+        $newReviews = \App\Models\ProductReview::where('created_at', '>=', now()->subDays(7))
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
+        
+        // Chat Baru (dalam 7 hari terakhir dengan unread messages)
+        $newChats = \App\Models\Chat::where('created_at', '>=', now()->subDays(7))
+            ->orWhere('last_message_at', '>=', now()->subDays(7))
+            ->count();
+        
+        // Total Pendapatan Perbulan
+        $totalRevenue = \App\Models\Order::where('created_at', '>=', $thisMonth)
+            ->where('payment_status', 'paid')
+            ->sum('total_price');
+        
+        // Produk Terpopuler (berdasarkan jumlah terjual dari order yang sudah dibayar)
+        $popularProducts = \App\Models\Product::with(['images'])
+            ->select('products.*')
+            ->selectSub(function($query) {
+                $query->selectRaw('COALESCE(SUM(order_details.qty), 0)')
+                    ->from('order_details')
+                    ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+                    ->whereColumn('order_details.product_id', 'products.product_id')
+                    ->where('orders.payment_status', 'paid');
+            }, 'total_sold')
+            ->orderBy('total_sold', 'desc')
+            ->limit(5)
+            ->get();
+        
+        // Data untuk chart penjualan produk (7 hari terakhir)
+        $salesChartData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->startOfDay();
+            $dateEnd = now()->subDays($i)->endOfDay();
+            
+            $salesCount = \App\Models\Order::whereBetween('created_at', [$date, $dateEnd])->count();
+            $salesChartData[] = [
+                'date' => $date->format('d M'),
+                'sales' => $salesCount
+            ];
+        }
+        
+        // Data penjualan produk per produk (top 5)
+        $productSalesData = \App\Models\OrderDetail::select('products.name', \DB::raw('SUM(order_details.qty) as total_sold'))
+            ->join('products', 'order_details.product_id', '=', 'products.product_id')
+            ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+            ->where('orders.created_at', '>=', $thisMonth)
+            ->where('orders.payment_status', 'paid')
+            ->groupBy('products.product_id', 'products.name')
+            ->orderBy('total_sold', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('dashboard.seller', compact(
+            'salesToday',
+            'salesThisMonth',
+            'activeProducts',
+            'activeTools',
+            'newReviews',
+            'newChats',
+            'totalRevenue',
+            'popularProducts',
+            'salesChartData',
+            'productSalesData'
+        ));
     })->name('dashboard');
     Route::get('/dashboard/products', function () {
-        $products = Product::with(['images', 'reviews'])->orderByDesc('created_at')->get();
+        $products = Product::with(['images', 'reviews.order'])->orderByDesc('created_at')->get();
         return view('dashboard.products', compact('products'));
     })->name('dashboard.products');
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');

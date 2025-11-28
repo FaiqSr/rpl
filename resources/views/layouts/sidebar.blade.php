@@ -225,6 +225,8 @@
   .sidebar-submenu {
     display: none;
     padding-left: 2.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
   }
   
   .sidebar-submenu.show {
@@ -238,17 +240,25 @@
     text-decoration: none;
     font-size: 0.875rem;
     transition: all 0.2s;
+    border-radius: 4px;
+    margin: 0.125rem 0;
   }
   
-  .sidebar-submenu a:hover,
+  .sidebar-submenu a:hover {
+    color: #22C55E;
+    background: #f8f9fa;
+  }
+  
   .sidebar-submenu a.active {
     color: #22C55E;
+    background: #f0fdf4;
+    font-weight: 500;
   }
   
   .chevron-icon {
     margin-left: auto;
     font-size: 0.7rem;
-    transition: transform 0.2s;
+    transition: transform 0.2s ease;
   }
   
   .chevron-icon.rotate {

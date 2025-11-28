@@ -198,23 +198,33 @@ async function loadAdminMessages(buyerId) {
         console.log('All messages sender_ids:', messages.map(m => m.sender_id));
         
         chatMessages.innerHTML = messages.map((msg, index) => {
-            // Admin: pesan dari admin = kanan, pesan dari buyer = kiri
-            // Logic WhatsApp: isMine = msg.sender_id === currentUserId
+            // Admin: pesan dari admin (role === 'admin' || role === 'seller') = kanan, pesan dari buyer = kiri
             // Convert to string untuk memastikan perbandingan benar
             const msgSenderId = String(msg.sender_id || '');
             const currentUserIdStr = String(currentUserId || '');
-            const isMine = msgSenderId === currentUserIdStr;
             
             // Deklarasi sender HARUS sebelum digunakan
             const sender = msg.sender || {};
             const senderName = sender.name || sender.email || 'User';
+            const senderRole = sender.role || '';
+            
+            // Cek apakah sender adalah admin (semua admin pesannya di kanan)
+            const isAdminMessage = senderRole === 'admin' || senderRole === 'seller';
+            // Atau cek apakah ini pesan dari admin yang sedang login
+            const isMine = msgSenderId === currentUserIdStr;
+            
+            // Pesan di kanan jika: dari admin manapun (termasuk admin lain) ATAU dari admin yang sedang login
+            const isRight = isAdminMessage || isMine;
             
             // Debug log untuk 3 pesan pertama
             if (index < 3) {
                 console.log(`Message ${index}:`, {
                     msg_sender_id: msgSenderId,
                     currentUserId: currentUserIdStr,
+                    sender_role: senderRole,
+                    isAdminMessage: isAdminMessage,
                     isMine: isMine,
+                    isRight: isRight,
                     message: msg.message?.substring(0, 20),
                     sender_name: senderName
                 });
@@ -223,15 +233,29 @@ async function loadAdminMessages(buyerId) {
             const time = formatTime(msg.created_at);
             const messageText = msg.message || '';
             
-            return `
-                <div class="chat-message ${isMine ? 'message-right' : 'message-left'}" data-message-id="${msg.message_id || msg.id}">
-                    ${!isMine ? `<div class="message-sender-name">${escapeHtml(senderName)}</div>` : ''}
-                    <div class="message-bubble">
-                        ${escapeHtml(messageText)}
+            // WhatsApp style: pesan dari admin (isRight) = kanan, pesan dari buyer = kiri
+            // Tidak tampilkan sender name untuk semua pesan (hanya bubble saja)
+            if (isRight) {
+                // Pesan dari admin (kanan)
+                return `
+                    <div class="chat-message message-right" data-message-id="${msg.message_id || msg.id}">
+                        <div class="message-bubble">
+                            ${escapeHtml(messageText)}
+                        </div>
+                        <div class="message-time">${time}</div>
                     </div>
-                    <div class="message-time">${time}</div>
-                </div>
-            `;
+                `;
+            } else {
+                // Pesan dari buyer (kiri)
+                return `
+                    <div class="chat-message message-left" data-message-id="${msg.message_id || msg.id}">
+                        <div class="message-bubble">
+                            ${escapeHtml(messageText)}
+                        </div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+            }
         }).join('');
 
         chatMessages.scrollTop = chatMessages.scrollHeight;

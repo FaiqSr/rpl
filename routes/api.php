@@ -669,31 +669,31 @@ Route::prefix('telegram')->name('telegram.')->group(function () {
     })->name('notification-status');
 });
 
-// Robot Status API Routes
-Route::prefix('robots')->name('robots.')->group(function () {
+// Tools Status API Routes
+Route::prefix('tools')->name('tools.')->group(function () {
     Route::get('/status', function () {
         try {
-            $robots = \App\Models\Robot::all()->map(function ($robot) {
+            $tools = \App\Models\Tools::all()->map(function ($tool) {
                 return [
-                    'robot_id' => $robot->robot_id,
-                    'name' => $robot->name,
-                    'model' => $robot->model,
-                    'location' => $robot->location,
-                    'operational_status' => $robot->operational_status,
-                    'status_text' => $robot->getStatusText(),
-                    'status_badge_class' => $robot->getStatusBadgeClass(),
-                    'battery_level' => $robot->battery_level,
-                    'last_activity_at' => $robot->last_activity_at?->toIso8601String(),
-                    'last_activity_text' => $robot->getLastActivityText(),
-                    'current_position' => $robot->current_position,
-                    'total_distance_today' => $robot->total_distance_today,
-                    'operating_hours_today' => $robot->operating_hours_today,
-                    'operating_hours_formatted' => gmdate('H:i', $robot->operating_hours_today * 60),
-                    'uptime_percentage' => $robot->uptime_percentage,
-                    'health_status' => $robot->health_status,
-                    'patrol_count_today' => $robot->patrol_count_today,
-                    'health_summary' => $robot->health_status ? 
-                        (collect($robot->health_status)->every(fn($v) => $v === 'normal' || $v === 'good') ? 
+                    'tool_id' => $tool->tool_id,
+                    'name' => $tool->name,
+                    'model' => $tool->model,
+                    'location' => $tool->location,
+                    'operational_status' => $tool->operational_status,
+                    'status_text' => $tool->getStatusText(),
+                    'status_badge_class' => $tool->getStatusBadgeClass(),
+                    'battery_level' => $tool->battery_level,
+                    'last_activity_at' => $tool->last_activity_at?->toIso8601String(),
+                    'last_activity_text' => $tool->getLastActivityText(),
+                    'current_position' => $tool->current_position,
+                    'total_distance_today' => $tool->total_distance_today,
+                    'operating_hours_today' => $tool->operating_hours_today,
+                    'operating_hours_formatted' => gmdate('H:i', $tool->operating_hours_today * 60),
+                    'uptime_percentage' => $tool->uptime_percentage,
+                    'health_status' => $tool->health_status,
+                    'patrol_count_today' => $tool->patrol_count_today,
+                    'health_summary' => $tool->health_status ? 
+                        (collect($tool->health_status)->every(fn($v) => $v === 'normal' || $v === 'good') ? 
                             'Semua sistem normal' : 'Perlu perhatian') : 
                         'Tidak diketahui'
                 ];
@@ -701,52 +701,52 @@ Route::prefix('robots')->name('robots.')->group(function () {
             
             return response()->json([
                 'success' => true,
-                'robots' => $robots,
+                'tools' => $tools,
                 'timestamp' => now()->toIso8601String()
             ]);
         } catch (\Exception $e) {
-            Log::error('Error fetching robot status: ' . $e->getMessage());
+            Log::error('Error fetching tool status: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memuat status robot',
+                'message' => 'Gagal memuat status alat',
                 'error' => $e->getMessage()
             ], 500);
         }
     })->name('status');
     
     // Start Patrol
-    Route::post('/{robotId}/start-patrol', function ($robotId) {
+    Route::post('/{toolId}/start-patrol', function ($toolId) {
         try {
-            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            $tool = \App\Models\Tools::where('tool_id', $toolId)->firstOrFail();
             
-            // Validasi: robot harus dalam status yang bisa di-start
-            if (!in_array($robot->operational_status, ['idle', 'offline', 'charging'])) {
+            // Validasi: alat harus dalam status yang bisa di-start
+            if (!in_array($tool->operational_status, ['idle', 'offline', 'charging'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Robot tidak dapat memulai patrol saat ini'
+                    'message' => 'Alat tidak dapat memulai patrol saat ini'
                 ], 400);
             }
             
             // Update status
-            $robot->update([
+            $tool->update([
                 'operational_status' => 'operating',
                 'last_activity_at' => now()
             ]);
             
             // Log activity
-            \App\Models\RobotActivity::create([
-                'robot_id' => $robotId,
+            \App\Models\ToolActivity::create([
+                'tool_id' => $toolId,
                 'activity_type' => 'patrol_start',
                 'description' => 'Patrol dimulai secara manual',
                 'occurred_at' => now()
             ]);
             
-            // TODO: Kirim command ke robot hardware (via MQTT/HTTP/Serial)
+            // TODO: Kirim command ke alat hardware (via MQTT/HTTP/Serial)
             
             return response()->json([
                 'success' => true,
                 'message' => 'Patrol berhasil dimulai',
-                'robot' => $robot->fresh()
+                'tool' => $tool->fresh()
             ]);
         } catch (\Exception $e) {
             Log::error('Error starting patrol: ' . $e->getMessage());
@@ -758,24 +758,24 @@ Route::prefix('robots')->name('robots.')->group(function () {
     })->name('start-patrol');
     
     // Stop Patrol
-    Route::post('/{robotId}/stop-patrol', function ($robotId) {
+    Route::post('/{toolId}/stop-patrol', function ($toolId) {
         try {
-            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            $tool = \App\Models\Tools::where('tool_id', $toolId)->firstOrFail();
             
-            if ($robot->operational_status !== 'operating') {
+            if ($tool->operational_status !== 'operating') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Robot tidak sedang beroperasi'
+                    'message' => 'Alat tidak sedang beroperasi'
                 ], 400);
             }
             
-            $robot->update([
+            $tool->update([
                 'operational_status' => 'idle',
                 'last_activity_at' => now()
             ]);
             
-            \App\Models\RobotActivity::create([
-                'robot_id' => $robotId,
+            \App\Models\ToolActivity::create([
+                'tool_id' => $toolId,
                 'activity_type' => 'patrol_end',
                 'description' => 'Patrol dihentikan secara manual',
                 'occurred_at' => now()
@@ -795,26 +795,26 @@ Route::prefix('robots')->name('robots.')->group(function () {
     })->name('stop-patrol');
     
     // Return to Base
-    Route::post('/{robotId}/return-to-base', function ($robotId) {
+    Route::post('/{toolId}/return-to-base', function ($toolId) {
         try {
-            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            $tool = \App\Models\Tools::where('tool_id', $toolId)->firstOrFail();
             
-            $robot->update([
+            $tool->update([
                 'operational_status' => 'charging',
                 'last_activity_at' => now()
             ]);
             
-            \App\Models\RobotActivity::create([
-                'robot_id' => $robotId,
+            \App\Models\ToolActivity::create([
+                'tool_id' => $toolId,
                 'activity_type' => 'position_update',
-                'description' => 'Robot kembali ke base station',
+                'description' => 'Alat kembali ke base station',
                 'position' => 'Base Station',
                 'occurred_at' => now()
             ]);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Robot sedang kembali ke base station'
+                'message' => 'Alat sedang kembali ke base station'
             ]);
         } catch (\Exception $e) {
             Log::error('Error returning to base: ' . $e->getMessage());
@@ -826,17 +826,17 @@ Route::prefix('robots')->name('robots.')->group(function () {
     })->name('return-to-base');
     
     // Emergency Stop
-    Route::post('/{robotId}/emergency-stop', function ($robotId) {
+    Route::post('/{toolId}/emergency-stop', function ($toolId) {
         try {
-            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            $tool = \App\Models\Tools::where('tool_id', $toolId)->firstOrFail();
             
-            $robot->update([
+            $tool->update([
                 'operational_status' => 'offline',
                 'last_activity_at' => now()
             ]);
             
-            \App\Models\RobotActivity::create([
-                'robot_id' => $robotId,
+            \App\Models\ToolActivity::create([
+                'tool_id' => $toolId,
                 'activity_type' => 'error',
                 'description' => 'EMERGENCY STOP - Dihentikan secara manual',
                 'occurred_at' => now()
@@ -855,13 +855,13 @@ Route::prefix('robots')->name('robots.')->group(function () {
         }
     })->name('emergency-stop');
     
-    // Get maintenance schedule untuk robot
-    Route::get('/{robotId}/maintenance', function ($robotId) {
+    // Get maintenance schedule untuk alat
+    Route::get('/{toolId}/maintenance', function ($toolId) {
         try {
-            $robot = \App\Models\Robot::where('robot_id', $robotId)->firstOrFail();
+            $tool = \App\Models\Tools::where('tool_id', $toolId)->firstOrFail();
             
             // Get upcoming maintenance
-            $upcoming = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+            $upcoming = \App\Models\ToolMaintenance::where('tool_id', $toolId)
                 ->whereIn('status', ['scheduled', 'in_progress'])
                 ->orderBy('scheduled_date', 'asc')
                 ->get()
@@ -881,13 +881,13 @@ Route::prefix('robots')->name('robots.')->group(function () {
                 });
             
             // Get next service date
-            $nextService = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+            $nextService = \App\Models\ToolMaintenance::where('tool_id', $toolId)
                 ->where('status', 'scheduled')
                 ->orderBy('scheduled_date', 'asc')
                 ->first();
             
             // Get maintenance history (last 5)
-            $history = \App\Models\RobotMaintenance::where('robot_id', $robotId)
+            $history = \App\Models\ToolMaintenance::where('tool_id', $toolId)
                 ->where('status', 'completed')
                 ->orderBy('completed_date', 'desc')
                 ->limit(5)
@@ -925,22 +925,22 @@ Route::prefix('robots')->name('robots.')->group(function () {
     })->name('maintenance');
 });
 
-// Tools/Robots CRUD API
+// Tools CRUD API
 Route::prefix('tools')->name('tools.')->group(function () {
-    // Get all tools (robots)
+    // Get all tools
     Route::get('/', function () {
         try {
-            $robots = \App\Models\Robot::all()->map(function ($robot) {
+            $tools = \App\Models\Tools::all()->map(function ($tool) {
                 return [
-                    'id' => $robot->id,
-                    'robot_id' => $robot->robot_id,
-                    'name' => $robot->name,
-                    'model' => $robot->model,
-                    'location' => $robot->location,
-                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive',
-                    'operational_status' => $robot->operational_status,
-                    'category' => 'Robot', // Default category
-                    'description' => 'Robot monitoring otomatis',
+                    'id' => $tool->id,
+                    'tool_id' => $tool->tool_id,
+                    'name' => $tool->name,
+                    'model' => $tool->model,
+                    'location' => $tool->location,
+                    'status' => $tool->operational_status === 'operating' || $tool->operational_status === 'idle' ? 'active' : 'inactive',
+                    'operational_status' => $tool->operational_status,
+                    'category' => 'Alat', // Default category
+                    'description' => 'Alat monitoring otomatis',
                     'rating' => 4, // Default rating
                     'image' => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"
                 ];
@@ -948,7 +948,7 @@ Route::prefix('tools')->name('tools.')->group(function () {
             
             return response()->json([
                 'success' => true,
-                'tools' => $robots
+                'tools' => $tools
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching tools: ' . $e->getMessage());
@@ -959,7 +959,7 @@ Route::prefix('tools')->name('tools.')->group(function () {
         }
     })->name('index');
     
-    // Create new tool (robot)
+    // Create new tool
     Route::post('/', function (Request $request) {
         try {
             $validated = $request->validate([
@@ -971,13 +971,13 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 'status' => 'nullable|string|in:active,inactive'
             ]);
             
-            // Generate robot_id
-            $robotId = 'CHICKPATROL-' . str_pad(\App\Models\Robot::count() + 1, 3, '0', STR_PAD_LEFT);
+            // Generate tool_id
+            $toolId = 'CHICKPATROL-' . str_pad(\App\Models\Tools::count() + 1, 3, '0', STR_PAD_LEFT);
             
             $operationalStatus = ($validated['status'] ?? 'active') === 'active' ? 'idle' : 'offline';
             
-            $robot = \App\Models\Robot::create([
-                'robot_id' => $robotId,
+            $tool = \App\Models\Tools::create([
+                'tool_id' => $toolId,
                 'name' => $validated['name'],
                 'model' => $validated['model'],
                 'location' => $validated['location'] ?? null,
@@ -996,12 +996,12 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 'success' => true,
                 'message' => 'Alat berhasil ditambahkan',
                 'tool' => [
-                    'id' => $robot->id,
-                    'robot_id' => $robot->robot_id,
-                    'name' => $robot->name,
-                    'model' => $robot->model,
-                    'location' => $robot->location,
-                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive'
+                    'id' => $tool->id,
+                    'tool_id' => $tool->tool_id,
+                    'name' => $tool->name,
+                    'model' => $tool->model,
+                    'location' => $tool->location,
+                    'status' => $tool->operational_status === 'operating' || $tool->operational_status === 'idle' ? 'active' : 'inactive'
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1019,10 +1019,10 @@ Route::prefix('tools')->name('tools.')->group(function () {
         }
     })->name('store');
     
-    // Update tool (robot)
+    // Update tool
     Route::put('/{id}', function (Request $request, $id) {
         try {
-            $robot = \App\Models\Robot::findOrFail($id);
+            $tool = \App\Models\Tools::findOrFail($id);
             
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
@@ -1034,10 +1034,10 @@ Route::prefix('tools')->name('tools.')->group(function () {
             ]);
             
             $operationalStatus = ($validated['status'] ?? 'active') === 'active' ? 
-                ($robot->operational_status === 'offline' ? 'idle' : $robot->operational_status) : 
+                ($tool->operational_status === 'offline' ? 'idle' : $tool->operational_status) : 
                 'offline';
             
-            $robot->update([
+            $tool->update([
                 'name' => $validated['name'],
                 'model' => $validated['model'],
                 'location' => $validated['location'] ?? null,
@@ -1048,12 +1048,12 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 'success' => true,
                 'message' => 'Alat berhasil diperbarui',
                 'tool' => [
-                    'id' => $robot->id,
-                    'robot_id' => $robot->robot_id,
-                    'name' => $robot->name,
-                    'model' => $robot->model,
-                    'location' => $robot->location,
-                    'status' => $robot->operational_status === 'operating' || $robot->operational_status === 'idle' ? 'active' : 'inactive'
+                    'id' => $tool->id,
+                    'tool_id' => $tool->tool_id,
+                    'name' => $tool->name,
+                    'model' => $tool->model,
+                    'location' => $tool->location,
+                    'status' => $tool->operational_status === 'operating' || $tool->operational_status === 'idle' ? 'active' : 'inactive'
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1071,11 +1071,11 @@ Route::prefix('tools')->name('tools.')->group(function () {
         }
     })->name('update');
     
-    // Delete tool (robot)
+    // Delete tool
     Route::delete('/{id}', function ($id) {
         try {
-            $robot = \App\Models\Robot::findOrFail($id);
-            $robot->delete();
+            $tool = \App\Models\Tools::findOrFail($id);
+            $tool->delete();
             
             return response()->json([
                 'success' => true,

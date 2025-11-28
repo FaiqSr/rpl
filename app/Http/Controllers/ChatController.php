@@ -13,23 +13,61 @@ use Illuminate\Support\Facades\Log;
 class ChatController extends Controller
 {
     /**
+     * Helper function: Get admin dengan chat paling sedikit (load balancing)
+     * Distribusikan chat secara merata ke semua admin
+     */
+    private function getAdminWithLeastChats()
+    {
+        // Get all admins
+        $admins = User::where('role', 'admin')->get();
+        if ($admins->isEmpty()) {
+            // Fallback to seller
+            $admins = User::where('role', 'seller')->get();
+        }
+        
+        if ($admins->isEmpty()) {
+            throw new \Exception('Admin not found');
+        }
+        
+        // Jika hanya ada 1 admin, langsung return
+        if ($admins->count() === 1) {
+            return $admins->first();
+        }
+        
+        // Hitung jumlah chat per admin dan pilih yang paling sedikit
+        $adminChatCounts = $admins->map(function($admin) {
+            $chatCount = Chat::where('seller_id', $admin->user_id)->count();
+            return [
+                'admin' => $admin,
+                'chat_count' => $chatCount
+            ];
+        });
+        
+        // Sort by chat count (ascending) dan ambil yang pertama
+        $selected = $adminChatCounts->sortBy('chat_count')->first();
+        
+        return $selected['admin'];
+    }
+    
+    /**
      * Helper function: Get or create chat untuk buyer dan admin
      * Memastikan buyer dan admin selalu menggunakan chat_id yang sama
      */
     private function getOrCreateChatForBuyer($buyerId, $orderId = null)
     {
-        // Get admin/seller (first admin, fallback to seller)
-        // PENTING: Gunakan seller yang sama di semua fungsi
-        $seller = User::where('role', 'admin')->orderBy('created_at', 'asc')->first();
-        if (!$seller) {
-            $seller = User::where('role', 'seller')->orderBy('created_at', 'asc')->first();
-        }
+        // Cek apakah buyer sudah punya chat dengan admin manapun
+        $existingChat = Chat::where('buyer_id', $buyerId)
+            ->whereNull('order_id')
+            ->first();
         
-        if (!$seller) {
-            throw new \Exception('Admin not found');
+        if ($existingChat) {
+            // Jika sudah ada chat, gunakan admin yang sama
+            $sellerId = $existingChat->seller_id;
+        } else {
+            // Jika belum ada chat, pilih admin dengan chat paling sedikit
+            $seller = $this->getAdminWithLeastChats();
+            $sellerId = $seller->user_id;
         }
-        
-        $sellerId = $seller->user_id;
         
         // SOLUSI: Selalu gunakan general chat (tanpa order_id) untuk memastikan semua chat terhubung
         // Bahkan jika dipanggil dari halaman orders, tetap gunakan general chat
@@ -68,49 +106,35 @@ class ChatController extends Controller
     
     /**
      * Helper function: Get chat untuk admin berdasarkan buyer_id
-     * Memastikan admin menggunakan chat_id yang sama dengan buyer
-     * SELALU gunakan general chat (tanpa order_id) untuk konsistensi
+     * Semua admin bisa akses semua chat buyer (tidak perlu cek seller_id)
      */
     private function getChatForAdmin($buyerId, $adminId)
     {
-        // Get admin/seller yang sama dengan yang digunakan buyer
-        $seller = User::where('role', 'admin')->orderBy('created_at', 'asc')->first();
-        if (!$seller) {
-            $seller = User::where('role', 'seller')->orderBy('created_at', 'asc')->first();
-        }
-        
-        if (!$seller) {
-            throw new \Exception('Admin not found');
-        }
-        
-        $sellerId = $seller->user_id;
-        
-        // SELALU gunakan general chat (tanpa order_id) untuk memastikan konsistensi
-        // Ini memastikan admin dan buyer selalu menggunakan chat_id yang sama
+        // Cari general chat dengan buyer_id tersebut (semua admin bisa akses)
         $chat = Chat::where('buyer_id', $buyerId)
-            ->where('seller_id', $sellerId)
             ->whereNull('order_id') // Hanya general chat
             ->first();
-
-        // If no general chat found, create a new one
+        
+        // Jika tidak ada chat, buat chat baru dengan admin yang memiliki chat paling sedikit
         if (!$chat) {
+            $seller = $this->getAdminWithLeastChats();
             $chat = Chat::create([
                 'buyer_id' => $buyerId,
-                'seller_id' => $sellerId,
+                'seller_id' => $seller->user_id,
             ]);
             
-            Log::info('getChatForAdmin - New general chat created', [
+            Log::info('getChatForAdmin - New chat created', [
                 'chat_id' => $chat->chat_id,
                 'buyer_id' => $buyerId,
-                'seller_id' => $sellerId,
-                'admin_user_id' => $adminId
+                'seller_id' => $seller->user_id,
+                'admin_id' => $adminId
             ]);
         } else {
-            Log::info('getChatForAdmin - General chat found', [
+            Log::info('getChatForAdmin - Chat found', [
                 'chat_id' => $chat->chat_id,
                 'buyer_id' => $buyerId,
-                'seller_id' => $sellerId,
-                'admin_user_id' => $adminId,
+                'seller_id' => $chat->seller_id,
+                'admin_id' => $adminId,
                 'last_message_at' => $chat->last_message_at
             ]);
         }
@@ -132,23 +156,29 @@ class ChatController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            // Admin/Seller: Get all chats dengan daftar buyer
+            // Admin/Seller: Get all chats dengan daftar buyer (semua admin melihat semua chat)
             if ($user->role === 'admin' || $user->role === 'seller') {
-                $chats = Chat::with(['buyer', 'order'])
-                    ->where('seller_id', $user->user_id)
+                // Semua admin melihat semua chat, tidak hanya chat dengan seller_id mereka
+                $chats = Chat::with(['buyer', 'order', 'seller'])
+                    ->whereNotNull('seller_id') // Hanya chat yang punya seller_id (chat dengan admin)
                     ->orderBy('last_message_at', 'desc')
                     ->get()
-                    ->map(function($chat) {
+                    ->map(function($chat) use ($user) {
+                        // Hitung unread count untuk admin ini (semua admin melihat unread count yang sama)
+                        $unreadCount = $chat->seller_unread_count ?? 0;
+                        
                         return [
                             'chat_id' => $chat->chat_id,
                             'buyer_id' => $chat->buyer_id,
                             'buyer_name' => $chat->buyer->name ?? $chat->buyer->email ?? 'Pembeli',
                             'buyer_email' => $chat->buyer->email ?? '',
+                            'seller_id' => $chat->seller_id,
+                            'seller_name' => $chat->seller->name ?? 'Admin',
                             'order_id' => $chat->order_id,
                             'order_info' => $chat->order ? 'Pesanan #' . substr($chat->order_id, 0, 8) : null,
                             'last_message' => $chat->last_message,
                             'last_message_at' => $chat->last_message_at,
-                            'unread_count' => $chat->seller_unread_count ?? 0,
+                            'unread_count' => $unreadCount,
                         ];
                     });
 
@@ -261,18 +291,10 @@ class ChatController extends Controller
                 }
             }
             
-            // Admin/Seller: bisa akses chat dengan seller_id yang sesuai
+            // Admin/Seller: semua admin bisa akses semua chat
             if ($user->role === 'admin' || $user->role === 'seller') {
-                // Get seller yang digunakan buyer
-                $seller = User::where('role', 'admin')->orderBy('created_at', 'asc')->first();
-                if (!$seller) {
-                    $seller = User::where('role', 'seller')->orderBy('created_at', 'asc')->first();
-                }
-                
-                // Admin bisa akses jika chat menggunakan seller_id yang sama dengan yang digunakan buyer
-                if ($seller && $chat->seller_id !== $seller->user_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-                }
+                // Semua admin bisa akses semua chat (tidak perlu cek seller_id)
+                // Tidak ada validasi, semua admin bisa akses
         }
 
         // Mark messages as read
@@ -336,10 +358,12 @@ class ChatController extends Controller
                             'user_id' => (string) $sender->user_id, // Convert to string
                             'name' => $sender->name ?? '',
                             'email' => $sender->email ?? '',
+                            'role' => $sender->role ?? '',
                         ] : [
                             'user_id' => (string) ($msg->sender_id ?? ''),
                             'name' => 'Unknown User',
                             'email' => '',
+                            'role' => '',
                         ],
                     ];
                 });
@@ -388,18 +412,10 @@ class ChatController extends Controller
                 }
             }
             
-            // Admin/Seller: bisa kirim ke chat dengan seller_id yang sesuai
+            // Admin/Seller: semua admin bisa kirim ke semua chat
             if ($user->role === 'admin' || $user->role === 'seller') {
-                // Get seller yang digunakan buyer
-                $seller = User::where('role', 'admin')->orderBy('created_at', 'asc')->first();
-                if (!$seller) {
-                    $seller = User::where('role', 'seller')->orderBy('created_at', 'asc')->first();
-                }
-                
-                // Admin bisa kirim jika chat menggunakan seller_id yang sama dengan yang digunakan buyer
-                if ($seller && $chat->seller_id !== $seller->user_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+                // Semua admin bisa kirim ke semua chat (tidak perlu cek seller_id)
+                // Tidak ada validasi, semua admin bisa kirim
             }
 
             // Create message - PASTIKAN sender_id = user yang sedang login
@@ -483,7 +499,8 @@ class ChatController extends Controller
             }
 
             if ($user->role === 'admin' || $user->role === 'seller') {
-            $count = Chat::where('seller_id', $user->user_id)
+            // Semua admin melihat total unread count dari semua chat
+            $count = Chat::whereNotNull('seller_id')
                 ->sum('seller_unread_count');
         } else {
             $count = Chat::where('buyer_id', $user->user_id)
@@ -509,19 +526,19 @@ class ChatController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
 
-            // Get distinct buyers who have chats with this admin
+            // Get distinct buyers who have chats (semua admin melihat semua buyer)
             $buyers = Chat::with('buyer')
-                ->where('seller_id', $user->user_id)
+                ->whereNotNull('seller_id')
                 ->select('buyer_id')
                 ->distinct()
                 ->get()
-                ->map(function($chat) use ($user) {
+                ->map(function($chat) {
                     $buyer = $chat->buyer;
                     if (!$buyer) return null;
                     
                     // Get unread count for this buyer (sum dari semua chat dengan buyer ini)
-                    $unreadCount = Chat::where('seller_id', $user->user_id)
-                        ->where('buyer_id', $buyer->user_id)
+                    $unreadCount = Chat::where('buyer_id', $buyer->user_id)
+                        ->whereNotNull('seller_id')
                         ->sum('seller_unread_count');
                     
                     return [
@@ -555,7 +572,7 @@ class ChatController extends Controller
                 return response()->json(['error' => 'Unauthorized'], 403);
             }
 
-            // Gunakan helper function untuk memastikan chat_id sama dengan buyer
+            // Gunakan helper function untuk mendapatkan chat buyer (semua admin bisa akses)
             $chat = $this->getChatForAdmin($buyerId, $user->user_id);
             
             Log::info('Admin getMessagesByBuyer - Response', [
@@ -620,10 +637,12 @@ class ChatController extends Controller
                             'user_id' => (string) $sender->user_id, // Convert to string
                             'name' => $sender->name ?? '',
                             'email' => $sender->email ?? '',
+                            'role' => $sender->role ?? '',
                         ] : [
                             'user_id' => (string) ($msg->sender_id ?? ''),
                             'name' => 'Unknown User',
                             'email' => '',
+                            'role' => '',
                         ],
                     ];
                 });
@@ -664,20 +683,9 @@ class ChatController extends Controller
                 return response()->json(['error' => 'Buyer not found'], 404);
             }
 
-            // Get seller ID (same logic as in getChatForAdmin)
-            $seller = User::where('role', 'admin')->orderBy('created_at', 'asc')->first();
-            if (!$seller) {
-                $seller = User::where('role', 'seller')->orderBy('created_at', 'asc')->first();
-            }
-            
-            if (!$seller) {
-                return response()->json(['error' => 'Seller not found'], 404);
-            }
-
-            // IMPORTANT: Only find chats between THIS SPECIFIC buyer and seller
-            // This ensures we only delete chat from the selected buyer, not all buyers
+            // IMPORTANT: Only find chats between THIS SPECIFIC buyer
+            // Semua admin bisa delete chat buyer (tidak perlu cek seller_id)
             $chats = Chat::where('buyer_id', $buyerId)
-                ->where('seller_id', $seller->user_id)
                 ->get();
             
             if ($chats->isEmpty()) {

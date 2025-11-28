@@ -163,6 +163,10 @@ async function loadBuyerMessages() {
       // Deklarasi sender HARUS sebelum digunakan
       const sender = msg.sender || {};
       const senderName = sender.name || sender.email || 'User';
+      const senderRole = sender.role || '';
+      
+      // Cek apakah sender adalah admin (jika admin, jangan tampilkan nama)
+      const isAdminMessage = senderRole === 'admin' || senderRole === 'seller';
       
       // Debug log untuk 3 pesan pertama
       if (index < 3) {
@@ -170,6 +174,8 @@ async function loadBuyerMessages() {
           msg_sender_id: msgSenderId,
           currentUserId: currentUserIdStr,
           isMine: isMine,
+          sender_role: senderRole,
+          isAdminMessage: isAdminMessage,
           message: msg.message?.substring(0, 20),
           sender_name: senderName
         });
@@ -181,9 +187,10 @@ async function loadBuyerMessages() {
       // Pastikan class diterapkan dengan benar
       const messageClass = isMine ? 'message-right' : 'message-left';
       
+      // Tidak tampilkan sender name untuk semua pesan (hanya bubble saja)
+      
       return `
         <div class="chat-message ${messageClass}">
-          ${!isMine ? `<div class="message-sender-name">${escapeHtml(senderName)}</div>` : ''}
           <div class="message-bubble">
             ${escapeHtml(messageText)}
           </div>

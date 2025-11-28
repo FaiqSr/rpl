@@ -59,13 +59,6 @@ class UserSeeder extends Seeder
             ]
         );
 
-        // 3. Buat 10 pengguna biasa,
-        // dan untuk setiap pengguna, buat 1 atau 2 alamat
-        // (Mengasumsikan ada relasi 'addresses' di model User)
-        User::factory()
-            ->count(10)
-            ->state(fn(array $attributes) => ['role' => 'visitor'])
-            ->hasAddresses(rand(1, 2))
-            ->create();
+        // User dummy tidak dibuat lagi - user pelanggan hanya dibuat melalui registrasi
     }
 }
