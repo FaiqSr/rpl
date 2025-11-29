@@ -50,4 +50,49 @@ class ThresholdProfile extends Model
         }
         return $thresholds;
     }
+
+    /**
+     * Get active threshold profile berdasarkan threshold values yang paling baru di-update
+     * Ini digunakan untuk Telegram notification agar selalu menggunakan threshold terbaru yang di-setting
+     * 
+     * Logika:
+     * 1. Ambil profile yang threshold values-nya paling baru di-update (menunjukkan threshold yang baru saja di-setting)
+     * 2. Jika tidak ada, gunakan profile default
+     * 3. Jika tidak ada default, gunakan profile pertama yang ada
+     * 
+     * @return ThresholdProfile|null
+     */
+    public static function getActiveProfile(): ?self
+    {
+        // Ambil profile berdasarkan threshold values yang paling baru di-update
+        // Ini menunjukkan threshold mana yang baru saja di-setting oleh user
+        // Gunakan subquery untuk mendapatkan profile_id dengan threshold value terbaru
+        $profileId = \App\Models\ThresholdValue::select('profile_id')
+            ->orderBy('updated_at', 'desc')
+            ->limit(1)
+            ->value('profile_id');
+        
+        if ($profileId) {
+            $profile = self::where('id', $profileId)
+                ->with('thresholdValues')
+                ->first();
+            
+            if ($profile) {
+                return $profile;
+            }
+        }
+        
+        // Jika tidak ada profile dengan threshold values, coba ambil default profile
+        $profile = self::where('is_default', true)
+            ->with('thresholdValues')
+            ->first();
+        
+        // Jika masih tidak ada, ambil profile pertama yang ada
+        if (!$profile) {
+            $profile = self::with('thresholdValues')
+                ->first();
+        }
+        
+        return $profile;
+    }
 }

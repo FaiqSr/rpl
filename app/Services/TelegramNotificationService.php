@@ -50,7 +50,7 @@ class TelegramNotificationService
      * @param array $history_24h History 24 jam terakhir untuk trend analysis (optional)
      * @return bool
      */
-    public function sendMonitoringNotification($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds = [], $history_24h = [])
+    public function sendMonitoringNotification($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds = [], $history_24h = [], $forecast_summary_24h = null)
     {
         // Check if Telegram notifications are enabled
         // Read directly from .env file to ensure latest value (bypass config cache)
@@ -68,8 +68,8 @@ class TelegramNotificationService
         }
 
         try {
-            // Format pesan dengan template lengkap - pass history_24h juga
-            $message = $this->buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds, $history_24h);
+            // Format pesan dengan template lengkap - pass history_24h dan forecast_summary_24h juga
+            $message = $this->buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds, $history_24h, $forecast_summary_24h);
             
             // Check message length (Telegram limit is 4096 characters)
             if (mb_strlen($message) > 4096) {
@@ -194,17 +194,28 @@ class TelegramNotificationService
     /**
      * Build laporan Telegram sesuai format baru yang lebih sederhana
      */
-    protected function buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds = [], $history_24h = [])
+    protected function buildTelegramReport($latest, $status, $prediction_6h, $anomalies, $forecast_summary_6h, $thresholds = [], $history_24h = [], $forecast_summary_24h = null)
     {
         // Use thresholds from database if provided, otherwise use defaults
+        // Threshold ini HARUS sama dengan yang digunakan di web monitoring
         $defaultThresholds = [
-            'temperature' => ['ideal_min' => 23, 'ideal_max' => 34],
-            'humidity' => ['ideal_min' => 50, 'ideal_max' => 70],
-            'ammonia' => ['ideal_max' => 20],
+            'temperature' => ['ideal_min' => 23, 'ideal_max' => 34, 'danger_low' => 20, 'danger_high' => 37],
+            'humidity' => ['ideal_min' => 50, 'ideal_max' => 70, 'warn_low' => 50, 'warn_high' => 80, 'danger_high' => 80],
+            'ammonia' => ['ideal_max' => 20, 'warn_max' => 35, 'danger_max' => 35],
             'light' => ['ideal_low' => 20, 'ideal_high' => 40, 'warn_low' => 10, 'warn_high' => 60]
         ];
         
         $effectiveThresholds = !empty($thresholds) ? $thresholds : $defaultThresholds;
+        
+        // Log threshold yang digunakan untuk debugging (hanya jika ada perbedaan)
+        if (!empty($thresholds)) {
+            Log::debug('TelegramNotificationService - Thresholds used', [
+                'temperature' => $effectiveThresholds['temperature'] ?? null,
+                'humidity' => $effectiveThresholds['humidity'] ?? null,
+                'ammonia' => $effectiveThresholds['ammonia'] ?? null,
+                'light' => $effectiveThresholds['light'] ?? null,
+            ]);
+        }
         
         // Helper: Get status text untuk parameter (SAMA DENGAN WEB MONITORING)
         $getParameterStatus = function($value, $type) use ($effectiveThresholds) {
@@ -224,6 +235,7 @@ class TelegramNotificationService
                     return '⚠ Perlu Perhatian';
                 }
             } elseif ($type === 'humidity') {
+                // SAMA PERSIS DENGAN WEB MONITORING getSensorStatus untuk humidity
                 $idealMin = $t['ideal_min'] ?? 50;
                 $idealMax = $t['ideal_max'] ?? 70;
                 $warnLow = $t['warn_low'] ?? 50;
@@ -237,7 +249,10 @@ class TelegramNotificationService
                 } elseif ($value < $warnLow || ($value > $idealMax && $value <= $warnHigh)) {
                     return '⚠ Perlu Perhatian';
                 }
+                // Default fallback jika tidak masuk kondisi di atas
+                return '⚠ Perlu Perhatian';
             } elseif ($type === 'ammonia') {
+                // SAMA PERSIS DENGAN WEB MONITORING getSensorStatus untuk ammonia
                 $idealMax = $t['ideal_max'] ?? 20;
                 $warnMax = $t['warn_max'] ?? 35;
                 $dangerMax = $t['danger_max'] ?? 35;
@@ -249,16 +264,19 @@ class TelegramNotificationService
                 } elseif ($value > $warnMax) {
                     return '⚠ Perlu Perhatian';
                 }
+                // Default fallback jika tidak masuk kondisi di atas
+                return '🟢 Aman';
             } elseif ($type === 'light') {
-                // Light: SAMA PERSIS DENGAN FRONTEND - TIDAK membagi 10 untuk status check
-                // Frontend menggunakan nilai langsung (51.3, bukan 5.13) untuk status check
-                $lightValue = $value; // Nilai langsung dari database (51.3, bukan 5.13)
+                // SAMA PERSIS DENGAN WEB MONITORING getSensorStatus untuk light
+                // Untuk cahaya, nilai aktual ratusan dibandingkan dengan threshold 10-60
+                // Web monitoring menggunakan nilai langsung tanpa konversi
+                $lightValue = $value; // Nilai langsung dari database (51.3)
                 $idealLow = $t['ideal_low'] ?? 20;
                 $idealHigh = $t['ideal_high'] ?? 40;
                 $warnLow = $t['warn_low'] ?? 10;
                 $warnHigh = $t['warn_high'] ?? 60;
                 
-                // Logika SAMA PERSIS dengan frontend getSensorStatus untuk light
+                // Logika SAMA PERSIS dengan frontend getSensorStatus untuk light (baris 960-969)
                 if ($lightValue >= $idealLow && $lightValue <= $idealHigh) {
                     return '🟢 Aman';
                 } elseif ($lightValue < $warnLow || $lightValue > $warnHigh) {
@@ -366,10 +384,20 @@ class TelegramNotificationService
             $pred6Items = ['Data prediksi tidak tersedia'];
         }
         
-        // History 24 Jam Terakhir - hitung trend dari data history yang sebenarnya (SAMA DENGAN WEB MONITORING)
+        // Prediksi 24 Jam - Gunakan forecast_summary_24h yang sudah di-generate (SAMA PERSIS DENGAN WEB MONITORING)
+        // Web monitoring menggunakan forecast_summary_24h langsung dari API dan menampilkan summary lengkap
         $history24Items = [];
-        if (!empty($history_24h) && is_array($history_24h) && count($history_24h) > 0) {
-            // Generate forecast summary untuk history 24 jam (SAMA DENGAN WEB MONITORING)
+        if (!empty($forecast_summary_24h) && is_array($forecast_summary_24h)) {
+            // Gunakan forecast_summary_24h yang sudah di-generate (SAMA PERSIS dengan web monitoring)
+            // Format di web: "Suhu menurun (29.31–33.22 °C) potensi keluar batas aman"
+            foreach ($forecast_summary_24h as $forecast) {
+                if (isset($forecast['summary'])) {
+                    // Langsung gunakan summary dari forecast_summary_24h (SAMA PERSIS dengan web monitoring)
+                    $history24Items[] = $forecast['summary'];
+                }
+            }
+        } elseif (!empty($history_24h) && is_array($history_24h) && count($history_24h) > 0) {
+            // Fallback: Generate forecast summary untuk history 24 jam jika forecast_summary_24h tidak ada
             $generateHistorySummary = function($series, $metric, $unit, $safeLow, $safeHigh) {
                 if (empty($series) || !is_array($series)) {
                     return "{$metric}: Data tidak tersedia";
@@ -425,10 +453,22 @@ class TelegramNotificationService
             $history24Items = ['Data history tidak tersedia'];
         }
         
-        // Deteksi Anomali
+        // Deteksi Anomali - SAMA PERSIS DENGAN WEB MONITORING formatAnomalyDescription
         $anomalyList = [];
         if (!empty($anomalies) && is_array($anomalies)) {
-            foreach (array_slice($anomalies, 0, 5) as $anomaly) {
+            // Sort anomali: critical dulu, lalu warning (SAMA DENGAN WEB MONITORING renderAnomalies)
+            $sortedAnomalies = $anomalies;
+            usort($sortedAnomalies, function($a, $b) {
+                $severityOrder = ['critical' => 0, 'warning' => 1, 'normal' => 2];
+                $aSeverity = $severityOrder[$a['severity'] ?? 'normal'] ?? 2;
+                $bSeverity = $severityOrder[$b['severity'] ?? 'normal'] ?? 2;
+                if ($aSeverity !== $bSeverity) {
+                    return $aSeverity - $bSeverity; // Critical dulu
+                }
+                return 0;
+            });
+            
+            foreach (array_slice($sortedAnomalies, 0, 5) as $index => $anomaly) {
                 $sensorEmoji = [
                     'temperature' => '🌡',
                     'humidity' => '💧',
@@ -438,13 +478,15 @@ class TelegramNotificationService
                 $sensorName = [
                     'temperature' => 'Temperature',
                     'humidity' => 'Humidity',
+                    'ammonia' => 'Ammonia',
                     'light' => 'Light'
                 ];
                 
-                $type = $anomaly['type'] ?? 'unknown';
+                $type = strtolower($anomaly['type'] ?? 'unknown');
                 $emoji = $sensorEmoji[$type] ?? '•';
                 $name = $sensorName[$type] ?? ucfirst($type);
                 
+                // Get value dari anomaly atau latest
                 $value = isset($anomaly['value']) ? (float)$anomaly['value'] : (float)($latest[$type] ?? 0);
                 
                 // Get unit
@@ -459,19 +501,69 @@ class TelegramNotificationService
                     $unit = 'lux';
                 }
                 
-                // Extract z-score if available
-                $zScore = '';
-                $message = $anomaly['message'] ?? '';
-                if (preg_match('/z[=\s:]+([\d.]+)/i', $message, $zMatches)) {
-                    $zScore = ' — z-score: ' . round((float)$zMatches[1], 2);
-                } elseif ($type === 'humidity') {
-                    // For humidity, show threshold (use ideal_min as safe threshold)
-                    $threshold = $effectiveThresholds['humidity']['ideal_min'] ?? 50;
-                    $zScore = ' — *batas aman: ' . $threshold . '%*';
+                // Format timestamp SAMA DENGAN WEB MONITORING formatAnomalyTime
+                $formattedTime = '';
+                if (isset($anomaly['time'])) {
+                    try {
+                        $anomalyTime = is_string($anomaly['time']) ? strtotime($anomaly['time']) : $anomaly['time'];
+                        if ($anomalyTime) {
+                            $date = new \DateTime('@' . $anomalyTime);
+                            $date->setTimezone(new \DateTimeZone('Asia/Jakarta'));
+                            $formattedTime = $date->format('Y-m-d H:00');
+                        }
+                    } catch (\Exception $e) {
+                        // Fallback: gunakan waktu saat ini dikurangi index (jam yang lalu)
+                        $hoursAgo = min($index, 24);
+                        $displayTime = now()->subHours($hoursAgo);
+                        $formattedTime = $displayTime->format('Y-m-d H:00');
+                    }
+                } else {
+                    // Fallback: gunakan waktu saat ini dikurangi index (jam yang lalu)
+                    $hoursAgo = min($index, 24);
+                    $displayTime = now()->subHours($hoursAgo);
+                    $formattedTime = $displayTime->format('Y-m-d H:00');
                 }
                 
-                // Format sesuai contoh: "• 💧 Humidity (49.8%) — *batas aman: 40%*"
-                $anomalyList[] = "• {$emoji} {$name} (" . round($value, 1) . " {$unit}){$zScore}";
+                // Format anomali SAMA PERSIS DENGAN WEB MONITORING formatAnomalyDescription
+                // Format di web: "Nilai: 49.8 % (batas aman: 40.0 %)" atau "Nilai: 51.3 lux (z-score: 1.09)"
+                $message = $anomaly['message'] ?? '';
+                $formattedValue = round($value, 1);
+                
+                // Cek apakah ada z-score di message (SAMA DENGAN WEB MONITORING)
+                $zScoreMatch = null;
+                if (preg_match('/z[-\s]*score[:\s]+([\d.]+)/i', $message, $zMatches)) {
+                    $zScore = round((float)$zMatches[1], 2);
+                    // Format: "Nilai: X unit (z-score: Z)" - SAMA DENGAN WEB MONITORING
+                    $anomalyList[] = "• {$emoji} {$name}\n  {$formattedTime}\n  Nilai: {$formattedValue} {$unit} (z-score: {$zScore})";
+                } else {
+                    // Tentukan threshold berdasarkan sensor type dari effectiveThresholds (SAMA DENGAN WEB MONITORING)
+                    $safeThreshold = '';
+                    $thresholdUnit = $unit;
+                    if ($type === 'temperature' || $type === 'suhu') {
+                        $max = $effectiveThresholds['temperature']['ideal_max'] ?? 34;
+                        $safeThreshold = round($max, 1);
+                        $thresholdUnit = '°C';
+                    } elseif ($type === 'humidity' || $type === 'kelembaban') {
+                        $max = $effectiveThresholds['humidity']['ideal_max'] ?? 70;
+                        $safeThreshold = round($max, 1);
+                        $thresholdUnit = '%';
+                    } elseif ($type === 'ammonia' || $type === 'amoniak') {
+                        $max = $effectiveThresholds['ammonia']['ideal_max'] ?? 20;
+                        $safeThreshold = round($max, 1);
+                        $thresholdUnit = ' ppm';
+                    } elseif ($type === 'light' || $type === 'cahaya') {
+                        $max = $effectiveThresholds['light']['ideal_high'] ?? 40;
+                        $safeThreshold = round($max, 1);
+                        $thresholdUnit = ' lux';
+                    }
+                    
+                    if ($safeThreshold) {
+                        // Format: "Nilai: X unit (batas aman: Y unit)" - SAMA DENGAN WEB MONITORING
+                        $anomalyList[] = "• {$emoji} {$name}\n  {$formattedTime}\n  Nilai: {$formattedValue} {$unit} (batas aman: {$safeThreshold}{$thresholdUnit})";
+                    } else {
+                        $anomalyList[] = "• {$emoji} {$name}\n  {$formattedTime}\n  Nilai: {$formattedValue} {$unit}";
+                    }
+                }
             }
         }
         

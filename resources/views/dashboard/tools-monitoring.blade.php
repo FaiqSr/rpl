@@ -2057,7 +2057,7 @@
         // Ini memastikan forecast_summary selalu sesuai dengan threshold yang aktif
         // Helper function untuk generate forecast summary
         const generateForecastSummary = (predictionData) => {
-          const sum = (series, metric, unit, low, high) => {
+            const sum = (series, metric, unit, low, high) => {
             if (!series || !Array.isArray(series) || series.length === 0) {
               return { metric, summary: `${metric} tidak tersedia`, range: {min: 0, max: 0, unit}, trend: 'stabil', risk: 'dalam kisaran aman' };
             }

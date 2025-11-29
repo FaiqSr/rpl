@@ -152,34 +152,28 @@ class SendTelegramNotification extends Command
             ]);
             
             $pred6 = $mlResults['prediction_6h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
+            $pred24 = $mlResults['prediction_24h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
             $mlStatus = $mlResults['status'] ?? ['label' => 'tidak diketahui', 'severity' => 'warning', 'message' => 'Status tidak dapat ditentukan'];
             $anomalies = $mlResults['anomalies'] ?? [];
             // Gunakan forecast_summary dari ML service jika ada (SAMA DENGAN WEB MONITORING)
             $forecast6SummaryFromML = $mlResults['forecast_summary_6h'] ?? null;
+            $forecast24SummaryFromML = $mlResults['forecast_summary_24h'] ?? null;
             
             // ============================================
             // APPLY SAME LOGIC AS WEB MONITORING
             // ============================================
             // Get threshold from database (ALWAYS FRESH - no cache) - SAMA PERSIS DENGAN WEB MONITORING
-            // Gunakan profile yang sama dengan web monitoring untuk konsistensi data
-            // Web monitoring menggunakan profile dari query parameter atau 'default', tapi sering menggunakan '1-7'
-            // Untuk Telegram, kita gunakan '1-7' agar sesuai dengan web monitoring
-            $profileKey = env('TELEGRAM_THRESHOLD_PROFILE', '1-7');
-            
+            // Gunakan profile yang paling baru di-update dari database (dinamis)
+            // Ini memastikan Telegram notification selalu menggunakan threshold terbaru yang di-setting
+            // Web monitoring menggunakan profile dari localStorage 'selectedThresholdProfile' atau query parameter 'profile'
+            // Untuk Telegram, kita ambil profile yang paling baru di-update dari database
             // Force fresh query - clear any model cache (SAMA PERSIS DENGAN WEB MONITORING)
             \App\Models\ThresholdProfile::clearBootedModels();
             \App\Models\ThresholdValue::clearBootedModels();
             
-            $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', $profileKey)
-                ->with('thresholdValues')
-                ->first();
-            
-            // Jika profile tidak ditemukan, gunakan default (SAMA PERSIS DENGAN WEB MONITORING)
-            if (!$thresholdProfile) {
-                $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', 'default')
-                    ->with('thresholdValues')
-                    ->first();
-            }
+            // Ambil active profile (profile yang paling baru di-update)
+            $thresholdProfile = \App\Models\ThresholdProfile::getActiveProfile();
+            $profileKey = $thresholdProfile ? $thresholdProfile->profile_key : 'default';
             
             // Map threshold dari database format ke format yang digunakan di kode (SAMA PERSIS DENGAN WEB MONITORING)
             $thresholds = [];
@@ -219,12 +213,15 @@ class SendTelegramNotification extends Command
             }
             
             // Log threshold yang digunakan (SAMA PERSIS DENGAN WEB MONITORING)
-            Log::info('=== TELEGRAM NOTIFICATION - THRESHOLD YANG DIGUNAKAN ===', [
+            // Profile diambil secara dinamis dari database berdasarkan threshold values yang paling baru di-update
+            // Ini memastikan Telegram notification selalu menggunakan threshold terbaru yang di-setting
+            Log::info('=== TELEGRAM NOTIFICATION - THRESHOLD YANG DIGUNAKAN (DINAMIS DARI DATABASE) ===', [
                 'profile' => $profileKey,
                 'profile_id' => $thresholdProfile ? $thresholdProfile->id : null,
                 'profile_name' => $thresholdProfile ? $thresholdProfile->profile_name : null,
                 'thresholds' => $thresholds,
-                'threshold_values_count' => $thresholdProfile ? $thresholdProfile->thresholdValues->count() : 0
+                'threshold_values_count' => $thresholdProfile ? $thresholdProfile->thresholdValues->count() : 0,
+                'note' => 'Profile diambil secara dinamis dari database berdasarkan threshold values yang paling baru di-update'
             ]);
             
             // Fallback to default thresholds if database is empty
@@ -697,6 +694,24 @@ class SendTelegramNotification extends Command
                     $qualitativeForecast($pred6['ammonia'] ?? [], 'Amoniak', 'ppm', 0, $ammMax),
                     $generateLightForecast($pred6['light'] ?? [], 'Cahaya', 'lux')
                 ];
+                
+                // Generate forecast_summary_24h - SAMA PERSIS dengan web monitoring
+                $forecast24Summary = [
+                    $qualitativeForecast($pred24['temperature'] ?? [], 'Suhu', '°C', $tempMin, $tempMax),
+                    $qualitativeForecast($pred24['humidity'] ?? [], 'Kelembaban', '%', $humMin, $humMax),
+                    $qualitativeForecast($pred24['ammonia'] ?? [], 'Amoniak', 'ppm', 0, $ammMax),
+                    $generateLightForecast($pred24['light'] ?? [], 'Cahaya', 'lux')
+                ];
+            } else {
+                // Jika forecast_summary_6h tidak ada, set forecast24Summary juga null
+                $forecast24Summary = null;
+            }
+            
+            // Jika forecast_summary_24h dari ML service ada, gunakan itu
+            if (!empty($mlResults) && isset($mlResults['forecast_summary_24h']) && is_array($mlResults['forecast_summary_24h'])) {
+                $forecast24Summary = $mlResults['forecast_summary_24h'];
+            } elseif (!empty($forecast24SummaryFromML) && is_array($forecast24SummaryFromML)) {
+                $forecast24Summary = $forecast24SummaryFromML;
             }
             
             // Log untuk debugging - SAMA PERSIS DENGAN WEB MONITORING
@@ -792,7 +807,7 @@ class SendTelegramNotification extends Command
                 ];
             }
             
-            // Send Telegram notification - pass thresholds dan history 24h juga
+            // Send Telegram notification - pass thresholds, forecast_summary_24h, dan history 24h juga
             $telegramService = new TelegramNotificationService();
             $sent = $telegramService->sendMonitoringNotification(
                 $latest,
@@ -801,7 +816,8 @@ class SendTelegramNotification extends Command
                 $anomalies,
                 $forecast6Summary,
                 $thresholds, // Pass thresholds untuk validasi status sensor
-                $history24h // Pass history 24h untuk trend analysis
+                $history24h, // Pass history 24h untuk trend analysis
+                $forecast24Summary ?? null // Pass forecast_summary_24h
             );
 
             if ($sent) {
