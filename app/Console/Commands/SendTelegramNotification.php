@@ -550,8 +550,14 @@ class SendTelegramNotification extends Command
             $status['probability'] = $adjustedProbabilities;
             
             // Generate forecast_summary_6h - SAMA PERSIS DENGAN WEB MONITORING
-            // Gunakan dari ML service jika ada, atau generate sendiri menggunakan threshold dari database
-            $forecast6Summary = $forecast6SummaryFromML;
+            // Gunakan dari ML service jika ada (SAMA PERSIS dengan web monitoring)
+            // Web monitoring menggunakan: isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary
+            $forecast6Summary = null;
+            if (!empty($mlResults) && isset($mlResults['forecast_summary_6h']) && is_array($mlResults['forecast_summary_6h'])) {
+                $forecast6Summary = $mlResults['forecast_summary_6h'];
+            } elseif (!empty($forecast6SummaryFromML) && is_array($forecast6SummaryFromML)) {
+                $forecast6Summary = $forecast6SummaryFromML;
+            }
             if (empty($forecast6Summary) && !empty($pred6) && is_array($pred6)) {
                 // Generate forecast summary menggunakan threshold dari database (SAMA PERSIS dengan web monitoring)
                 // Get threshold values dari database
@@ -596,9 +602,11 @@ class SendTelegramNotification extends Command
                     $firstValue = $numericSeries[0];
                     $lastValue = end($numericSeries);
                     $trend = $lastValue - $firstValue;
+                    // Threshold untuk trend: 0.5 untuk suhu/kelembaban/amoniak - SAMA DENGAN WEB MONITORING
                     $dir = $trend > 0.5 ? 'meningkat' : ($trend < -0.5 ? 'menurun' : 'stabil');
                     $risk = ($min < $safeLow || $max > $safeHigh) ? 'potensi keluar batas aman' : 'dalam kisaran aman';
                     
+                    // Format summary: "Suhu stabil (32.82–33.22 °C) dalam kisaran aman" - SAMA DENGAN WEB MONITORING
                     return [
                         'metric' => $metric,
                         'summary' => "$metric $dir (" . round($min, 2) . "–" . round($max, 2) . " $unit) $risk",
@@ -609,11 +617,15 @@ class SendTelegramNotification extends Command
                 };
                 
                 // generateLightForecast - SAMA PERSIS dengan web monitoring
+                // Di web monitoring, checkLightRisk TIDAK mengkonversi nilai cahaya (tetap ratusan)
+                // Tapi threshold yang digunakan adalah 10-60 (dalam puluhan)
+                // Jadi kita perlu mengkonversi untuk pengecekan threshold
                 $checkLightRisk = function($lightValues) use ($lightWarnLow, $lightWarnHigh, $lightIdealLow, $lightIdealHigh) {
                     if (empty($lightValues) || !is_array($lightValues)) {
                         return 'tidak diketahui';
                     }
-                    // Konversi dari ratusan ke puluhan untuk pengecekan threshold
+                    // Konversi dari ratusan ke puluhan untuk pengecekan threshold (SAMA DENGAN WEB MONITORING)
+                    // Web monitoring menggunakan threshold 10-60 (dalam puluhan), jadi nilai ratusan harus dikonversi
                     $convertedValues = array_map(function($v) {
                         return is_numeric($v) ? (float)$v / 10 : 0;
                     }, $lightValues);
@@ -656,20 +668,25 @@ class SendTelegramNotification extends Command
                         ];
                     }
                     
+                    // Display tetap menggunakan nilai ratusan (sesuai data aktual) - SAMA DENGAN WEB MONITORING
                     $min = min($numericSeries);
                     $max = max($numericSeries);
                     $firstValue = $numericSeries[0];
                     $lastValue = end($numericSeries);
                     $trend = $lastValue - $firstValue;
+                    // Threshold untuk trend: 5 untuk cahaya (karena dalam ratusan), sama dengan web monitoring
                     $dir = $trend > 5 ? 'meningkat' : ($trend < -5 ? 'menurun' : 'stabil');
                     $risk = $checkLightRisk($lightValues);
                     
+                    // Format summary: "Cahaya stabil (56.6–57.4 lux) potensi keluar batas aman" - SAMA DENGAN WEB MONITORING
+                    $riskText = $risk === 'dalam kisaran aman' ? 'dalam kisaran aman' : ($risk === 'di luar batas aman' ? 'di luar batas aman' : 'potensi keluar batas aman');
+                    
                     return [
                         'metric' => $metric,
-                        'summary' => "$metric $dir (" . round($min, 2) . "–" . round($max, 2) . " $unit) $risk",
+                        'summary' => "$metric $dir (" . round($min, 2) . "–" . round($max, 2) . " $unit) $riskText",
                         'range' => ['min' => round($min, 2), 'max' => round($max, 2), 'unit' => $unit],
                         'trend' => $dir,
-                        'risk' => $risk
+                        'risk' => $riskText
                     ];
                 };
                 

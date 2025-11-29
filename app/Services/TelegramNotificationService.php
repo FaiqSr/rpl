@@ -250,13 +250,15 @@ class TelegramNotificationService
                     return '⚠ Perlu Perhatian';
                 }
             } elseif ($type === 'light') {
-                // Light dibagi 10 untuk konversi (sama seperti web monitoring)
-                $lightValue = $value / 10;
+                // Light: SAMA PERSIS DENGAN FRONTEND - TIDAK membagi 10 untuk status check
+                // Frontend menggunakan nilai langsung (51.3, bukan 5.13) untuk status check
+                $lightValue = $value; // Nilai langsung dari database (51.3, bukan 5.13)
                 $idealLow = $t['ideal_low'] ?? 20;
                 $idealHigh = $t['ideal_high'] ?? 40;
                 $warnLow = $t['warn_low'] ?? 10;
                 $warnHigh = $t['warn_high'] ?? 60;
                 
+                // Logika SAMA PERSIS dengan frontend getSensorStatus untuk light
                 if ($lightValue >= $idealLow && $lightValue <= $idealHigh) {
                     return '🟢 Aman';
                 } elseif ($lightValue < $warnLow || $lightValue > $warnHigh) {
@@ -342,8 +344,9 @@ class TelegramNotificationService
         $burukProb = round(($prob['BURUK'] ?? 0) * 100, 1);
         
         // Parameter Lingkungan
-        // Untuk cahaya, konversi dari ratusan ke puluhan untuk status check (sama seperti web monitoring)
-        $lightValueForStatus = isset($latest['light']) ? (float)$latest['light'] / 10 : 0;
+        // Untuk cahaya, SAMA PERSIS DENGAN FRONTEND - TIDAK membagi 10 untuk status check
+        // Frontend menggunakan nilai langsung (51.3) untuk status check, bukan 5.13
+        $lightValueForStatus = isset($latest['light']) ? (float)$latest['light'] : 0;
         
         $tempStatus = $getParameterStatus($latest['temperature'], 'temperature');
         $humStatus = $getParameterStatus($latest['humidity'], 'humidity');
@@ -507,8 +510,9 @@ class TelegramNotificationService
         $message .= "---\n\n";
         
         // Parameter Lingkungan
-        // Untuk cahaya, konversi dari ratusan ke puluhan (sama seperti web monitoring)
-        $lightValue = isset($latest['light']) ? (float)$latest['light'] / 10 : 0;
+        // Untuk cahaya, SAMA PERSIS DENGAN FRONTEND - TIDAK membagi 10 untuk display
+        // Frontend menampilkan nilai langsung (51.3 lux), bukan 5.13 lux
+        $lightValue = isset($latest['light']) ? (float)$latest['light'] : 0;
         
         $message .= "*Parameter Lingkungan*\n\n";
         $message .= "🌡 Suhu: *" . round($latest['temperature'], 1) . "°C* — {$tempStatus}\n\n";

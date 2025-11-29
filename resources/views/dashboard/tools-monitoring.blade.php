@@ -2053,76 +2053,51 @@
           console.log('Using profile:', selectedProfile);
         }
         
-        // Validasi dan log forecast_summary untuk memastikan menggunakan threshold yang benar
-        if (forecast_summary_6h && forecast_summary_6h.length > 0) {
-          console.log('Forecast Summary 6h from backend:', forecast_summary_6h);
-          // Pastikan forecast_summary menggunakan threshold yang benar
-          // Jika tidak, regenerate menggunakan globalThresholds
-          const needsRegeneration = forecast_summary_6h.some(f => {
-            // Cek apakah forecast summary sesuai dengan threshold
-            if (f.metric === 'Suhu') {
-              const expectedMin = globalThresholds.temperature.ideal_min;
-              const expectedMax = globalThresholds.temperature.ideal_max;
-              // Extract range dari summary
-              const rangeMatch = f.summary.match(/\(([\d.]+)–([\d.]+)/);
-              if (rangeMatch) {
-                const min = parseFloat(rangeMatch[1]);
-                const max = parseFloat(rangeMatch[2]);
-                // Cek apakah risk sesuai dengan threshold
-                const shouldBeSafe = min >= expectedMin && max <= expectedMax;
-                const isSafe = f.risk === 'dalam kisaran aman';
-                return shouldBeSafe !== isSafe;
-              }
-            }
-            return false;
-          });
-          
-          if (needsRegeneration) {
-            console.warn('Forecast summary tidak sesuai threshold, regenerating...');
-            // Regenerate forecast summary menggunakan globalThresholds
-            const sum = (series, metric, unit, low, high) => {
-              const min = Math.min(...series), max = Math.max(...series);
-              const trend = series[series.length-1] - series[0];
-              const dir = trend>0.5?'meningkat':(trend<-0.5?'menurun':'stabil');
-              const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
-              return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
-            };
-            forecast_summary_6h = [
-              sum(prediction_6h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
-              sum(prediction_6h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
-              sum(prediction_6h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
-              sum(prediction_6h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
-            ];
-            forecast_summary_24h = [
-              sum(prediction_24h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
-              sum(prediction_24h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
-              sum(prediction_24h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
-              sum(prediction_24h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
-            ];
-            console.log('Forecast Summary regenerated with correct thresholds:', forecast_summary_6h);
-          }
-        } else {
-          // Jika forecast_summary tidak ada, generate menggunakan globalThresholds
-          console.log('Forecast summary tidak ada dari backend, generating with globalThresholds...');
+        // Selalu regenerate forecast_summary menggunakan globalThresholds yang sudah ter-update
+        // Ini memastikan forecast_summary selalu sesuai dengan threshold yang aktif
+        // Helper function untuk generate forecast summary
+        const generateForecastSummary = (predictionData) => {
           const sum = (series, metric, unit, low, high) => {
-            const min = Math.min(...series), max = Math.max(...series);
+            if (!series || !Array.isArray(series) || series.length === 0) {
+              return { metric, summary: `${metric} tidak tersedia`, range: {min: 0, max: 0, unit}, trend: 'stabil', risk: 'dalam kisaran aman' };
+            }
+            const min = Math.min(...series);
+            const max = Math.max(...series);
             const trend = series[series.length-1] - series[0];
-            const dir = trend>0.5?'meningkat':(trend<-0.5?'menurun':'stabil');
-            const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
-            return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
+            const dir = trend > 0.5 ? 'meningkat' : (trend < -0.5 ? 'menurun' : 'stabil');
+            const risk = (min < low || max > high) ? 'potensi keluar batas aman' : 'dalam kisaran aman';
+            return { 
+              metric, 
+              summary: `${metric} ${dir} (${min.toFixed ? min.toFixed(2) : min}–${max.toFixed ? max.toFixed(2) : max} ${unit}) ${risk}`, 
+              range: {min, max, unit}, 
+              trend: dir, 
+              risk 
+            };
           };
-          forecast_summary_6h = [
-            sum(prediction_6h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
-            sum(prediction_6h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
-            sum(prediction_6h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
-            sum(prediction_6h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+          
+          return [
+            sum(predictionData.temperature, 'Suhu', '°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+            sum(predictionData.humidity, 'Kelembaban', '%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+            sum(predictionData.ammonia, 'Amoniak', 'ppm', 0, globalThresholds.ammonia.ideal_max),
+            sum(predictionData.light, 'Cahaya', 'lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
           ];
-          forecast_summary_24h = [
-            sum(prediction_24h.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
-            sum(prediction_24h.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
-            sum(prediction_24h.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
-            sum(prediction_24h.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
-          ];
+        };
+        
+        // Regenerate forecast_summary menggunakan globalThresholds yang sudah ter-update
+        // Ini memastikan konsistensi antara threshold dan forecast summary
+        if (prediction_6h && prediction_24h) {
+          console.log('Regenerating forecast summary dengan threshold yang ter-update...');
+          forecast_summary_6h = generateForecastSummary(prediction_6h);
+          forecast_summary_24h = generateForecastSummary(prediction_24h);
+          console.log('Forecast Summary regenerated dengan threshold:', globalThresholds);
+          console.log('Forecast Summary 6h:', forecast_summary_6h);
+        } else {
+          console.warn('Prediction data tidak tersedia, menggunakan forecast_summary dari backend jika ada');
+          // Fallback: jika prediction tidak ada, gunakan dari backend atau buat default
+          if (!forecast_summary_6h || forecast_summary_6h.length === 0) {
+            forecast_summary_6h = [];
+            forecast_summary_24h = [];
+          }
         }
         
         // Pastikan threshold sudah ter-update sebelum membuat sensor cards
