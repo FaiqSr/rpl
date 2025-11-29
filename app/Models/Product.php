@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Product extends BaseModel
 {
@@ -13,6 +14,7 @@ class Product extends BaseModel
     protected $table = 'products';
     protected $primaryKey = 'product_id';
     protected $fillable = [
+        'product_id',
         'name',
         'slug',
         'description',
@@ -21,6 +23,16 @@ class Product extends BaseModel
         'category_id',
         'unit'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->product_id)) {
+                $model->product_id = (string) Str::uuid();
+            }
+        });
+    }
 
     public function orderDetail(): HasMany
     {

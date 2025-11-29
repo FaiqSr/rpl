@@ -95,13 +95,36 @@
         .page-break {
             page-break-before: always;
         }
+        .chart-container {
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2F2F2F;
+            margin-bottom: 10px;
+        }
+        .chart-svg {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #e5e7eb;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>📊 Laporan Data Sensor</h1>
         <p>ChickPatrol - Monitoring Kandang Ayam</p>
-        <p>Dibuat: {{ $generatedAt }} WIB</p>
+        <p>Dibuat: {{ $generatedAt }}</p>
     </div>
 
     <div class="stats">
@@ -141,6 +164,139 @@
             </div>
         </div>
         <p style="margin-top: 15px; font-weight: 600;">Total Data: {{ $stats['total'] }} record</p>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h3 style="margin-top: 0;">📈 Grafik Trend Parameter Sensor</h3>
+    <div class="chart-grid">
+        @php
+            // Use chart data from controller or prepare from data
+            $chartDataLocal = isset($chartData) ? $chartData : [
+                'amonia' => $data->take(50)->pluck('amonia_ppm')->toArray(),
+                'suhu' => $data->take(50)->pluck('suhu_c')->toArray(),
+                'kelembaban' => $data->take(50)->pluck('kelembaban_rh')->toArray(),
+                'cahaya' => $data->take(50)->pluck('cahaya_lux')->toArray(),
+            ];
+            
+            $amoniaValues = $chartDataLocal['amonia'] ?? [];
+            $suhuValues = $chartDataLocal['suhu'] ?? [];
+            $kelembabanValues = $chartDataLocal['kelembaban'] ?? [];
+            $cahayaValues = $chartDataLocal['cahaya'] ?? [];
+            
+            $chartWidth = 700;
+            $chartHeight = 200;
+            $padding = 40;
+            $plotWidth = $chartWidth - ($padding * 2);
+            $plotHeight = $chartHeight - ($padding * 2);
+            
+            // Calculate min/max for scaling
+            $amoniaMin = !empty($amoniaValues) ? min($amoniaValues) : 0;
+            $amoniaMax = !empty($amoniaValues) ? max($amoniaValues) : 1;
+            $suhuMin = !empty($suhuValues) ? min($suhuValues) : 0;
+            $suhuMax = !empty($suhuValues) ? max($suhuValues) : 1;
+            $kelembabanMin = !empty($kelembabanValues) ? min($kelembabanValues) : 0;
+            $kelembabanMax = !empty($kelembabanValues) ? max($kelembabanValues) : 1;
+            $cahayaMin = !empty($cahayaValues) ? min($cahayaValues) : 0;
+            $cahayaMax = !empty($cahayaValues) ? max($cahayaValues) : 1;
+            
+            // Helper function to generate SVG path
+            $generatePath = function($values, $min, $max, $plotWidth, $plotHeight) use ($padding) {
+                if (empty($values)) return '';
+                $path = '';
+                $count = count($values);
+                $range = ($max - $min) > 0 ? ($max - $min) : 1;
+                for ($i = 0; $i < $count; $i++) {
+                    $x = $padding + ($count > 1 ? ($i / ($count - 1)) : 0) * $plotWidth;
+                    $y = $padding + $plotHeight - (($values[$i] - $min) / $range) * $plotHeight;
+                    $path .= ($i == 0 ? "M $x $y " : "L $x $y ");
+                }
+                return $path;
+            };
+        @endphp
+        
+        <!-- Grafik Amonia -->
+        <div class="chart-container">
+            <div class="chart-title">Amonia (ppm)</div>
+            <svg class="chart-svg" viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" xmlns="http://www.w3.org/2000/svg">
+                <!-- Grid lines -->
+                @for($i = 0; $i <= 4; $i++)
+                    <line x1="{{ $padding }}" y1="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          x2="{{ $padding + $plotWidth }}" y2="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          stroke="#e5e7eb" stroke-width="0.5"/>
+                    <text x="{{ $padding - 5 }}" y="{{ $padding + ($i * $plotHeight / 4) + 3 }}" 
+                          font-size="9" fill="#666" text-anchor="end">
+                        {{ number_format($amoniaMax - ($i * ($amoniaMax - $amoniaMin) / 4), 1) }}
+                    </text>
+                @endfor
+                <!-- Chart line -->
+                <path d="{{ $generatePath($amoniaValues, $amoniaMin, $amoniaMax, $plotWidth, $plotHeight) }}" 
+                      fill="none" stroke="#EF4444" stroke-width="2"/>
+                <!-- Fill area -->
+                <path d="{{ $generatePath($amoniaValues, $amoniaMin, $amoniaMax, $plotWidth, $plotHeight) }} L {{ $padding + $plotWidth }} {{ $padding + $plotHeight }} L {{ $padding }} {{ $padding + $plotHeight }} Z" 
+                      fill="#EF4444" opacity="0.2"/>
+            </svg>
+        </div>
+        
+        <!-- Grafik Suhu -->
+        <div class="chart-container">
+            <div class="chart-title">Suhu (°C)</div>
+            <svg class="chart-svg" viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" xmlns="http://www.w3.org/2000/svg">
+                @for($i = 0; $i <= 4; $i++)
+                    <line x1="{{ $padding }}" y1="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          x2="{{ $padding + $plotWidth }}" y2="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          stroke="#e5e7eb" stroke-width="0.5"/>
+                    <text x="{{ $padding - 5 }}" y="{{ $padding + ($i * $plotHeight / 4) + 3 }}" 
+                          font-size="9" fill="#666" text-anchor="end">
+                        {{ number_format($suhuMax - ($i * ($suhuMax - $suhuMin) / 4), 1) }}
+                    </text>
+                @endfor
+                <path d="{{ $generatePath($suhuValues, $suhuMin, $suhuMax, $plotWidth, $plotHeight) }}" 
+                      fill="none" stroke="#3B82F6" stroke-width="2"/>
+                <path d="{{ $generatePath($suhuValues, $suhuMin, $suhuMax, $plotWidth, $plotHeight) }} L {{ $padding + $plotWidth }} {{ $padding + $plotHeight }} L {{ $padding }} {{ $padding + $plotHeight }} Z" 
+                      fill="#3B82F6" opacity="0.2"/>
+            </svg>
+        </div>
+        
+        <!-- Grafik Kelembaban -->
+        <div class="chart-container">
+            <div class="chart-title">Kelembaban (%)</div>
+            <svg class="chart-svg" viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" xmlns="http://www.w3.org/2000/svg">
+                @for($i = 0; $i <= 4; $i++)
+                    <line x1="{{ $padding }}" y1="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          x2="{{ $padding + $plotWidth }}" y2="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          stroke="#e5e7eb" stroke-width="0.5"/>
+                    <text x="{{ $padding - 5 }}" y="{{ $padding + ($i * $plotHeight / 4) + 3 }}" 
+                          font-size="9" fill="#666" text-anchor="end">
+                        {{ number_format($kelembabanMax - ($i * ($kelembabanMax - $kelembabanMin) / 4), 1) }}
+                    </text>
+                @endfor
+                <path d="{{ $generatePath($kelembabanValues, $kelembabanMin, $kelembabanMax, $plotWidth, $plotHeight) }}" 
+                      fill="none" stroke="#10B981" stroke-width="2"/>
+                <path d="{{ $generatePath($kelembabanValues, $kelembabanMin, $kelembabanMax, $plotWidth, $plotHeight) }} L {{ $padding + $plotWidth }} {{ $padding + $plotHeight }} L {{ $padding }} {{ $padding + $plotHeight }} Z" 
+                      fill="#10B981" opacity="0.2"/>
+            </svg>
+        </div>
+        
+        <!-- Grafik Cahaya -->
+        <div class="chart-container">
+            <div class="chart-title">Cahaya (lux)</div>
+            <svg class="chart-svg" viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" xmlns="http://www.w3.org/2000/svg">
+                @for($i = 0; $i <= 4; $i++)
+                    <line x1="{{ $padding }}" y1="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          x2="{{ $padding + $plotWidth }}" y2="{{ $padding + ($i * $plotHeight / 4) }}" 
+                          stroke="#e5e7eb" stroke-width="0.5"/>
+                    <text x="{{ $padding - 5 }}" y="{{ $padding + ($i * $plotHeight / 4) + 3 }}" 
+                          font-size="9" fill="#666" text-anchor="end">
+                        {{ number_format($cahayaMax - ($i * ($cahayaMax - $cahayaMin) / 4), 1) }}
+                    </text>
+                @endfor
+                <path d="{{ $generatePath($cahayaValues, $cahayaMin, $cahayaMax, $plotWidth, $plotHeight) }}" 
+                      fill="none" stroke="#F59E0B" stroke-width="2"/>
+                <path d="{{ $generatePath($cahayaValues, $cahayaMin, $cahayaMax, $plotWidth, $plotHeight) }} L {{ $padding + $plotWidth }} {{ $padding + $plotHeight }} L {{ $padding }} {{ $padding + $plotHeight }} Z" 
+                      fill="#F59E0B" opacity="0.2"/>
+            </svg>
+        </div>
     </div>
 
     <div class="page-break"></div>
@@ -191,15 +347,12 @@
             @endphp
             @foreach($data->take(100) as $index => $row)
             @php
-                // Gunakan tanggal real-time saat ini, hitung mundur dari data terakhir
-                // Data terakhir = waktu saat ini, data sebelumnya = mundur per jam
-                $totalData = $data->count();
-                $hoursAgo = $totalData - $index - 1;
-                $displayTime = $now->copy()->subHours($hoursAgo);
+                // Gunakan recorded_at yang sudah di-convert ke WIB
+                $displayTime = $row->recorded_at_wib ?? \Carbon\Carbon::parse($row->recorded_at)->setTimezone('Asia/Jakarta')->format('d/m/Y H:i:s');
             @endphp
             <tr>
                 <td>{{ $index + 1 }}</td>
-                <td>{{ $displayTime->format('Y-m-d H:i') }}</td>
+                <td>{{ $displayTime }} WIB</td>
                 <td>{{ number_format($row->amonia_ppm, 2) }}</td>
                 <td>{{ number_format($row->suhu_c, 1) }}</td>
                 <td>{{ number_format($row->kelembaban_rh, 1) }}</td>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Pengaturan Monitoring - ChickPatrol Seller</title>
+  <title>Konfigurasi - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -600,7 +600,7 @@
     <div class="page-header">
       <h1>
         <i class="fa-solid fa-info-circle me-2"></i>
-        Pengaturan Monitoring
+        Konfigurasi
       </h1>
     </div>
 
@@ -912,16 +912,12 @@
           Ekspor data sensor untuk laporan atau analisis lebih lanjut.
         </p>
         <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-          <a href="{{ route('export.pdf') }}" class="btn btn-danger" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
-            <i class="fas fa-file-pdf me-2"></i>Ekspor PDF (Laporan)
-          </a>
           <a href="{{ route('export.csv') }}" class="btn btn-success" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
             <i class="fas fa-file-csv me-2"></i>Ekspor CSV (Dataset)
           </a>
         </div>
         <div style="margin-top:.75rem;">
           <small style="font-size:.7rem; color:#6c757d; display:block; line-height:1.5;">
-            <strong>PDF:</strong> Laporan lengkap dengan statistik dan ringkasan harian<br>
             <strong>CSV:</strong> Dataset mentah (hanya nilai parameter, tanpa timestamp)
           </small>
         </div>

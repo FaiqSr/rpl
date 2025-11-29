@@ -349,10 +349,10 @@
             <div class="cart-item-info">
               <div class="cart-item-name">{{ $item->product->name }}</div>
               <div class="cart-item-price">Rp {{ number_format($item->product->price, 0, ',', '.') }} / {{ $item->product->unit ?? 'kg' }}</div>
-              <div class="cart-item-stock">Stok: {{ $item->product->stock }}</div>
+              <div class="cart-item-stock" id="stock-{{ $item->cart_id }}">Stok: {{ $item->product->stock }}</div>
               
               <div class="cart-item-qty mt-3">
-                <button class="qty-btn" onclick="updateQty('{{ $item->cart_id }}', {{ $item->qty - 1 }})">
+                <button class="qty-btn" onclick="changeQty('{{ $item->cart_id }}', -1)" id="minus-{{ $item->cart_id }}">
                   <i class="fa-solid fa-minus"></i>
                 </button>
                 <input type="number" 
@@ -361,8 +361,10 @@
                        value="{{ $item->qty }}" 
                        min="1" 
                        max="{{ $item->product->stock }}"
-                       onchange="updateQty('{{ $item->cart_id }}', this.value)">
-                <button class="qty-btn" onclick="updateQty('{{ $item->cart_id }}', {{ $item->qty + 1 }})">
+                       data-cart-id="{{ $item->cart_id }}"
+                       data-max-stock="{{ $item->product->stock }}"
+                       onchange="updateQtyFromInput('{{ $item->cart_id }}')">
+                <button class="qty-btn" onclick="changeQty('{{ $item->cart_id }}', 1)" id="plus-{{ $item->cart_id }}">
                   <i class="fa-solid fa-plus"></i>
                 </button>
               </div>
@@ -565,53 +567,179 @@
       });
     }
     
+    // Track ongoing requests to prevent race conditions
+    const updateQtyRequests = new Map();
+    const updateQtyLocks = new Set(); // Track which cart items are currently being updated
+    
+    // Change quantity with debounce
+    function changeQty(cartId, delta) {
+      // Prevent multiple simultaneous updates for same item
+      if (updateQtyLocks.has(cartId)) {
+        return;
+      }
+      
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      if (!qtyInput) return;
+      
+      const currentQty = parseInt(qtyInput.value) || 1;
+      const maxStock = parseInt(qtyInput.dataset.maxStock) || 999;
+      let newQty = currentQty + delta;
+      
+      // Validate bounds
+      if (newQty < 1) newQty = 1;
+      if (newQty > maxStock) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Stok Tidak Cukup',
+          text: `Stok tersedia: ${maxStock}`
+        });
+        newQty = maxStock;
+      }
+      
+      // Update input immediately for better UX
+      qtyInput.value = newQty;
+      
+      // Update quantity with debounce
+      updateQty(cartId, newQty);
+    }
+    
+    // Update quantity from input change
+    function updateQtyFromInput(cartId) {
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      if (!qtyInput) return;
+      
+      const newQty = parseInt(qtyInput.value) || 1;
+      const maxStock = parseInt(qtyInput.dataset.maxStock) || 999;
+      
+      // Validate bounds
+      if (newQty < 1) {
+        qtyInput.value = 1;
+        updateQty(cartId, 1);
+        return;
+      }
+      if (newQty > maxStock) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Stok Tidak Cukup',
+          text: `Stok tersedia: ${maxStock}`
+        });
+        qtyInput.value = maxStock;
+        updateQty(cartId, maxStock);
+        return;
+      }
+      
+      updateQty(cartId, newQty);
+    }
+    
+    // Update quantity with debounce and loading state
     function updateQty(cartId, newQty) {
       const qty = parseInt(newQty);
       if (qty < 1) return;
       
-      fetch(`/cart/update/${cartId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrfToken
-        },
-        body: JSON.stringify({ qty: qty })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          // Update checkbox data-qty and item total
-          const checkbox = document.querySelector(`.item-checkbox[data-cart-id="${cartId}"]`);
-          if (checkbox) {
-            checkbox.dataset.qty = qty;
-            const totalEl = document.getElementById(`total-${cartId}`);
-            if (totalEl) {
-              const price = parseFloat(checkbox.dataset.price);
-              totalEl.textContent = 'Rp ' + (price * qty).toLocaleString('id-ID');
+      // Prevent multiple simultaneous updates for same item
+      if (updateQtyLocks.has(cartId)) {
+        return;
+      }
+      
+      // Cancel previous request if exists
+      if (updateQtyRequests.has(cartId)) {
+        clearTimeout(updateQtyRequests.get(cartId));
+      }
+      
+      // Disable buttons during request
+      const minusBtn = document.getElementById(`minus-${cartId}`);
+      const plusBtn = document.getElementById(`plus-${cartId}`);
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      
+      if (minusBtn) minusBtn.disabled = true;
+      if (plusBtn) plusBtn.disabled = true;
+      if (qtyInput) qtyInput.disabled = true;
+      
+      // Debounce: wait 500ms before sending request (increased from 300ms)
+      const timeoutId = setTimeout(() => {
+        // Lock this cart item
+        updateQtyLocks.add(cartId);
+        fetch(`/cart/update/${cartId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+          },
+          body: JSON.stringify({ qty: qty })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Update checkbox data-qty and item total
+            const checkbox = document.querySelector(`.item-checkbox[data-cart-id="${cartId}"]`);
+            if (checkbox) {
+              checkbox.dataset.qty = qty;
+              const totalEl = document.getElementById(`total-${cartId}`);
+              if (totalEl) {
+                const price = parseFloat(checkbox.dataset.price);
+                totalEl.textContent = 'Rp ' + (price * qty).toLocaleString('id-ID');
+              }
+              updateSelection();
             }
-            updateSelection();
+            
+            // Update stock display from response
+            const stockEl = document.getElementById(`stock-${cartId}`);
+            if (stockEl && data.stock !== undefined) {
+              stockEl.textContent = `Stok: ${data.stock}`;
+              // Update max attribute of input
+              if (qtyInput) {
+                qtyInput.dataset.maxStock = data.stock;
+                qtyInput.max = data.stock;
+              }
+            }
+            
+            // Update cart count if available
+            if (data.cart_count !== undefined) {
+              updateCartCount();
+            }
+          } else {
+            // Revert input value on error
+            if (qtyInput) {
+              qtyInput.value = qtyInput.dataset.lastValue || 1;
+            }
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: data.message || 'Gagal memperbarui keranjang'
+            });
           }
-          // Update qty input
-          const qtyInput = document.getElementById(`qty-${cartId}`);
+        })
+        .catch(err => {
+          console.error('Error updating quantity:', err);
+          // Revert input value on error
           if (qtyInput) {
-            qtyInput.value = qty;
+            qtyInput.value = qtyInput.dataset.lastValue || qtyInput.value;
           }
-          // Don't reload, just update
-        } else {
           Swal.fire({
             icon: 'error',
             title: 'Oops...',
-            text: data.message || 'Gagal memperbarui keranjang'
+            text: 'Terjadi kesalahan saat memperbarui jumlah'
           });
-        }
-      })
-      .catch(err => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: 'Terjadi kesalahan'
+        })
+        .finally(() => {
+          // Re-enable buttons and unlock after a short delay
+          setTimeout(() => {
+            if (minusBtn) minusBtn.disabled = false;
+            if (plusBtn) plusBtn.disabled = false;
+            if (qtyInput) qtyInput.disabled = false;
+            updateQtyRequests.delete(cartId);
+            updateQtyLocks.delete(cartId);
+          }, 100);
         });
-      });
+      }, 500);
+      
+      updateQtyRequests.set(cartId, timeoutId);
+      
+      // Store last valid value before update
+      if (qtyInput) {
+        const currentValue = parseInt(qtyInput.value) || 1;
+        qtyInput.dataset.lastValue = currentValue;
+      }
     }
     
     function deleteItem(cartId) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Dashboard Monitoring - ChickPatrol Seller</title>
+  <title>Monitoring Kandang - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -755,8 +755,30 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Dashboard Monitoring</h1>
+      <h1>Monitoring Kandang</h1>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="{{ route('export.pdf') }}" id="downloadPdfBtn" class="btn btn-sm btn-outline-danger" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-file-pdf"></i> Unduh Laporan PDF
+        </a>
+      </div>
     </div>
+    
+    <script>
+      document.getElementById('downloadPdfBtn')?.addEventListener('click', function(e) {
+        const btn = this;
+        const originalHTML = btn.innerHTML;
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh...';
+        
+        // Reset setelah 10 detik jika masih loading
+        setTimeout(function() {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+          btn.innerHTML = originalHTML;
+        }, 10000);
+      });
+    </script>
     <!-- Monitoring Summary Banner (dynamic) -->
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
       <span style="font-size: 2rem; opacity: 0.95;">📊</span>

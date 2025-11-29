@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Daftar Alat - ChickPatrol Seller</title>
+  <title>Daftar - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -566,7 +566,7 @@
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Daftar Alat</h1>
+      <h1>Daftar</h1>
       <button class="btn-add" onclick="addTool()">
         <i class="fa-solid fa-plus"></i>
         Tambah Alat
@@ -922,6 +922,10 @@
                             <div>
                                 <div class="product-name">${tool.name}</div>
                                 <div class="product-subtitle">${tool.model}</div>
+                                ${tool.location ? `<div class="product-location" style="font-size: 0.8rem; color: #6c757d; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.25rem;">
+                                    <i class="fa-solid fa-map-marker-alt" style="font-size: 0.7rem; color: #22C55E;"></i>
+                                    <span>${tool.location}</span>
+                                </div>` : ''}
                                 <!-- Robot Status Info (Real-time) -->
                                 <div class="robot-status-info">
                                     <div class="d-flex align-items-center gap-2 mb-1">

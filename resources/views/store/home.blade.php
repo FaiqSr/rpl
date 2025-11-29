@@ -113,6 +113,69 @@
       margin: 0 !important;
       padding: 0 !important;
     }
+    /* Pagination Styles */
+    .pagination-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 40px;
+      padding: 0 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #4B5563;
+      background: white;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .pagination-btn:hover:not(.pagination-btn-disabled):not(.pagination-btn-active) {
+      background: #F9FAFB;
+      border-color: #D1D5DB;
+      color: #111827;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .pagination-btn-active {
+      background: #F4C430;
+      border-color: #F4C430;
+      color: #2F2F2F;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(244, 196, 48, 0.3);
+      cursor: default;
+    }
+    
+    .pagination-btn-disabled {
+      background: #F9FAFB;
+      border-color: #E5E7EB;
+      color: #9CA3AF;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    .pagination-btn-nav {
+      font-size: 0.75rem;
+    }
+    
+    .pagination-btn-page {
+      font-weight: 500;
+    }
+    
+    .pagination-dots {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 40px;
+      padding: 0 8px;
+      color: #6B7280;
+      font-weight: 500;
+    }
+    
     @media (min-width: 768px) {
       #productGrid {
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
@@ -130,6 +193,8 @@
         width: 100% !important;
         height: auto !important;
         max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
       }
       
       section[style*="width: 1205px"] > div {
@@ -151,6 +216,18 @@
       section.mb-6[style*="margin-top: 2rem"] {
         margin-top: 1rem !important;
         margin-bottom: 1rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+      }
+      
+      section.mb-6[style*="margin-top: 2rem"] h2 {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 0 1rem !important;
       }
       
       .categories-container {
@@ -348,7 +425,7 @@
       $hasAnyBanner = $squareBanners->count() > 0 || $rectTopBanners->count() > 0 || $rectBottomBanners->count() > 0;
     @endphp
     @if($hasAnyBanner)
-    <section class="mb-6" style="width: 1205px; height: 365px; border-radius: 8px; opacity: 1;">
+    <section class="mb-6" style="width: 1205px; max-width: 1205px; height: 365px; border-radius: 8px; opacity: 1; margin: 0 auto;">
       <div style="display: flex; gap: 4px; width: 100%; height: 100%;">
         <!-- Banner Persegi (Kiri) -->
         <div style="width: 365px; height: 365px; border-radius: 8px; overflow: hidden; position: relative;">
@@ -484,8 +561,8 @@
 
     <!-- Categories dengan foto -->
     @if(isset($homepageCategories) && $homepageCategories && $homepageCategories->count() > 0)
-    <section class="mb-6" style="margin-top: 2rem; margin-bottom: 2rem;">
-      <h2 class="text-sm font-semibold text-gray-700 mb-4">Kategori</h2>
+    <section class="mb-6" style="margin-top: 2rem; margin-bottom: 2rem; width: 1205px; max-width: 1205px; margin-left: auto; margin-right: auto;">
+      <h2 class="text-sm font-semibold text-gray-700 mb-4" style="width: 1205px; max-width: 1205px; margin-left: auto; margin-right: auto;">Kategori</h2>
       <div class="categories-container" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; width: 1205px !important; max-width: 1205px !important; margin: 0 auto 1.5rem auto !important; align-items: flex-start !important; justify-content: flex-start !important;">
         @foreach($homepageCategories as $index => $category)
           <div class="category-item" 
@@ -572,7 +649,93 @@
 
       <!-- Pagination -->
       @isset($products)
-      <div class="mt-6">{{ $products->withQueryString()->links() }}</div>
+      @if($products->hasPages())
+      <div class="mt-8">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+          <!-- Results Info -->
+          <div class="text-sm text-gray-600">
+            Menampilkan <span class="font-semibold text-gray-900">{{ $products->firstItem() }}</span> sampai 
+            <span class="font-semibold text-gray-900">{{ $products->lastItem() }}</span> dari 
+            <span class="font-semibold text-gray-900">{{ $products->total() }}</span> produk
+          </div>
+          
+          <!-- Pagination Links -->
+          <nav class="flex items-center gap-2" aria-label="Pagination" id="paginationNav">
+            {{-- Previous Page Link --}}
+            @if ($products->onFirstPage())
+              <span class="pagination-btn pagination-btn-disabled">
+                <i class="fa-solid fa-chevron-left"></i>
+              </span>
+            @else
+              <a href="{{ $products->previousPageUrl() }}" class="pagination-btn pagination-btn-nav pagination-link" rel="prev" aria-label="Halaman Sebelumnya">
+                <i class="fa-solid fa-chevron-left"></i>
+              </a>
+            @endif
+
+            {{-- Pagination Elements --}}
+            @php
+              $currentPage = $products->currentPage();
+              $lastPage = $products->lastPage();
+              $showPages = [];
+              
+              if ($lastPage <= 7) {
+                // Jika total halaman <= 7, tampilkan semua
+                for ($i = 1; $i <= $lastPage; $i++) {
+                  $showPages[] = $i;
+                }
+              } else {
+                // Selalu tampilkan halaman pertama
+                $showPages[] = 1;
+                
+                if ($currentPage <= 4) {
+                  // Jika halaman saat ini di awal
+                  for ($i = 2; $i <= 5; $i++) {
+                    $showPages[] = $i;
+                  }
+                  $showPages[] = '...';
+                  $showPages[] = $lastPage;
+                } elseif ($currentPage >= $lastPage - 3) {
+                  // Jika halaman saat ini di akhir
+                  $showPages[] = '...';
+                  for ($i = $lastPage - 4; $i <= $lastPage; $i++) {
+                    $showPages[] = $i;
+                  }
+                } else {
+                  // Jika halaman saat ini di tengah
+                  $showPages[] = '...';
+                  for ($i = $currentPage - 1; $i <= $currentPage + 1; $i++) {
+                    $showPages[] = $i;
+                  }
+                  $showPages[] = '...';
+                  $showPages[] = $lastPage;
+                }
+              }
+            @endphp
+
+            @foreach ($showPages as $page)
+              @if ($page === '...')
+                <span class="pagination-dots">...</span>
+              @elseif ($page == $currentPage)
+                <span class="pagination-btn pagination-btn-active" aria-current="page">{{ $page }}</span>
+              @else
+                <a href="{{ $products->url($page) }}" class="pagination-btn pagination-btn-page pagination-link" aria-label="Halaman {{ $page }}">{{ $page }}</a>
+              @endif
+            @endforeach
+
+            {{-- Next Page Link --}}
+            @if ($products->hasMorePages())
+              <a href="{{ $products->nextPageUrl() }}" class="pagination-btn pagination-btn-nav pagination-link" rel="next" aria-label="Halaman Selanjutnya">
+                <i class="fa-solid fa-chevron-right"></i>
+              </a>
+            @else
+              <span class="pagination-btn pagination-btn-disabled">
+                <i class="fa-solid fa-chevron-right"></i>
+              </span>
+            @endif
+          </nav>
+        </div>
+      </div>
+      @endif
       @endisset
     </section>
   </main>
@@ -980,5 +1143,66 @@
   </script>
   <script src="{{ asset('js/chat-buyer.js') }}"></script>
   @endif
+  
+  <script>
+    // Pagination: Scroll ke posisi produk setelah page load (jika ada parameter page)
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('page')) {
+        // Tunggu sebentar untuk memastikan halaman sudah ter-render
+        setTimeout(function() {
+          const productGrid = document.getElementById('productGrid');
+          if (productGrid) {
+            // Scroll ke produk grid dengan offset untuk header
+            const offset = 100; // Offset untuk header/navbar
+            const elementPosition = productGrid.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }, 100);
+      }
+    });
+    
+    // Pagination: Prevent scroll to top saat klik pagination link
+    document.addEventListener('DOMContentLoaded', function() {
+      const paginationLinks = document.querySelectorAll('.pagination-link');
+      
+      paginationLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          // Simpan posisi scroll saat ini
+          const currentScrollPosition = window.pageYOffset;
+          
+          // Simpan posisi di sessionStorage
+          sessionStorage.setItem('scrollPosition', currentScrollPosition.toString());
+          sessionStorage.setItem('scrollToProductGrid', 'true');
+        });
+      });
+      
+      // Restore scroll position setelah page load (jika dari pagination)
+      if (sessionStorage.getItem('scrollToProductGrid') === 'true') {
+        setTimeout(function() {
+          const productGrid = document.getElementById('productGrid');
+          if (productGrid) {
+            const offset = 100;
+            const elementPosition = productGrid.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+            
+            // Clear flag
+            sessionStorage.removeItem('scrollToProductGrid');
+            sessionStorage.removeItem('scrollPosition');
+          }
+        }, 100);
+      }
+    });
+  </script>
 </body>
 </html>

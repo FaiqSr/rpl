@@ -212,6 +212,52 @@
       color: #6c757d;
     }
     
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-badge.paid {
+      background: #E8F5E9;
+      color: #22C55E;
+    }
+    
+    .status-badge.pending {
+      background: #FEF3C7;
+      color: #D97706;
+    }
+    
+    .status-badge.processing {
+      background: #E3F2FD;
+      color: #2196F3;
+    }
+    
+    .status-badge.cancelled {
+      background: #FFEBEE;
+      color: #EF4444;
+    }
+    
+    .status-badge.dikirim {
+      background: #E3F2FD;
+      color: #2196F3;
+    }
+    
+    .status-badge.selesai {
+      background: #E8F5E9;
+      color: #22C55E;
+    }
+    
+    .status-badge.dibatalkan {
+      background: #FFEBEE;
+      color: #EF4444;
+    }
+    
     .order-response-time {
       font-size: 0.875rem;
       color: #6c757d;
@@ -365,7 +411,37 @@
     }
     
     .btn-accept:hover {
-      background: #5a9d66;
+      background: #16a34a;
+    }
+    
+    .btn-accept:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    .btn-ship {
+      background: #3B82F6;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-ship:hover:not(:disabled) {
+      background: #2563eb;
+    }
+    
+    .btn-ship:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
     
     .performa-badge {
@@ -388,17 +464,49 @@
 <body>
   @include('layouts.sidebar')
   
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="page-header">
-      <h1>Penjualan</h1>
-      <div class="search-box">
-        <i class="fa-solid fa-search"></i>
-        <input type="text" placeholder="Cari Produk">
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Penjualan</h1>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <a href="{{ route('dashboard.sales.export', array_merge(request()->all(), ['format' => 'excel'])) }}" class="btn btn-sm btn-outline-success">
+            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+          </a>
+          <a href="{{ route('dashboard.sales.export', array_merge(request()->all(), ['format' => 'pdf'])) }}" class="btn btn-sm btn-outline-danger">
+            <i class="fa-solid fa-file-pdf me-1"></i> Export PDF
+          </a>
+          <div class="search-box">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" placeholder="Cari Produk">
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <!-- Content Card -->
+      
+      <!-- Statistics Cards -->
+      <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pendapatan Hari Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">Rp {{ number_format($salesStats['today_revenue'] ?? 0, 0, ',', '.') }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Hari Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['today_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Pending</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['pending_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Dikirim</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['shipped_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pendapatan Bulan Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">Rp {{ number_format($salesStats['month_revenue'] ?? 0, 0, ',', '.') }}</h2>
+        </div>
+      </div>
+      
+      <!-- Content Card -->
     <div class="content-card">
       <!-- Filter Bar -->
       <div class="filter-bar">
@@ -429,7 +537,11 @@
             </div>
             <div class="order-header-right">
               <span class="order-status">Status</span>
-              <span class="order-response-time">{{ ucfirst($order->status ?? 'pending') }}</span>
+              @php
+                $status = strtolower($order->status ?? 'pending');
+                $statusClass = in_array($status, ['paid', 'pending', 'processing', 'cancelled', 'dikirim', 'selesai', 'dibatalkan']) ? $status : 'pending';
+              @endphp
+              <span class="status-badge {{ $statusClass }}">{{ ucfirst($order->status ?? 'pending') }}</span>
             </div>
           </div>
           <div class="order-body">
@@ -478,7 +590,7 @@
           </div>
           <div class="order-footer">
             <div class="order-footer-left">
-              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm btn-outline-primary" title="Chat Pembeli">
+              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm" style="border: 1px solid #22C55E; color: #22C55E; background: transparent;" onmouseover="this.style.background='#22C55E'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#22C55E';" title="Chat Pembeli">
                 <i class="fa-solid fa-comment"></i> Chat Pembeli
               </a>
             </div>
@@ -489,7 +601,7 @@
               </div>
               <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                 @if($order->payment_method)
-                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-success' : 'bg-info' }}">
+                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-secondary' : 'bg-secondary' }}" style="{{ $order->payment_method === 'QRIS' ? 'background: #8B5CF6 !important; color: white;' : 'background: #6B7280 !important; color: white;' }}">
                     <i class="fa-solid fa-{{ $order->payment_method === 'QRIS' ? 'qrcode' : 'building-columns' }} me-1"></i>
                     {{ $order->payment_method }}
                   </span>
@@ -511,13 +623,21 @@
                   </span>
                 @endif
                 @if($order->status === 'pending')
-                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" {{ $order->payment_status !== 'paid' ? 'disabled title="Pesanan hanya bisa dikirim setelah pembayaran divalidasi"' : '' }}>Kirim Pesanan</button>
+                  <button class="btn-ship" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" {{ $order->payment_status !== 'paid' ? 'disabled title="Pesanan hanya bisa dikirim setelah pembayaran divalidasi"' : '' }}>
+                    <i class="fa-solid fa-truck me-1"></i>Kirim Pesanan
+                  </button>
                 @elseif($order->status === 'dikirim')
-                  <span class="badge bg-info">Pesanan Dikirim</span>
+                  <span class="badge bg-info text-white">
+                    <i class="fa-solid fa-truck me-1"></i>Pesanan Dikirim
+                  </span>
                 @elseif($order->status === 'selesai')
-                  <span class="badge bg-success">Pesanan Selesai</span>
+                  <span class="badge bg-success text-white">
+                    <i class="fa-solid fa-check-circle me-1"></i>Pesanan Selesai
+                  </span>
                 @elseif($order->status === 'dibatalkan')
-                  <span class="badge bg-danger">Dibatalkan</span>
+                  <span class="badge bg-danger text-white">
+                    <i class="fa-solid fa-times-circle me-1"></i>Dibatalkan
+                  </span>
                 @endif
               </div>
             </div>
@@ -569,7 +689,7 @@
     async function validatePayment(orderId) {
         const result = await Swal.fire({
             title: 'Validasi Pembayaran',
-            html: '<p>Apakah Anda yakin sudah menerima pembayaran dari pembeli?</p><p class="text-muted mt-2"><small>Setelah divalidasi, status akan berubah menjadi "Lunas" dan pembeli dapat melihat nomor resi setelah pesanan dikirim.</small></p>',
+            html: '<p>Apakah Anda yakin sudah menerima pembayaran dari pembeli?</p>',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#22C55E',
@@ -625,7 +745,7 @@
         
         const result = await Swal.fire({
             title: 'Kirim Pesanan?',
-            text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
+            text: 'Pesanan akan dikirim. Tindakan ini tidak dapat dibatalkan.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#22C55E',

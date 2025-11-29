@@ -7,14 +7,22 @@
   $isToolsMonitoring = $currentRoute === 'dashboard.tools.monitoring' || request()->is('dashboard/tools/monitoring');
   $isToolsInformation = $currentRoute === 'dashboard.tools.information' || request()->is('dashboard/tools/information');
   $isSales = $currentRoute === 'dashboard.sales' || request()->is('dashboard/sales');
+  $isReviews = $currentRoute === 'dashboard.reviews' || request()->is('dashboard/reviews*');
   $isChat = $currentRoute === 'dashboard.chat' || request()->is('dashboard/chat');
   $isCustomers = $currentRoute === 'dashboard.customers' || request()->is('dashboard/customers');
+  
+  // Get unreplied reviews count for badge
+  $unrepliedReviewsCount = \App\Models\ProductReview::whereNull('parent_id')
+      ->whereNotNull('order_id')
+      ->whereHas('order')
+      ->doesntHave('replies')
+      ->count();
   $isArticles = $currentRoute === 'dashboard.articles' || request()->is('dashboard/articles*');
   $isArticleCategories = $currentRoute === 'dashboard.article-categories' || request()->is('dashboard/article-categories*');
   $isHomepage = $currentRoute === 'dashboard.homepage' || request()->is('dashboard/homepage*');
   
-  // Check if any tools submenu is active
-  $isToolsActive = $isTools || $isToolsMonitoring || $isToolsInformation;
+  // Check if any tools submenu is active (excluding monitoring which is now main menu)
+  $isToolsActive = $isTools || $isToolsInformation;
 @endphp
 
 <!-- Sidebar Toggle Button (Mobile) -->
@@ -36,8 +44,12 @@
   </div>
   <div class="sidebar-menu">
     <a href="{{ route('dashboard') }}" class="sidebar-menu-item {{ $isHome ? 'active' : '' }}">
-      <i class="fa-solid fa-house"></i>
-      <span>Home</span>
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Dashboard</span>
+    </a>
+    <a href="{{ route('dashboard.tools.monitoring') }}" class="sidebar-menu-item {{ $isToolsMonitoring ? 'active' : '' }}">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Monitoring Kandang</span>
     </a>
     <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item {{ $isProducts ? 'active' : '' }}">
       <i class="fa-solid fa-box"></i>
@@ -46,6 +58,13 @@
     <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item {{ $isSales ? 'active' : '' }}">
       <i class="fa-solid fa-cart-shopping"></i>
       <span>Penjualan</span>
+    </a>
+    <a href="{{ route('dashboard.reviews') }}" class="sidebar-menu-item {{ $isReviews ? 'active' : '' }}" style="position: relative;">
+      <i class="fa-solid fa-star"></i>
+      <span>Ulasan</span>
+      @if($unrepliedReviewsCount > 0)
+        <span class="sidebar-badge">{{ $unrepliedReviewsCount > 99 ? '99+' : $unrepliedReviewsCount }}</span>
+      @endif
     </a>
     <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item {{ $isChat ? 'active' : '' }}">
       <i class="fa-solid fa-comments"></i>
@@ -61,23 +80,22 @@
       <i class="fa-solid fa-chevron-down chevron-icon {{ $isToolsActive ? 'rotate' : '' }}"></i>
     </div>
     <div class="sidebar-submenu {{ $isToolsActive ? 'show' : '' }}">
-      <a href="{{ route('dashboard.tools') }}" class="{{ $isTools ? 'active' : '' }}">Daftar Alat</a>
-      <a href="{{ route('dashboard.tools.monitoring') }}" class="{{ $isToolsMonitoring ? 'active' : '' }}">Dashboard Monitoring</a>
-      <a href="{{ route('dashboard.tools.information') }}" class="{{ $isToolsInformation ? 'active' : '' }}">Pengaturan Monitoring</a>
+      <a href="{{ route('dashboard.tools') }}" class="{{ $isTools ? 'active' : '' }}">Daftar</a>
+      <a href="{{ route('dashboard.tools.information') }}" class="{{ $isToolsInformation ? 'active' : '' }}">Konfigurasi</a>
     </div>
     <a href="{{ route('dashboard.articles') }}" class="sidebar-menu-item {{ $isArticles ? 'active' : '' }}">
       <i class="fa-solid fa-newspaper"></i>
       <span>Konten Artikel</span>
     </a>
     <a href="{{ route('dashboard.homepage') }}" class="sidebar-menu-item {{ $isHomepage ? 'active' : '' }}">
-      <i class="fa-solid fa-home"></i>
+      <i class="fa-solid fa-store"></i>
       <span>Manajemen Homestore</span>
     </a>
   </div>
   <div class="sidebar-footer">
-    <a href="{{ route('logout') }}" class="sidebar-menu-item">
-      <i class="fa-solid fa-arrow-right-from-bracket"></i>
-      <span>Logout</span>
+    <a href="{{ route('logout') }}" class="sidebar-menu-item" style="color: #EF4444;" onmouseover="this.style.background='#FEE2E2';" onmouseout="this.style.background='transparent';">
+      <i class="fa-solid fa-sign-out-alt"></i>
+      <span>Keluar</span>
     </a>
   </div>
 </div>
@@ -245,6 +263,21 @@
   .sidebar-menu-item i {
     width: 20px;
     text-align: center;
+  }
+  
+  .sidebar-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    background: #EF4444;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.2;
   }
   
   .sidebar-submenu {

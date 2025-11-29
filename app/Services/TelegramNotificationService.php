@@ -555,8 +555,8 @@ class TelegramNotificationService
                         $max = $effectiveThresholds['light']['ideal_high'] ?? 40;
                         $safeThreshold = round($max, 1);
                         $thresholdUnit = ' lux';
-                    }
-                    
+                }
+                
                     if ($safeThreshold) {
                         // Format: "Nilai: X unit (batas aman: Y unit)" - SAMA DENGAN WEB MONITORING
                         $anomalyList[] = "• {$emoji} {$name}\n  {$formattedTime}\n  Nilai: {$formattedValue} {$unit} (batas aman: {$safeThreshold}{$thresholdUnit})";

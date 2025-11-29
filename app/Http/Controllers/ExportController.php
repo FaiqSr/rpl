@@ -14,7 +14,13 @@ class ExportController extends Controller
      */
     public function exportPdf()
     {
-        $data = SensorReading::orderBy('recorded_at', 'asc')->get();
+        // Limit data untuk menghindari timeout (ambil 1000 data terakhir)
+        // Gunakan chunk untuk menghindari memory issue
+        $data = SensorReading::orderBy('recorded_at', 'desc')
+            ->limit(1000)
+            ->get()
+            ->reverse()
+            ->values(); // Reset keys untuk indexing yang benar
         
         // Hitung statistik
         $stats = [
@@ -70,14 +76,42 @@ class ExportController extends Controller
             return strcmp($b['date'], $a['date']);
         });
         
+        // Process data timestamps to WIB
+        $data->transform(function($item) {
+            if ($item->recorded_at) {
+                $item->recorded_at_wib = \Carbon\Carbon::parse($item->recorded_at)
+                    ->setTimezone('Asia/Jakarta')
+                    ->format('d/m/Y H:i:s');
+            }
+            return $item;
+        });
+        
+        // Prepare chart data (50 data terakhir untuk grafik)
+        $chartData = $data->take(50)->values();
+        $chartDataArray = [
+            'amonia' => $chartData->pluck('amonia_ppm')->toArray(),
+            'suhu' => $chartData->pluck('suhu_c')->toArray(),
+            'kelembaban' => $chartData->pluck('kelembaban_rh')->toArray(),
+            'cahaya' => $chartData->pluck('cahaya_lux')->toArray(),
+        ];
+        
+        try {
         $pdf = Pdf::loadView('dashboard.export-pdf', [
             'data' => $data,
             'stats' => $stats,
             'dailyData' => $dailyData,
-            'generatedAt' => $now->format('d/m/Y H:i:s')
-        ]);
+                'chartData' => $chartDataArray,
+                'generatedAt' => $now->format('d/m/Y H:i:s') . ' WIB'
+            ])->setPaper('a4', 'landscape')
+              ->setOption('enable-local-file-access', true)
+              ->setOption('isHtml5ParserEnabled', true)
+              ->setOption('isRemoteEnabled', false);
         
         return $pdf->download('laporan-sensor-' . $now->format('Y-m-d') . '.pdf');
+        } catch (\Exception $e) {
+            \Log::error('PDF Export Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mengunduh PDF. Silakan coba lagi.');
+        }
     }
     
     /**

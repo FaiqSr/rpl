@@ -161,28 +161,71 @@ Route::get('/', function () {
         $homepageCategory = \App\Models\HomepageCategory::where('slug', $category)->where('is_active', true)->first();
         
         if ($homepageCategory) {
-            // Use homepage category name to filter products with keyword mapping
+            // Use homepage category name to filter products with keyword mapping (lebih fleksibel)
             $categoryName = strtolower($homepageCategory->name);
             $categorySlug = strtolower($homepageCategory->slug);
             
-            // Map category names to product keywords
+            // Map category names to product keywords (diperluas dan lebih fleksibel)
             $categoryKeywords = [
-                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal'],
-                'daging segar' => ['daging', 'ayam segar', 'ayam utuh', 'ayam potong'],
-                'daging' => ['daging', 'ayam segar', 'ayam utuh', 'ayam potong'],
-                'ayam karkas' => ['karkas', 'ayam karkas', 'carcass'],
-                'dada' => ['dada', 'breast', 'fillet'],
-                'paha' => ['paha', 'thigh', 'drumstick'],
-                'sayap' => ['sayap', 'wing'],
+                // Jeroan Ayam
+                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
+                'jeroan ayam' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
+                
+                // Ayam Potong Segar
+                'daging segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                'daging' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                'ayam potong segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                
+                // Dada Ayam
+                'dada' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
+                'dada ayam' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
+                
+                // Ayam Karkas
+                'ayam karkas' => ['karkas', 'carcass', 'ayam karkas'],
+                'karkas' => ['karkas', 'carcass', 'ayam karkas'],
+                
+                // Produk Frozen
+                'produk frozen' => ['beku', 'frozen'],
+                'frozen' => ['beku', 'frozen'],
+                'ayam beku' => ['beku', 'frozen'],
+                
+                // Produk Olahan
+                'produk olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                'olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                'produk olahan ayam' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                
+                // Obat & Vitamin
+                'obat vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                'obat & vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                'obat & vitamin ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                
+                // Pakan Ayam
+                'pakan' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
+                'pakan ayam' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
+                
+                // Peralatan Kandang
+                'peralatan kandang' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                'peralatan' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                'alat-alat' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                
+                // Robot ChickPatrol
+                'robot' => ['robot', 'chickpatrol', 'chick patrol'],
+                'robot chickpatrol' => ['robot', 'chickpatrol', 'chick patrol'],
             ];
             
             // Get keywords for this category
-            $keywords = $categoryKeywords[$categorySlug] ?? $categoryKeywords[$categoryName] ?? [$categoryName, $categorySlug];
+            $keywords = $categoryKeywords[$categorySlug] ?? $categoryKeywords[$categoryName] ?? [];
+            
+            // Jika tidak ada mapping, gunakan nama kategori sebagai keyword
+            if (empty($keywords)) {
+                $keywords = [$categoryName, $categorySlug];
+            }
             
             $query->where(function($q) use ($keywords) {
                 foreach ($keywords as $keyword) {
                     $q->orWhere('slug', 'like', '%' . $keyword . '%')
-                      ->orWhere('name', 'like', '%' . $keyword . '%');
+                      ->orWhere('name', 'like', '%' . $keyword . '%')
+                      ->orWhere('description', 'like', '%' . $keyword . '%');
                 }
             });
         } else {
@@ -616,22 +659,37 @@ Route::post('/order/{id}/confirm-received', function ($id) {
 
 // Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
 Route::middleware(['auth.session','admin'])->group(function() {
-    Route::get('/dashboard', function () {
+    Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
         // Get statistics from database
         $today = now()->startOfDay();
         $thisMonth = now()->startOfMonth();
         
         // Penjualan Hari Ini
         $salesToday = \App\Models\Order::whereDate('created_at', $today)->count();
+        $salesYesterday = \App\Models\Order::whereDate('created_at', now()->subDay()->startOfDay())->count();
+        $salesTodayChange = $salesYesterday > 0 ? (($salesToday - $salesYesterday) / $salesYesterday) * 100 : ($salesToday > 0 ? 100 : 0);
         
         // Penjualan Perbulan
         $salesThisMonth = \App\Models\Order::where('created_at', '>=', $thisMonth)->count();
+        $lastMonth = now()->subMonth()->startOfMonth();
+        $salesLastMonth = \App\Models\Order::where('created_at', '>=', $lastMonth)
+            ->where('created_at', '<', $thisMonth)
+            ->count();
+        $salesMonthChange = $salesLastMonth > 0 ? (($salesThisMonth - $salesLastMonth) / $salesLastMonth) * 100 : ($salesThisMonth > 0 ? 100 : 0);
         
         // Produk Aktif (produk dengan stok > 0)
         $activeProducts = \App\Models\Product::where('stock', '>', 0)->count();
+        $activeProductsPrev = \App\Models\Product::where('stock', '>', 0)
+            ->where('updated_at', '<', now()->subDay())
+            ->count();
+        $activeProductsChange = $activeProductsPrev > 0 ? (($activeProducts - $activeProductsPrev) / $activeProductsPrev) * 100 : 0;
         
         // Alat Aktif (tools yang aktif, bukan offline)
         $activeTools = \App\Models\Tools::where('operational_status', '!=', 'offline')->count();
+        $activeToolsPrev = \App\Models\Tools::where('operational_status', '!=', 'offline')
+            ->where('updated_at', '<', now()->subDay())
+            ->count();
+        $activeToolsChange = $activeToolsPrev > 0 ? (($activeTools - $activeToolsPrev) / $activeToolsPrev) * 100 : 0;
         
         // Ulasan Baru (dalam 7 hari terakhir)
         $newReviews = \App\Models\ProductReview::where('created_at', '>=', now()->subDays(7))
@@ -639,41 +697,83 @@ Route::middleware(['auth.session','admin'])->group(function() {
             ->whereNotNull('order_id')
             ->whereHas('order')
             ->count();
-        
-        // Chat Baru (dalam 7 hari terakhir dengan unread messages)
-        $newChats = \App\Models\Chat::where('created_at', '>=', now()->subDays(7))
-            ->orWhere('last_message_at', '>=', now()->subDays(7))
+        $newReviewsPrev = \App\Models\ProductReview::where('created_at', '>=', now()->subDays(14))
+            ->where('created_at', '<', now()->subDays(7))
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
             ->count();
+        $newReviewsChange = $newReviewsPrev > 0 ? (($newReviews - $newReviewsPrev) / $newReviewsPrev) * 100 : ($newReviews > 0 ? 100 : 0);
         
         // Total Pendapatan Perbulan
         $totalRevenue = \App\Models\Order::where('created_at', '>=', $thisMonth)
             ->where('payment_status', 'paid')
             ->sum('total_price');
+        $totalRevenueLastMonth = \App\Models\Order::where('created_at', '>=', $lastMonth)
+            ->where('created_at', '<', $thisMonth)
+            ->where('payment_status', 'paid')
+            ->sum('total_price');
+        $totalRevenueChange = $totalRevenueLastMonth > 0 ? (($totalRevenue - $totalRevenueLastMonth) / $totalRevenueLastMonth) * 100 : ($totalRevenue > 0 ? 100 : 0);
         
         // Produk Terpopuler (berdasarkan jumlah terjual dari order yang sudah dibayar)
+        // Hanya tampilkan produk yang sudah pernah terjual (total_sold > 0)
         $popularProducts = \App\Models\Product::with(['images'])
             ->select('products.*')
-            ->selectSub(function($query) {
-                $query->selectRaw('COALESCE(SUM(order_details.qty), 0)')
-                    ->from('order_details')
-                    ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
-                    ->whereColumn('order_details.product_id', 'products.product_id')
-                    ->where('orders.payment_status', 'paid');
-            }, 'total_sold')
+            ->selectRaw('COALESCE((
+                SELECT SUM(order_details.qty)
+                FROM order_details
+                INNER JOIN orders ON order_details.order_id = orders.order_id
+                WHERE order_details.product_id = products.product_id
+                AND orders.payment_status = "paid"
+            ), 0) as total_sold')
+            ->selectRaw('COALESCE((
+                SELECT AVG(product_reviews.rating)
+                FROM product_reviews
+                WHERE product_reviews.product_id = products.product_id
+                AND product_reviews.parent_id IS NULL
+                AND product_reviews.rating > 0
+                AND product_reviews.order_id IS NOT NULL
+            ), 0) as avg_rating')
+            ->selectRaw('COALESCE((
+                SELECT COUNT(*)
+                FROM product_reviews
+                WHERE product_reviews.product_id = products.product_id
+                AND product_reviews.parent_id IS NULL
+                AND product_reviews.rating > 0
+                AND product_reviews.order_id IS NOT NULL
+            ), 0) as total_reviews')
+            ->havingRaw('total_sold > 0')
             ->orderBy('total_sold', 'desc')
             ->limit(5)
             ->get();
         
-        // Data untuk chart penjualan produk (7 hari terakhir)
+        // Data untuk chart penjualan produk (default 7 hari, bisa diubah via request)
+        $dateRange = $request->get('chart_range', '7days');
+        $days = 7;
+        if ($dateRange === '30days') $days = 30;
+        elseif ($dateRange === '3months') $days = 90;
+        elseif ($dateRange === '1year') $days = 365;
+        
         $salesChartData = [];
-        for ($i = 6; $i >= 0; $i--) {
+        $salesChartDataCompare = [];
+        
+        for ($i = $days - 1; $i >= 0; $i--) {
             $date = now()->subDays($i)->startOfDay();
             $dateEnd = now()->subDays($i)->endOfDay();
             
             $salesCount = \App\Models\Order::whereBetween('created_at', [$date, $dateEnd])->count();
             $salesChartData[] = [
-                'date' => $date->format('d M'),
+                'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
                 'sales' => $salesCount
+            ];
+            
+            // Data untuk comparison (periode sebelumnya)
+            $compareDate = $date->copy()->subDays($days);
+            $compareDateEnd = $dateEnd->copy()->subDays($days);
+            $compareSalesCount = \App\Models\Order::whereBetween('created_at', [$compareDate, $compareDateEnd])->count();
+            $salesChartDataCompare[] = [
+                'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
+                'sales' => $compareSalesCount
             ];
         }
         
@@ -690,17 +790,333 @@ Route::middleware(['auth.session','admin'])->group(function() {
         
         return view('dashboard.seller', compact(
             'salesToday',
+            'salesTodayChange',
             'salesThisMonth',
+            'salesMonthChange',
             'activeProducts',
+            'activeProductsChange',
             'activeTools',
+            'activeToolsChange',
             'newReviews',
-            'newChats',
+            'newReviewsChange',
             'totalRevenue',
+            'totalRevenueChange',
             'popularProducts',
             'salesChartData',
-            'productSalesData'
+            'salesChartDataCompare',
+            'productSalesData',
+            'dateRange'
         ));
     })->name('dashboard');
+    
+    // Reviews Page
+    Route::get('/dashboard/reviews', function (\Illuminate\Http\Request $request) {
+        $query = \App\Models\ProductReview::with(['product.images', 'user', 'order', 'replies.user'])
+            ->whereNull('parent_id') // Only top-level reviews
+            ->whereNotNull('order_id') // Only reviews with valid order
+            ->whereHas('order'); // Ensure order still exists
+        
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('review', 'like', "%{$search}%")
+                  ->orWhereHas('product', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        // Rating filter
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+        
+        // Product filter
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+        
+        // Status filter (has reply or not)
+        if ($request->filled('status')) {
+            if ($request->status === 'unreplied') {
+                $query->doesntHave('replies');
+            } elseif ($request->status === 'replied') {
+                $query->has('replies');
+            }
+        }
+        
+        // Date filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        // Sort
+        $sortBy = $request->get('sort', 'created_at_desc');
+        switch ($sortBy) {
+            case 'created_at_asc':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'rating_desc':
+                $query->orderByDesc('rating')->orderByDesc('created_at');
+                break;
+            case 'rating_asc':
+                $query->orderBy('rating', 'asc')->orderByDesc('created_at');
+                break;
+            case 'product_asc':
+                $query->join('products', 'product_reviews.product_id', '=', 'products.product_id')
+                      ->orderBy('products.name', 'asc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'product_desc':
+                $query->join('products', 'product_reviews.product_id', '=', 'products.product_id')
+                      ->orderBy('products.name', 'desc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'user_asc':
+                $query->join('users', 'product_reviews.user_id', '=', 'users.user_id')
+                      ->orderBy('users.name', 'asc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'user_desc':
+                $query->join('users', 'product_reviews.user_id', '=', 'users.user_id')
+                      ->orderBy('users.name', 'desc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            default:
+                $query->orderByDesc('created_at');
+        }
+        
+        $reviews = $query->paginate(20)->withQueryString();
+        
+        // Reload relationships after join to ensure eager loading works
+        $reviews->load(['product.images', 'user', 'order', 'replies.user']);
+        
+        // Get statistics
+        $totalReviews = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
+        
+        $unrepliedCount = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->doesntHave('replies')
+            ->count();
+        
+        $avgRating = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->where('rating', '>', 0)
+            ->avg('rating');
+        
+        $stats = [
+            'total' => $totalReviews,
+            'unreplied' => $unrepliedCount,
+            'avg_rating' => round($avgRating, 1),
+            'replied' => $totalReviews - $unrepliedCount
+        ];
+        
+        // Get products list for filter
+        $products = \App\Models\Product::whereHas('reviews', function($q) {
+            $q->whereNull('parent_id')
+              ->whereNotNull('order_id')
+              ->whereHas('order');
+        })->orderBy('name')->get(['product_id', 'name']);
+        
+        // Process review images
+        $reviews->getCollection()->transform(function($review) {
+            if ($review->image && is_array($review->image)) {
+                $review->image_urls = array_map(function($img) {
+                    if ($img && !preg_match('/^(https?:\/\/|data:)/', $img)) {
+                        if (strpos($img, 'storage/reviews/') !== false) {
+                            return asset($img);
+                        } else {
+                            return asset('storage/' . $img);
+                        }
+                    }
+                    return $img;
+                }, array_filter($review->image));
+            }
+            return $review;
+        });
+        
+        return view('dashboard.reviews', compact('reviews', 'stats', 'products'));
+    })->name('dashboard.reviews');
+    
+    // Reply to Review API (for dashboard)
+    Route::post('/api/dashboard/reviews/{reviewId}/reply', function ($reviewId, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->whereNull('parent_id')
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::create([
+            'product_id' => $parentReview->product_id,
+            'user_id' => $user->user_id,
+            'parent_id' => $parentReview->review_id,
+            'rating' => 0, // Replies don't have ratings
+            'review' => $validated['reply']
+        ]);
+        
+        $reply->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'reply' => $reply
+        ]);
+    })->name('api.dashboard.review.reply');
+    
+    // Bulk Reply to Reviews API
+    Route::post('/api/dashboard/reviews/bulk-reply', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'review_ids' => 'required|array',
+            'review_ids.*' => 'required|uuid',
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $user = Auth::user();
+        $reviews = \App\Models\ProductReview::whereIn('review_id', $validated['review_ids'])
+            ->whereNull('parent_id')
+            ->get();
+        
+        $replies = [];
+        foreach ($reviews as $review) {
+            $reply = \App\Models\ProductReview::create([
+                'product_id' => $review->product_id,
+                'user_id' => $user->user_id,
+                'parent_id' => $review->review_id,
+                'rating' => 0,
+                'review' => $validated['reply']
+            ]);
+            $replies[] = $reply;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => count($replies) . ' balasan berhasil dikirim',
+            'count' => count($replies)
+        ]);
+    })->name('api.dashboard.reviews.bulk-reply');
+    
+    // Export Reviews to Excel/CSV
+    Route::get('/dashboard/reviews/export', function (\Illuminate\Http\Request $request) {
+        $query = \App\Models\ProductReview::with(['product', 'user', 'order', 'replies'])
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order');
+        
+        // Apply same filters as main page
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('review', 'like', "%{$search}%")
+                  ->orWhereHas('product', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+        
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+        
+        if ($request->filled('status')) {
+            if ($request->status === 'unreplied') {
+                $query->doesntHave('replies');
+            } elseif ($request->status === 'replied') {
+                $query->has('replies');
+            }
+        }
+        
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        $reviews = $query->orderByDesc('created_at')->get();
+        
+        $format = $request->get('format', 'csv');
+        
+        if ($format === 'excel' || $format === 'csv') {
+            $filename = 'ulasan-produk-' . date('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+            
+            $callback = function() use ($reviews) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // Header
+                fputcsv($file, [
+                    'Tanggal',
+                    'Produk',
+                    'Pelanggan',
+                    'Rating',
+                    'Ulasan',
+                    'Status Balasan',
+                    'Jumlah Balasan',
+                    'Order ID'
+                ]);
+                
+                // Data
+                foreach ($reviews as $review) {
+                    fputcsv($file, [
+                        $review->created_at->format('Y-m-d H:i:s'),
+                        $review->product->name ?? 'Produk Dihapus',
+                        $review->user->name ?? 'User',
+                        $review->rating,
+                        $review->review ?? '',
+                        $review->replies->count() > 0 ? 'Sudah Dibalas' : 'Belum Dibalas',
+                        $review->replies->count(),
+                        substr($review->order_id ?? '', 0, 8)
+                    ]);
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+        } else {
+            // PDF Export
+            $now = now()->setTimezone('Asia/Jakarta');
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('dashboard.reviews-export-pdf', [
+                'reviews' => $reviews,
+                'generatedAt' => $now->format('d/m/Y H:i:s') . ' WIB'
+            ]);
+            
+            return $pdf->download('ulasan-produk-' . $now->format('Y-m-d') . '.pdf');
+        }
+    })->name('dashboard.reviews.export');
+    
     Route::get('/dashboard/products', function () {
         $products = Product::with(['images', 'reviews.order'])->orderByDesc('created_at')->get();
         return view('dashboard.products', compact('products'));
@@ -713,6 +1129,21 @@ Route::middleware(['auth.session','admin'])->group(function() {
     Route::get('/dashboard/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportPdf'])->name('export.pdf');
     Route::get('/dashboard/export/csv', [\App\Http\Controllers\ExportController::class, 'exportCsv'])->name('export.csv');
     Route::get('/dashboard/sales', function (\Illuminate\Http\Request $request) {
+        $today = now()->startOfDay();
+        $thisMonth = now()->startOfMonth();
+        
+        // Statistik ringkas
+        $salesStats = [
+            'today_revenue' => \App\Models\Order::whereDate('created_at', $today)
+                ->where('payment_status', 'paid')
+                ->sum('total_price'),
+            'today_orders' => \App\Models\Order::whereDate('created_at', $today)->count(),
+            'pending_orders' => \App\Models\Order::where('status', 'pending')->count(),
+            'shipped_orders' => \App\Models\Order::where('status', 'dikirim')->count(),
+            'month_revenue' => \App\Models\Order::where('created_at', '>=', $thisMonth)
+                ->where('payment_status', 'paid')
+                ->sum('total_price')
+        ];
         $filter = $request->get('filter', 'all');
         $query = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at');
         
@@ -727,8 +1158,115 @@ Route::middleware(['auth.session','admin'])->group(function() {
         }
         
         $orders = $query->get();
-        return view('dashboard.sales', compact('orders', 'filter'));
+        return view('dashboard.sales', compact('orders', 'filter', 'salesStats'));
     })->name('dashboard.sales');
+    
+    // Export Sales to Excel/PDF
+    Route::get('/dashboard/sales/export', function (\Illuminate\Http\Request $request) {
+        $filter = $request->get('filter', 'all');
+        $query = \App\Models\Order::with(['orderDetail.product', 'orderDetail'])
+            ->orderByDesc('created_at');
+        
+        if ($filter === 'dikirim') {
+            $query->where('status', 'dikirim');
+        } elseif ($filter === 'selesai') {
+            $query->where('status', 'selesai');
+        }
+        
+        $orders = $query->get();
+        $format = $request->get('format', 'excel');
+        $now = now()->setTimezone('Asia/Jakarta');
+        
+        if ($format === 'excel' || $format === 'csv') {
+            $filename = 'laporan-penjualan-' . $now->format('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+            
+            $callback = function() use ($orders, $now) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // Header
+                fputcsv($file, [
+                    'Tanggal & Waktu (WIB)',
+                    'Order ID',
+                    'Nama Pembeli',
+                    'No. Telepon',
+                    'Alamat',
+                    'Produk',
+                    'Jumlah',
+                    'Harga Satuan',
+                    'Subtotal',
+                    'Total Harga',
+                    'Status',
+                    'Status Pembayaran',
+                    'Kurir',
+                    'Resi'
+                ]);
+                
+                // Data
+                foreach ($orders as $order) {
+                    $orderDate = $order->created_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i:s');
+                    $orderId = substr($order->order_id, 0, 8);
+                    
+                    if ($order->orderDetail->count() > 0) {
+                        foreach ($order->orderDetail as $detail) {
+                            fputcsv($file, [
+                                $orderDate,
+                                $orderId,
+                                $order->buyer_name,
+                                $order->buyer_phone,
+                                $order->buyer_address,
+                                $detail->product->name ?? 'Produk Dihapus',
+                                $detail->qty,
+                                $detail->price,
+                                $detail->qty * $detail->price,
+                                $order->orderDetail->count() > 1 && $detail !== $order->orderDetail->last() ? '' : $order->total_price,
+                                ucfirst($order->status ?? 'pending'),
+                                ucfirst($order->payment_status ?? 'pending'),
+                                $order->shipping_service ?? '-',
+                                $order->tracking_number ?? '-'
+                            ]);
+                        }
+                    } else {
+                        fputcsv($file, [
+                            $orderDate,
+                            $orderId,
+                            $order->buyer_name,
+                            $order->buyer_phone,
+                            $order->buyer_address,
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            $order->total_price,
+                            ucfirst($order->status ?? 'pending'),
+                            ucfirst($order->payment_status ?? 'pending'),
+                            $order->shipping_service ?? '-',
+                            $order->tracking_number ?? '-'
+                        ]);
+                    }
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+        } else {
+            // PDF Export
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('dashboard.sales-export-pdf', [
+                'orders' => $orders,
+                'filter' => $filter,
+                'generatedAt' => $now->format('d/m/Y H:i:s') . ' WIB'
+            ]);
+            
+            return $pdf->download('laporan-penjualan-' . $now->format('Y-m-d') . '.pdf');
+        }
+    })->name('dashboard.sales.export');
     Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
     Route::get('/dashboard/customers', [\App\Http\Controllers\CustomerController::class, 'index'])->name('dashboard.customers');
     
@@ -1648,14 +2186,48 @@ Route::middleware('auth.session')->group(function() {
                 ], 400);
             }
             
-            // Admin validates payment - change status to "paid"
+            // PERBAIKAN: Kurangi stok saat payment divalidasi (hanya sekali)
+            // Cek apakah payment_status sudah pernah "paid" sebelumnya untuk mencegah duplikasi
+            // Jika sudah pernah "paid", tidak perlu mengurangi stok lagi
+            if ($order->payment_status === 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran sudah divalidasi sebelumnya'
+                ], 400);
+            }
+            
+            // Load order details dengan product terlebih dahulu
+            $order->load('orderDetail.product');
+            
+            // Cek stok untuk semua produk sebelum mengurangi
+            foreach ($order->orderDetail as $detail) {
+                $product = $detail->product;
+                if ($product && $product->stock < $detail->qty) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stok tidak mencukupi untuk produk: ' . $product->name . '. Stok tersedia: ' . $product->stock
+                    ], 400);
+                }
+            }
+            
+            // Jika semua stok cukup, kurangi stok untuk semua produk (HANYA SEKALI)
+            foreach ($order->orderDetail as $detail) {
+                $product = $detail->product;
+                if ($product) {
+                    // Kurangi stok (hanya sekali, saat payment divalidasi)
+                    $product->stock -= $detail->qty;
+                    $product->save();
+                }
+            }
+            
+            // Setelah stok berhasil dikurangi, update payment status
             $order->payment_status = 'paid';
             $order->paid_at = now();
             $order->save();
             
             return response()->json([
                 'success' => true,
-                'message' => 'Pembayaran berhasil divalidasi. Status pesanan sekarang "Lunas".'
+                'message' => 'Pembayaran berhasil divalidasi. Status pesanan sekarang "Lunas" dan stok telah dikurangi.'
             ]);
         } catch (\Exception $e) {
             \Log::error('Error validating payment: ' . $e->getMessage());
@@ -1694,18 +2266,14 @@ Route::middleware('auth.session')->group(function() {
             $order->status = 'dikirim';
             $order->save();
             
-            // Reduce stock for each product in order
-            foreach ($order->orderDetail as $detail) {
-                $product = $detail->product;
-                if ($product) {
-                    $newStock = max(0, $product->stock - $detail->qty);
-                    $product->update(['stock' => $newStock]);
-                }
-            }
+            // PERBAIKAN: Stok TIDAK dikurangi di sini karena sudah dikurangi saat checkout
+            // Stok sudah dikurangi saat checkout (baris 2080-2082 di cart.checkout route)
+            // Jika dikurangi lagi di sini, stok akan berkurang 2 kali (double reduction)
+            // Hanya update status order, tidak perlu mengurangi stok lagi
             
             return response()->json([
                 'success' => true,
-                'message' => 'Pesanan berhasil dikirim dan stok telah dikurangi. Nomor resi: ' . $order->tracking_number
+                'message' => 'Pesanan berhasil dikirim. Nomor resi: ' . $order->tracking_number
             ]);
         } catch (\Exception $e) {
             \Log::error('Error shipping order: ' . $e->getMessage());
@@ -1937,11 +2505,16 @@ Route::middleware('auth.session')->group(function(){
             $subtotal += $item->product->price * $item->qty;
         }
         
+        // Refresh product to get latest stock
+        $product->refresh();
+        
         return response()->json([
             'success' => true,
             'message' => 'Keranjang berhasil diperbarui',
             'item_total' => $product->price * $validated['qty'],
-            'subtotal' => $subtotal
+            'subtotal' => $subtotal,
+            'stock' => $product->stock, // Return latest stock
+            'qty' => $validated['qty'] // Return updated qty
         ]);
     })->name('cart.update');
     
@@ -2063,6 +2636,9 @@ Route::middleware('auth.session')->group(function(){
         $order = \App\Models\Order::create($orderData);
         
         // Create order details for each cart item
+        // PERBAIKAN: Stok TIDAK dikurangi di sini (saat checkout)
+        // Stok akan dikurangi saat payment status menjadi "paid" (setelah admin validasi pembayaran)
+        // Ini mencegah stok berkurang jika pembayaran gagal atau order dibatalkan
         foreach ($cartItems as $item) {
             \App\Models\OrderDetail::create([
                 'order_detail_id' => (string) Str::uuid(),
@@ -2072,9 +2648,7 @@ Route::middleware('auth.session')->group(function(){
                 'price' => $item->product->price
             ]);
             
-            // Reduce stock
-            $item->product->stock -= $item->qty;
-            $item->product->save();
+            // TIDAK mengurangi stok di sini - akan dikurangi saat payment divalidasi
         }
         
         // Clear only selected cart items
@@ -2215,7 +2789,7 @@ Route::middleware('auth.session')->group(function(){
                 'order_id' => $order->order_id,
                 'rating' => $validated['rating'],
                 'review' => $validated['review'],
-                'image' => !empty($imagePaths) ? $imagePaths : null
+                'image' => !empty($finalImages) ? $finalImages : null
             ]);
         }
         

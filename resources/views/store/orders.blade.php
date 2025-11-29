@@ -62,18 +62,18 @@
     }
     
     .status-pending {
-      background: #fff3cd;
-      color: #856404;
+      background: #FEF3C7;
+      color: #D97706;
     }
     
     .status-dikirim {
-      background: #d1ecf1;
-      color: #0c5460;
+      background: #DBEAFE;
+      color: #1E40AF;
     }
     
     .status-selesai {
-      background: #d4edda;
-      color: #155724;
+      background: #D1FAE5;
+      color: #065F46;
     }
     
     .order-product {
@@ -122,7 +122,7 @@
     }
     
     .btn-confirm {
-      background: #69B578;
+      background: #22C55E;
       color: white;
       border: none;
       padding: 0.6rem 1.5rem;
@@ -134,7 +134,7 @@
     }
     
     .btn-confirm:hover {
-      background: #5a9d66;
+      background: #16a34a;
     }
     
     /* WhatsApp-style chat messages - Buyer Chat (Orders Page) */
@@ -382,7 +382,7 @@
                         </button>
                       </div>
                     @else
-                      <button class="btn btn-sm btn-outline-primary" onclick="showReviewForm('{{ $product->product_id }}', '{{ $order->order_id }}', '{{ $detail->order_detail_id }}')" style="font-size: 0.75rem; margin-top: 0.5rem;">
+                      <button class="btn btn-sm" onclick="showReviewForm('{{ $product->product_id }}', '{{ $order->order_id }}', '{{ $detail->order_detail_id }}')" style="font-size: 0.75rem; margin-top: 0.5rem; border: 1px solid #F59E0B; color: #F59E0B; background: transparent;" onmouseover="this.style.background='#F59E0B'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#F59E0B';">
                         <i class="fa-solid fa-star me-1"></i> Beri Rating & Ulasan
                       </button>
                     @endif
@@ -473,9 +473,9 @@
             <div class="col-md-6 mb-2">
               <strong>Metode Pembayaran:</strong> 
               @if($order->payment_method === 'QRIS')
-                <span class="badge bg-success"><i class="fa-solid fa-qrcode me-1"></i>QRIS</span>
+                <span class="badge" style="background: #8B5CF6; color: white;"><i class="fa-solid fa-qrcode me-1"></i>QRIS</span>
               @elseif($order->payment_method === 'Transfer Bank')
-                <span class="badge bg-info"><i class="fa-solid fa-building-columns me-1"></i>Transfer Bank</span>
+                <span class="badge" style="background: #6B7280; color: white;"><i class="fa-solid fa-building-columns me-1"></i>Transfer Bank</span>
               @else
                 <span class="text-muted">Belum dipilih</span>
               @endif
@@ -484,7 +484,7 @@
               <div class="col-md-12">
                 <strong>Nomor Resi:</strong> 
                 <span class="text-primary">{{ $order->tracking_number }}</span>
-                <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="btn btn-sm ms-2" style="border: 1px solid #3B82F6; color: #3B82F6; background: transparent;" onmouseover="this.style.background='#3B82F6'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#3B82F6';">
                   <i class="fa-solid fa-external-link me-1"></i>Cek Resi
                 </a>
               </div>
@@ -540,7 +540,7 @@
             Total: Rp {{ number_format($order->total_price,0,',','.') }}
           </div>
           <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary btn-sm" onclick="openChatForOrder('{{ $order->order_id }}')" title="Chat dengan Penjual">
+            <button class="btn btn-sm" style="border: 1px solid #22C55E; color: #22C55E; background: transparent;" onmouseover="this.style.background='#22C55E'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#22C55E';" onclick="openChatForOrder('{{ $order->order_id }}')" title="Chat dengan Penjual">
               <i class="fa-solid fa-comments me-1"></i> Chat Penjual
             </button>
             @if($order->status === 'dikirim')
