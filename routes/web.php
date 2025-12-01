@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 // Helper function untuk generate tracking number
@@ -45,10 +46,245 @@ if (!function_exists('getPaymentAccount')) {
     }
 }
 
+// Serve storage files (fix 403 Forbidden) - Must be before other routes
+Route::get('/storage/products/{filename}', function ($filename) {
+    try {
+        // Security: prevent directory traversal
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false) {
+            abort(403, 'Forbidden');
+        }
+        
+        $filePath = 'products/' . $filename;
+        
+        // Check if file exists using Storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            \Log::error("Storage file not found: {$filePath}");
+            abort(404, 'File not found');
+        }
+        
+        // Serve file using Storage response
+        return Storage::disk('public')->response($filePath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error serving storage file: " . $e->getMessage());
+        abort(500, 'Error serving file');
+    }
+})->name('storage.products');
+
+// Serve review images
+Route::get('/storage/reviews/{filename}', function ($filename) {
+    try {
+        // Security: prevent directory traversal
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false) {
+            abort(403, 'Forbidden');
+        }
+        
+        $filePath = 'reviews/' . $filename;
+        
+        // Check if file exists using Storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            \Log::error("Storage file not found: {$filePath}");
+            abort(404, 'File not found');
+        }
+        
+        // Serve file using Storage response
+        return Storage::disk('public')->response($filePath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error serving review image {$filename}: " . $e->getMessage());
+        abort(500, 'Error serving file');
+    }
+})->name('storage.reviews');
+
+// Serve other storage files
+Route::get('/storage/{path}', function ($path) {
+    // Decode path jika ada encoding
+    $path = urldecode($path);
+    
+    // Security: prevent directory traversal
+    if (strpos($path, '..') !== false) {
+        abort(403, 'Forbidden');
+    }
+    
+    $filePath = storage_path('app/public/' . $path);
+    
+    if (!file_exists($filePath) || !is_file($filePath)) {
+        abort(404, 'File not found');
+    }
+    
+    // Get MIME type
+    $mimeType = mime_content_type($filePath);
+    if (!$mimeType) {
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+        ];
+        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+    }
+    
+    // Serve file with proper headers
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
+})->where('path', '.*')->name('storage.serve');
+
 // Public Routes - Semua bisa diakses tanpa login
 Route::get('/', function () {
-    $products = Product::with('images')->orderByDesc('created_at')->paginate(24);
-    return view('store.home', compact('products'));
+    $query = Product::with(['images', 'reviews.order']);
+    
+    // Filter by search
+    if (request('search')) {
+        $search = request('search');
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', '%' . $search . '%')
+              ->orWhere('description', 'like', '%' . $search . '%')
+              ->orWhere('slug', 'like', '%' . $search . '%');
+        });
+    }
+    
+    // Filter by category
+    if (request('category')) {
+        $category = request('category');
+        
+        // Check if it's a homepage category slug
+        $homepageCategory = \App\Models\HomepageCategory::where('slug', $category)->where('is_active', true)->first();
+        
+        if ($homepageCategory) {
+            // Use homepage category name to filter products with keyword mapping (lebih fleksibel)
+            $categoryName = strtolower($homepageCategory->name);
+            $categorySlug = strtolower($homepageCategory->slug);
+            
+            // Map category names to product keywords (diperluas dan lebih fleksibel)
+            $categoryKeywords = [
+                // Jeroan Ayam
+                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
+                'jeroan ayam' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
+                
+                // Ayam Potong Segar
+                'daging segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                'daging' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                'ayam potong segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                
+                // Dada Ayam
+                'dada' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
+                'dada ayam' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
+                
+                // Ayam Karkas
+                'ayam karkas' => ['karkas', 'carcass', 'ayam karkas'],
+                'karkas' => ['karkas', 'carcass', 'ayam karkas'],
+                
+                // Produk Frozen
+                'produk frozen' => ['beku', 'frozen'],
+                'frozen' => ['beku', 'frozen'],
+                'ayam beku' => ['beku', 'frozen'],
+                
+                // Produk Olahan
+                'produk olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                'olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                'produk olahan ayam' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                
+                // Obat & Vitamin
+                'obat vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                'obat & vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                'obat & vitamin ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                
+                // Pakan Ayam
+                'pakan' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
+                'pakan ayam' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
+                
+                // Peralatan Kandang
+                'peralatan kandang' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                'peralatan' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                'alat-alat' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                
+                // Robot ChickPatrol
+                'robot' => ['robot', 'chickpatrol', 'chick patrol'],
+                'robot chickpatrol' => ['robot', 'chickpatrol', 'chick patrol'],
+            ];
+            
+            // Get keywords for this category
+            $keywords = $categoryKeywords[$categorySlug] ?? $categoryKeywords[$categoryName] ?? [];
+            
+            // Jika tidak ada mapping, gunakan nama kategori sebagai keyword
+            if (empty($keywords)) {
+                $keywords = [$categoryName, $categorySlug];
+            }
+            
+            $query->where(function($q) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $q->orWhere('slug', 'like', '%' . $keyword . '%')
+                      ->orWhere('name', 'like', '%' . $keyword . '%')
+                      ->orWhere('description', 'like', '%' . $keyword . '%');
+                }
+            });
+        } else {
+            // Fallback to old category map for backward compatibility
+            $categoryMap = [
+                'daging-ayam-segar' => ['daging', 'ayam-segar', 'ayam-utuh'],
+                'olahan' => ['olahan', 'sosis', 'nugget', 'bakso'],
+                'alat-alat' => ['alat', 'peralatan'],
+                'pakan' => ['pakan', 'makanan-ayam'],
+                'obat-vitamin' => ['obat', 'vitamin', 'suplemen'],
+                'peralatan-kandang' => ['kandang', 'peralatan-kandang']
+            ];
+            
+            if (isset($categoryMap[$category])) {
+                $query->where(function($q) use ($categoryMap, $category) {
+                    foreach ($categoryMap[$category] as $pattern) {
+                        $q->orWhere('slug', 'like', '%' . $pattern . '%')
+                          ->orWhere('name', 'like', '%' . $pattern . '%');
+                    }
+                });
+            }
+        }
+    }
+    
+    $products = $query->orderByDesc('created_at')->paginate(24);
+    
+    // Get banners and group by banner_type
+    $allBanners = \App\Models\HomepageBanner::where('is_active', true)
+        ->orderBy('banner_type')
+        ->orderBy('sort_order')
+        ->orderBy('created_at')
+        ->get();
+    
+    // Group banners by banner_type (default to 'square' if banner_type is null)
+    $banners = [
+        'square' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'square';
+        })->values(),
+        'rectangle_top' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'rectangle_top';
+        })->values(),
+        'rectangle_bottom' => $allBanners->filter(function($banner) {
+            return ($banner->banner_type ?? 'square') === 'rectangle_bottom';
+        })->values(),
+    ];
+    
+    // Auto-fix sort_order for categories with missing or duplicate orders
+    $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+    $order = 1;
+    foreach ($allCategories as $cat) {
+        if ($cat->sort_order != $order) {
+            $cat->update(['sort_order' => $order]);
+        }
+        $order++;
+    }
+    
+    $homepageCategories = \App\Models\HomepageCategory::where('is_active', true)->orderBy('sort_order')->orderBy('created_at')->get();
+    $articleCategories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    return view('store.home', compact('products', 'banners', 'homepageCategories', 'articleCategories'));
 })->name('home');
 
 // Authentication Pages (hanya tampilan, tidak ada proses backend)
@@ -62,7 +298,17 @@ Route::post('/register', function (\Illuminate\Http\Request $request) {
         'last_name' => 'required|string|max:50',
         'phone' => 'required|string|max:30',
         'email' => 'required|email|unique:users,email',
-        'password' => 'required|min:8|confirmed'
+        'password' => [
+            'required',
+            'min:8',
+            'confirmed',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+        ]
+    ], [
+        'password.required' => 'Password harus diisi',
+        'password.min' => 'Password minimal 8 karakter',
+        'password.confirmed' => 'Konfirmasi password tidak cocok',
+        'password.regex' => 'Password harus mengandung minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol',
     ]);
     $user = \App\Models\User::create([
         'user_id' => (string) Str::uuid(),
@@ -80,17 +326,50 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::post('/login', function (\Illuminate\Http\Request $request) {
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
-    if (Auth::attempt($credentials, true)) {
+    try {
+        $credentials = $request->validate([
+            'email' => 'required|string',
+            'password' => 'required'
+        ]);
+        
+        // Check if input is email or phone
+        $isEmail = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL);
+        
+        // Find user by email or phone
+        $user = null;
+        if ($isEmail) {
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        } else {
+            $user = \App\Models\User::where('phone', $credentials['email'])->first();
+        }
+        
+        if (!$user) {
+            return back()->withErrors(['email' => 'Email/No. Telepon atau password salah'])->with('error', 'Login gagal');
+        }
+        
+        // Verify password manually (because User model uses user_id as primary key, not id)
+        if (!\Illuminate\Support\Facades\Hash::check($credentials['password'], $user->password)) {
+            return back()->withErrors(['email' => 'Email/No. Telepon atau password salah'])->with('error', 'Login gagal');
+        }
+        
+        // Regenerate session ID before login to prevent session fixation
         $request->session()->regenerate();
-        return Auth::user()->role === 'admin'
+        
+        // Login user manually
+        \Illuminate\Support\Facades\Auth::login($user, $request->filled('remember'));
+        
+        // Ensure session is saved
+        $request->session()->save();
+        
+        return $user->role === 'admin' || $user->role === 'seller'
             ? redirect()->route('dashboard')->with('success', 'Login admin berhasil')
             : redirect()->route('home')->with('success', 'Login berhasil');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return back()->withErrors($e->errors())->withInput();
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Login error: ' . $e->getMessage());
+        return back()->withErrors(['email' => 'Terjadi kesalahan saat login. Silakan coba lagi.'])->with('error', 'Login gagal');
     }
-    return back()->withErrors(['email' => 'Kredensial tidak valid'])->with('error', 'Login gagal');
 })->name('login.post');
 
 Route::get('/logout', function (\Illuminate\Http\Request $request) {
@@ -100,10 +379,85 @@ Route::get('/logout', function (\Illuminate\Http\Request $request) {
     return redirect()->route('home')->with('success', 'Logout berhasil');
 })->name('logout');
 
+// Password Reset Routes (Tanpa Email - Verifikasi Data Pribadi)
+Route::get('/forgot-password', function () {
+    return view('auth.forgot-password');
+})->name('password.request');
+
+Route::post('/forgot-password/verify', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'email' => 'required|string',
+        'name' => 'required|string',
+        'phone' => 'required|string',
+    ]);
+    
+    // Cari user berdasarkan email atau phone
+    $user = \App\Models\User::where(function($query) use ($request) {
+        $query->where('email', $request->email)
+              ->orWhere('phone', $request->email);
+    })->first();
+    
+    if (!$user) {
+        return back()->withErrors(['email' => 'Email/No. Telepon tidak ditemukan'])->withInput();
+    }
+    
+    // Verifikasi nama dan phone
+    $nameMatch = strtolower(trim($user->name)) === strtolower(trim($request->name));
+    $phoneMatch = trim($user->phone) === trim($request->phone);
+    
+    if (!$nameMatch || !$phoneMatch) {
+        return back()->withErrors(['name' => 'Data verifikasi tidak cocok. Pastikan nama dan nomor telepon sesuai dengan data registrasi.'])->withInput();
+    }
+    
+    // Jika verifikasi berhasil, redirect ke halaman reset password
+    return redirect()->route('password.reset', ['user_id' => $user->user_id]);
+})->name('password.verify');
+
+Route::get('/reset-password/{user_id}', function (string $user_id) {
+    $user = \App\Models\User::find($user_id);
+    
+    if (!$user) {
+        return redirect()->route('password.request')->with('error', 'Link reset password tidak valid');
+    }
+    
+    return view('auth.reset-password', [
+        'user_id' => $user_id
+    ]);
+})->name('password.reset');
+
+Route::post('/reset-password', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'user_id' => 'required|string',
+        'password' => [
+            'required',
+            'min:8',
+            'confirmed',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+        ],
+    ], [
+        'password.required' => 'Password harus diisi',
+        'password.min' => 'Password minimal 8 karakter',
+        'password.confirmed' => 'Konfirmasi password tidak cocok',
+        'password.regex' => 'Password harus mengandung minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol',
+    ]);
+    
+    $user = \App\Models\User::find($request->user_id);
+    
+    if (!$user) {
+        return back()->withErrors(['password' => 'User tidak ditemukan'])->withInput();
+    }
+    
+    // Update password
+    $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+    $user->save();
+    
+    return redirect()->route('login')->with('success', 'Password berhasil direset! Silakan login dengan password baru.');
+})->name('password.update');
+
 // Product Detail
 Route::get('/product/{id}', function ($id) {
     // Try to find by product_id first (database UUID), then by numeric id (localStorage)
-    $product = \App\Models\Product::with('images')->where('product_id', $id)->first();
+    $product = \App\Models\Product::with(['images', 'reviews.user', 'reviews.replies.user'])->where('product_id', $id)->first();
     
     // If not found and id is numeric, this might be a localStorage product
     if (!$product && is_numeric($id)) {
@@ -113,7 +467,29 @@ Route::get('/product/{id}', function ($id) {
     }
     
     if (!$product) abort(404);
-    return view('store.product-detail', compact('product'));
+    
+    $avgRating = $product->average_rating;
+    $totalReviews = $product->total_reviews;
+    // Only get top-level reviews (no parent_id)
+    $reviews = $product->reviews->whereNull('parent_id')->map(function($review) {
+        // Process review image URLs (support multiple images)
+        if ($review->image) {
+            $images = is_array($review->image) ? $review->image : [$review->image];
+            $review->image_urls = array_map(function($img) {
+                if ($img && !preg_match('/^(https?:\/\/|data:)/', $img)) {
+                    if (strpos($img, 'storage/reviews/') !== false) {
+                        return asset($img);
+                    } else {
+                        return asset('storage/' . $img);
+                    }
+                }
+                return $img;
+            }, array_filter($images));
+        }
+        return $review;
+    });
+    
+    return view('store.product-detail', compact('product', 'avgRating', 'totalReviews', 'reviews'));
 })->name('product.detail');
 
 // Order Payment Page
@@ -132,7 +508,7 @@ Route::get('/order/{id}/payment', function ($id) {
     return view('store.payment', compact('order', 'paymentAccount'));
 })->middleware('auth.session')->name('order.payment');
 
-// Confirm Payment (Manual confirmation for demo)
+// Confirm Payment (Buyer states they have paid - status becomes "processing")
 Route::post('/order/{id}/confirm-payment', function ($id) {
     if (!Auth::check()) {
         return response()->json(['message' => 'Harus login terlebih dahulu'], 401);
@@ -149,13 +525,20 @@ Route::post('/order/{id}/confirm-payment', function ($id) {
         ], 400);
     }
     
-    $order->payment_status = 'paid';
-    $order->paid_at = now();
+    if ($order->payment_status === 'processing') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Pembayaran sedang diproses oleh admin'
+        ], 400);
+    }
+    
+    // Change status to "processing" - waiting for admin validation
+    $order->payment_status = 'processing';
     $order->save();
     
     return response()->json([
         'success' => true,
-        'message' => 'Pembayaran berhasil dikonfirmasi',
+        'message' => 'Pembayaran Anda sedang diproses. Admin akan memvalidasi pembayaran Anda.',
         'redirect' => route('orders')
     ]);
 })->middleware('auth.session')->name('order.confirm-payment');
@@ -193,12 +576,13 @@ Route::post('/order/create', function (\Illuminate\Http\Request $request) {
         $trackingNumber = generateTrackingNumber($validated['shipping_service']);
         
         // Create order with all fields
+        // IMPORTANT: Use logged-in user's name, not from form (to prevent user impersonation)
         $orderData = [
             'user_id' => $user->user_id,
             'total_price' => $validated['total_price'],
             'status' => 'pending',
             'notes' => $validated['notes'] ?? null,
-            'buyer_name' => $validated['buyer_name'],
+            'buyer_name' => $user->name ?? $validated['buyer_name'], // Use logged-in user's name
             'buyer_phone' => $validated['phone'],
             'buyer_address' => $validated['address'],
             'shipping_service' => $validated['shipping_service'],
@@ -275,17 +659,491 @@ Route::post('/order/{id}/confirm-received', function ($id) {
 
 // Dashboard (siapkan untuk admin-only; middleware belum diaktifkan agar demo tetap jalan)
 Route::middleware(['auth.session','admin'])->group(function() {
-    Route::get('/dashboard', function () {
-        return view('dashboard.seller');
+    Route::get('/dashboard', function (\Illuminate\Http\Request $request) {
+        // Get statistics from database
+        $today = now()->startOfDay();
+        $thisMonth = now()->startOfMonth();
+        
+        // Penjualan Hari Ini
+        $salesToday = \App\Models\Order::whereDate('created_at', $today)->count();
+        $salesYesterday = \App\Models\Order::whereDate('created_at', now()->subDay()->startOfDay())->count();
+        $salesTodayChange = $salesYesterday > 0 ? (($salesToday - $salesYesterday) / $salesYesterday) * 100 : ($salesToday > 0 ? 100 : 0);
+        
+        // Penjualan Perbulan
+        $salesThisMonth = \App\Models\Order::where('created_at', '>=', $thisMonth)->count();
+        $lastMonth = now()->subMonth()->startOfMonth();
+        $salesLastMonth = \App\Models\Order::where('created_at', '>=', $lastMonth)
+            ->where('created_at', '<', $thisMonth)
+            ->count();
+        $salesMonthChange = $salesLastMonth > 0 ? (($salesThisMonth - $salesLastMonth) / $salesLastMonth) * 100 : ($salesThisMonth > 0 ? 100 : 0);
+        
+        // Produk Aktif (produk dengan stok > 0)
+        $activeProducts = \App\Models\Product::where('stock', '>', 0)->count();
+        $activeProductsPrev = \App\Models\Product::where('stock', '>', 0)
+            ->where('updated_at', '<', now()->subDay())
+            ->count();
+        $activeProductsChange = $activeProductsPrev > 0 ? (($activeProducts - $activeProductsPrev) / $activeProductsPrev) * 100 : 0;
+        
+        // Alat Aktif (tools yang aktif, bukan offline)
+        $activeTools = \App\Models\Tools::where('operational_status', '!=', 'offline')->count();
+        $activeToolsPrev = \App\Models\Tools::where('operational_status', '!=', 'offline')
+            ->where('updated_at', '<', now()->subDay())
+            ->count();
+        $activeToolsChange = $activeToolsPrev > 0 ? (($activeTools - $activeToolsPrev) / $activeToolsPrev) * 100 : 0;
+        
+        // Ulasan Baru (dalam 7 hari terakhir)
+        $newReviews = \App\Models\ProductReview::where('created_at', '>=', now()->subDays(7))
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
+        $newReviewsPrev = \App\Models\ProductReview::where('created_at', '>=', now()->subDays(14))
+            ->where('created_at', '<', now()->subDays(7))
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
+        $newReviewsChange = $newReviewsPrev > 0 ? (($newReviews - $newReviewsPrev) / $newReviewsPrev) * 100 : ($newReviews > 0 ? 100 : 0);
+        
+        // Total Pendapatan Perbulan
+        $totalRevenue = \App\Models\Order::where('created_at', '>=', $thisMonth)
+            ->where('payment_status', 'paid')
+            ->sum('total_price');
+        $totalRevenueLastMonth = \App\Models\Order::where('created_at', '>=', $lastMonth)
+            ->where('created_at', '<', $thisMonth)
+            ->where('payment_status', 'paid')
+            ->sum('total_price');
+        $totalRevenueChange = $totalRevenueLastMonth > 0 ? (($totalRevenue - $totalRevenueLastMonth) / $totalRevenueLastMonth) * 100 : ($totalRevenue > 0 ? 100 : 0);
+        
+        // Produk Terpopuler (berdasarkan jumlah terjual dari order yang sudah dibayar)
+        // Hanya tampilkan produk yang sudah pernah terjual (total_sold > 0)
+        $popularProducts = \App\Models\Product::with(['images'])
+            ->select('products.*')
+            ->selectRaw('COALESCE((
+                SELECT SUM(order_details.qty)
+                FROM order_details
+                INNER JOIN orders ON order_details.order_id = orders.order_id
+                WHERE order_details.product_id = products.product_id
+                AND orders.payment_status = "paid"
+            ), 0) as total_sold')
+            ->selectRaw('COALESCE((
+                SELECT AVG(product_reviews.rating)
+                FROM product_reviews
+                WHERE product_reviews.product_id = products.product_id
+                AND product_reviews.parent_id IS NULL
+                AND product_reviews.rating > 0
+                AND product_reviews.order_id IS NOT NULL
+            ), 0) as avg_rating')
+            ->selectRaw('COALESCE((
+                SELECT COUNT(*)
+                FROM product_reviews
+                WHERE product_reviews.product_id = products.product_id
+                AND product_reviews.parent_id IS NULL
+                AND product_reviews.rating > 0
+                AND product_reviews.order_id IS NOT NULL
+            ), 0) as total_reviews')
+            ->havingRaw('total_sold > 0')
+            ->orderBy('total_sold', 'desc')
+            ->limit(5)
+            ->get();
+        
+        // Data untuk chart penjualan produk (default 7 hari, bisa diubah via request)
+        $dateRange = $request->get('chart_range', '7days');
+        $days = 7;
+        if ($dateRange === '30days') $days = 30;
+        elseif ($dateRange === '3months') $days = 90;
+        elseif ($dateRange === '1year') $days = 365;
+        
+        $salesChartData = [];
+        $salesChartDataCompare = [];
+        
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->startOfDay();
+            $dateEnd = now()->subDays($i)->endOfDay();
+            
+            $salesCount = \App\Models\Order::whereBetween('created_at', [$date, $dateEnd])->count();
+            $salesChartData[] = [
+                'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
+                'sales' => $salesCount
+            ];
+            
+            // Data untuk comparison (periode sebelumnya)
+            $compareDate = $date->copy()->subDays($days);
+            $compareDateEnd = $dateEnd->copy()->subDays($days);
+            $compareSalesCount = \App\Models\Order::whereBetween('created_at', [$compareDate, $compareDateEnd])->count();
+            $salesChartDataCompare[] = [
+                'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
+                'sales' => $compareSalesCount
+            ];
+        }
+        
+        // Data penjualan produk per produk (top 5)
+        $productSalesData = \App\Models\OrderDetail::select('products.name', \DB::raw('SUM(order_details.qty) as total_sold'))
+            ->join('products', 'order_details.product_id', '=', 'products.product_id')
+            ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+            ->where('orders.created_at', '>=', $thisMonth)
+            ->where('orders.payment_status', 'paid')
+            ->groupBy('products.product_id', 'products.name')
+            ->orderBy('total_sold', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('dashboard.seller', compact(
+            'salesToday',
+            'salesTodayChange',
+            'salesThisMonth',
+            'salesMonthChange',
+            'activeProducts',
+            'activeProductsChange',
+            'activeTools',
+            'activeToolsChange',
+            'newReviews',
+            'newReviewsChange',
+            'totalRevenue',
+            'totalRevenueChange',
+            'popularProducts',
+            'salesChartData',
+            'salesChartDataCompare',
+            'productSalesData',
+            'dateRange'
+        ));
     })->name('dashboard');
+    
+    // Reviews Page
+    Route::get('/dashboard/reviews', function (\Illuminate\Http\Request $request) {
+        $query = \App\Models\ProductReview::with(['product.images', 'user', 'order', 'replies.user'])
+            ->whereNull('parent_id') // Only top-level reviews
+            ->whereNotNull('order_id') // Only reviews with valid order
+            ->whereHas('order'); // Ensure order still exists
+        
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('review', 'like', "%{$search}%")
+                  ->orWhereHas('product', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        // Rating filter
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+        
+        // Product filter
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+        
+        // Status filter (has reply or not)
+        if ($request->filled('status')) {
+            if ($request->status === 'unreplied') {
+                $query->doesntHave('replies');
+            } elseif ($request->status === 'replied') {
+                $query->has('replies');
+            }
+        }
+        
+        // Date filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        // Sort
+        $sortBy = $request->get('sort', 'created_at_desc');
+        switch ($sortBy) {
+            case 'created_at_asc':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'rating_desc':
+                $query->orderByDesc('rating')->orderByDesc('created_at');
+                break;
+            case 'rating_asc':
+                $query->orderBy('rating', 'asc')->orderByDesc('created_at');
+                break;
+            case 'product_asc':
+                $query->join('products', 'product_reviews.product_id', '=', 'products.product_id')
+                      ->orderBy('products.name', 'asc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'product_desc':
+                $query->join('products', 'product_reviews.product_id', '=', 'products.product_id')
+                      ->orderBy('products.name', 'desc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'user_asc':
+                $query->join('users', 'product_reviews.user_id', '=', 'users.user_id')
+                      ->orderBy('users.name', 'asc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            case 'user_desc':
+                $query->join('users', 'product_reviews.user_id', '=', 'users.user_id')
+                      ->orderBy('users.name', 'desc')
+                      ->orderByDesc('product_reviews.created_at')
+                      ->select('product_reviews.*');
+                break;
+            default:
+                $query->orderByDesc('created_at');
+        }
+        
+        $reviews = $query->paginate(20)->withQueryString();
+        
+        // Reload relationships after join to ensure eager loading works
+        $reviews->load(['product.images', 'user', 'order', 'replies.user']);
+        
+        // Get statistics
+        $totalReviews = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
+        
+        $unrepliedCount = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->doesntHave('replies')
+            ->count();
+        
+        $avgRating = \App\Models\ProductReview::whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->where('rating', '>', 0)
+            ->avg('rating');
+        
+        $stats = [
+            'total' => $totalReviews,
+            'unreplied' => $unrepliedCount,
+            'avg_rating' => round($avgRating, 1),
+            'replied' => $totalReviews - $unrepliedCount
+        ];
+        
+        // Get products list for filter
+        $products = \App\Models\Product::whereHas('reviews', function($q) {
+            $q->whereNull('parent_id')
+              ->whereNotNull('order_id')
+              ->whereHas('order');
+        })->orderBy('name')->get(['product_id', 'name']);
+        
+        // Process review images
+        $reviews->getCollection()->transform(function($review) {
+            if ($review->image && is_array($review->image)) {
+                $review->image_urls = array_map(function($img) {
+                    if ($img && !preg_match('/^(https?:\/\/|data:)/', $img)) {
+                        if (strpos($img, 'storage/reviews/') !== false) {
+                            return asset($img);
+                        } else {
+                            return asset('storage/' . $img);
+                        }
+                    }
+                    return $img;
+                }, array_filter($review->image));
+            }
+            return $review;
+        });
+        
+        return view('dashboard.reviews', compact('reviews', 'stats', 'products'));
+    })->name('dashboard.reviews');
+    
+    // Reply to Review API (for dashboard)
+    Route::post('/api/dashboard/reviews/{reviewId}/reply', function ($reviewId, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->whereNull('parent_id')
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::create([
+            'product_id' => $parentReview->product_id,
+            'user_id' => $user->user_id,
+            'parent_id' => $parentReview->review_id,
+            'rating' => 0, // Replies don't have ratings
+            'review' => $validated['reply']
+        ]);
+        
+        $reply->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'reply' => $reply
+        ]);
+    })->name('api.dashboard.review.reply');
+    
+    // Bulk Reply to Reviews API
+    Route::post('/api/dashboard/reviews/bulk-reply', function (\Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'review_ids' => 'required|array',
+            'review_ids.*' => 'required|uuid',
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $user = Auth::user();
+        $reviews = \App\Models\ProductReview::whereIn('review_id', $validated['review_ids'])
+            ->whereNull('parent_id')
+            ->get();
+        
+        $replies = [];
+        foreach ($reviews as $review) {
+            $reply = \App\Models\ProductReview::create([
+                'product_id' => $review->product_id,
+                'user_id' => $user->user_id,
+                'parent_id' => $review->review_id,
+                'rating' => 0,
+                'review' => $validated['reply']
+            ]);
+            $replies[] = $reply;
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => count($replies) . ' balasan berhasil dikirim',
+            'count' => count($replies)
+        ]);
+    })->name('api.dashboard.reviews.bulk-reply');
+    
+    // Export Reviews to Excel/CSV
+    Route::get('/dashboard/reviews/export', function (\Illuminate\Http\Request $request) {
+        $query = \App\Models\ProductReview::with(['product', 'user', 'order', 'replies'])
+            ->whereNull('parent_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order');
+        
+        // Apply same filters as main page
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('review', 'like', "%{$search}%")
+                  ->orWhereHas('product', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+        
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+        
+        if ($request->filled('status')) {
+            if ($request->status === 'unreplied') {
+                $query->doesntHave('replies');
+            } elseif ($request->status === 'replied') {
+                $query->has('replies');
+            }
+        }
+        
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        $reviews = $query->orderByDesc('created_at')->get();
+        
+        $format = $request->get('format', 'csv');
+        
+        if ($format === 'excel' || $format === 'csv') {
+            $filename = 'ulasan-produk-' . date('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+            
+            $callback = function() use ($reviews) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // Header
+                fputcsv($file, [
+                    'Tanggal',
+                    'Produk',
+                    'Pelanggan',
+                    'Rating',
+                    'Ulasan',
+                    'Status Balasan',
+                    'Jumlah Balasan',
+                    'Order ID'
+                ]);
+                
+                // Data
+                foreach ($reviews as $review) {
+                    fputcsv($file, [
+                        $review->created_at->format('Y-m-d H:i:s'),
+                        $review->product->name ?? 'Produk Dihapus',
+                        $review->user->name ?? 'User',
+                        $review->rating,
+                        $review->review ?? '',
+                        $review->replies->count() > 0 ? 'Sudah Dibalas' : 'Belum Dibalas',
+                        $review->replies->count(),
+                        substr($review->order_id ?? '', 0, 8)
+                    ]);
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+        } else {
+            // PDF Export
+            $now = now()->setTimezone('Asia/Jakarta');
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('dashboard.reviews-export-pdf', [
+                'reviews' => $reviews,
+                'generatedAt' => $now->format('d/m/Y H:i:s') . ' WIB'
+            ]);
+            
+            return $pdf->download('ulasan-produk-' . $now->format('Y-m-d') . '.pdf');
+        }
+    })->name('dashboard.reviews.export');
+    
     Route::get('/dashboard/products', function () {
-        $products = Product::with('images')->orderByDesc('created_at')->get();
+        $products = Product::with(['images', 'reviews.order'])->orderByDesc('created_at')->get();
         return view('dashboard.products', compact('products'));
     })->name('dashboard.products');
     Route::get('/dashboard/tools', function () { return view('dashboard.tools'); })->name('dashboard.tools');
     Route::get('/dashboard/tools/monitoring', function () { return view('dashboard.tools-monitoring'); })->name('dashboard.tools.monitoring');
     Route::get('/dashboard/tools/information', function () { return view('dashboard.tools-information'); })->name('dashboard.tools.information');
+    
+    // Export routes
+    Route::get('/dashboard/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportPdf'])->name('export.pdf');
+    Route::get('/dashboard/export/csv', [\App\Http\Controllers\ExportController::class, 'exportCsv'])->name('export.csv');
     Route::get('/dashboard/sales', function (\Illuminate\Http\Request $request) {
+        $today = now()->startOfDay();
+        $thisMonth = now()->startOfMonth();
+        
+        // Statistik ringkas
+        $salesStats = [
+            'today_revenue' => \App\Models\Order::whereDate('created_at', $today)
+                ->where('payment_status', 'paid')
+                ->sum('total_price'),
+            'today_orders' => \App\Models\Order::whereDate('created_at', $today)->count(),
+            'pending_orders' => \App\Models\Order::where('status', 'pending')->count(),
+            'shipped_orders' => \App\Models\Order::where('status', 'dikirim')->count(),
+            'month_revenue' => \App\Models\Order::where('created_at', '>=', $thisMonth)
+                ->where('payment_status', 'paid')
+                ->sum('total_price')
+        ];
         $filter = $request->get('filter', 'all');
         $query = \App\Models\Order::with(['orderDetail.product.images'])->orderByDesc('created_at');
         
@@ -300,9 +1158,816 @@ Route::middleware(['auth.session','admin'])->group(function() {
         }
         
         $orders = $query->get();
-        return view('dashboard.sales', compact('orders', 'filter'));
+        return view('dashboard.sales', compact('orders', 'filter', 'salesStats'));
     })->name('dashboard.sales');
+    
+    // Export Sales to Excel/PDF
+    Route::get('/dashboard/sales/export', function (\Illuminate\Http\Request $request) {
+        $filter = $request->get('filter', 'all');
+        $query = \App\Models\Order::with(['orderDetail.product', 'orderDetail'])
+            ->orderByDesc('created_at');
+        
+        if ($filter === 'dikirim') {
+            $query->where('status', 'dikirim');
+        } elseif ($filter === 'selesai') {
+            $query->where('status', 'selesai');
+        }
+        
+        $orders = $query->get();
+        $format = $request->get('format', 'excel');
+        $now = now()->setTimezone('Asia/Jakarta');
+        
+        if ($format === 'excel' || $format === 'csv') {
+            $filename = 'laporan-penjualan-' . $now->format('Y-m-d') . '.csv';
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+            
+            $callback = function() use ($orders, $now) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                // Header
+                fputcsv($file, [
+                    'Tanggal & Waktu (WIB)',
+                    'Order ID',
+                    'Nama Pembeli',
+                    'No. Telepon',
+                    'Alamat',
+                    'Produk',
+                    'Jumlah',
+                    'Harga Satuan',
+                    'Subtotal',
+                    'Total Harga',
+                    'Status',
+                    'Status Pembayaran',
+                    'Kurir',
+                    'Resi'
+                ]);
+                
+                // Data
+                foreach ($orders as $order) {
+                    $orderDate = $order->created_at->setTimezone('Asia/Jakarta')->format('d/m/Y H:i:s');
+                    $orderId = substr($order->order_id, 0, 8);
+                    
+                    if ($order->orderDetail->count() > 0) {
+                        foreach ($order->orderDetail as $detail) {
+                            fputcsv($file, [
+                                $orderDate,
+                                $orderId,
+                                $order->buyer_name,
+                                $order->buyer_phone,
+                                $order->buyer_address,
+                                $detail->product->name ?? 'Produk Dihapus',
+                                $detail->qty,
+                                $detail->price,
+                                $detail->qty * $detail->price,
+                                $order->orderDetail->count() > 1 && $detail !== $order->orderDetail->last() ? '' : $order->total_price,
+                                ucfirst($order->status ?? 'pending'),
+                                ucfirst($order->payment_status ?? 'pending'),
+                                $order->shipping_service ?? '-',
+                                $order->tracking_number ?? '-'
+                            ]);
+                        }
+                    } else {
+                        fputcsv($file, [
+                            $orderDate,
+                            $orderId,
+                            $order->buyer_name,
+                            $order->buyer_phone,
+                            $order->buyer_address,
+                            '-',
+                            '-',
+                            '-',
+                            '-',
+                            $order->total_price,
+                            ucfirst($order->status ?? 'pending'),
+                            ucfirst($order->payment_status ?? 'pending'),
+                            $order->shipping_service ?? '-',
+                            $order->tracking_number ?? '-'
+                        ]);
+                    }
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+        } else {
+            // PDF Export
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('dashboard.sales-export-pdf', [
+                'orders' => $orders,
+                'filter' => $filter,
+                'generatedAt' => $now->format('d/m/Y H:i:s') . ' WIB'
+            ]);
+            
+            return $pdf->download('laporan-penjualan-' . $now->format('Y-m-d') . '.pdf');
+        }
+    })->name('dashboard.sales.export');
     Route::get('/dashboard/chat', function () { return view('dashboard.chat'); })->name('dashboard.chat');
+    Route::get('/dashboard/customers', [\App\Http\Controllers\CustomerController::class, 'index'])->name('dashboard.customers');
+    
+    // Article Categories Management
+    Route::get('/dashboard/article-categories', function () {
+        $categories = \App\Models\ArticleCategory::orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.article-categories', compact('categories'));
+    })->name('dashboard.article-categories');
+    
+    Route::get('/dashboard/article-categories/{id}', function ($id) {
+        $category = \App\Models\ArticleCategory::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'category' => $category
+        ]);
+    });
+    
+    Route::post('/dashboard/article-categories', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:article_categories,slug',
+                'description' => 'nullable|string',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            $category = \App\Models\ArticleCategory::create([
+                'category_id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $validated['name'],
+                'slug' => $validated['slug'],
+                'description' => $validated['description'] ?? null,
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dibuat',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/article-categories/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $category = \App\Models\ArticleCategory::findOrFail($id);
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:article_categories,slug,' . $id . ',category_id',
+                'description' => 'nullable|string',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            $category->update($validated);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil diperbarui',
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/article-categories/{id}', function ($id) {
+        try {
+            $category = \App\Models\ArticleCategory::findOrFail($id);
+            
+            // Check if category has articles
+            if ($category->articles()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak dapat dihapus karena masih memiliki artikel'
+                ], 400);
+            }
+            
+            $category->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Homepage Management
+    Route::get('/dashboard/homepage', function () {
+        $banners = \App\Models\HomepageBanner::orderBy('banner_type')->orderBy('sort_order')->orderBy('created_at')->get();
+        $categories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.homepage', compact('banners', 'categories'));
+    })->name('dashboard.homepage');
+    
+    // Banner Routes
+    Route::get('/dashboard/homepage/banners/{id}', function ($id) {
+        $banner = \App\Models\HomepageBanner::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'banner' => $banner
+        ]);
+    });
+    
+    Route::post('/dashboard/homepage/banners', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'banner_type' => 'required|string|in:square,rectangle_top,rectangle_bottom',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'link_url' => 'nullable|string|max:500',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            $imageUrl = null;
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+                $extension = strtolower($file->getClientOriginalExtension());
+                $filename = time() . '_' . uniqid() . '.' . $extension;
+                $destinationPath = public_path('storage/homepage-banners');
+                
+                // Ensure directory exists
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                
+                // For JPEG, optimize quality
+                if (in_array($extension, ['jpg', 'jpeg'])) {
+                    $image = imagecreatefromjpeg($file->getRealPath());
+                    if ($image) {
+                        imagejpeg($image, $destinationPath . '/' . $filename, 95); // 95% quality
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } elseif ($extension === 'png') {
+                    $image = imagecreatefrompng($file->getRealPath());
+                    if ($image) {
+                        imagealphablending($image, false);
+                        imagesavealpha($image, true);
+                        imagepng($image, $destinationPath . '/' . $filename, 9); // 9 = highest compression but lossless
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } else {
+                    $file->move($destinationPath, $filename);
+                }
+                
+                $imageUrl = asset('storage/homepage-banners/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $imageUrl = $request->input('image_url');
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gambar banner harus diisi (URL atau upload file)'
+                ], 422);
+            }
+            
+            $banner = \App\Models\HomepageBanner::create([
+                'banner_id' => (string) \Illuminate\Support\Str::uuid(),
+                'title' => $validated['title'] ?? null,
+                'banner_type' => $validated['banner_type'],
+                'image_url' => $imageUrl,
+                'link_url' => $validated['link_url'] ?? null,
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil dibuat',
+                'banner' => $banner
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/homepage/banners/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $banner = \App\Models\HomepageBanner::where('banner_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'title' => 'nullable|string|max:255',
+                'banner_type' => 'required|string|in:square,rectangle_top,rectangle_bottom',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'link_url' => 'nullable|string|max:500',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            if ($request->hasFile('image_file')) {
+                // Delete old image if exists
+                if ($banner->image_url && strpos($banner->image_url, asset('storage/homepage-banners')) === 0) {
+                    $oldFile = str_replace(asset('storage/homepage-banners'), public_path('storage/homepage-banners'), $banner->image_url);
+                    if (file_exists($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+                
+                $file = $request->file('image_file');
+                $extension = strtolower($file->getClientOriginalExtension());
+                $filename = time() . '_' . uniqid() . '.' . $extension;
+                $destinationPath = public_path('storage/homepage-banners');
+                
+                // Ensure directory exists
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                
+                // For JPEG, optimize quality
+                if (in_array($extension, ['jpg', 'jpeg'])) {
+                    $image = imagecreatefromjpeg($file->getRealPath());
+                    if ($image) {
+                        imagejpeg($image, $destinationPath . '/' . $filename, 95); // 95% quality
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } elseif ($extension === 'png') {
+                    $image = imagecreatefrompng($file->getRealPath());
+                    if ($image) {
+                        imagealphablending($image, false);
+                        imagesavealpha($image, true);
+                        imagepng($image, $destinationPath . '/' . $filename, 9); // 9 = highest compression but lossless
+                        imagedestroy($image);
+                    } else {
+                        $file->move($destinationPath, $filename);
+                    }
+                } else {
+                    $file->move($destinationPath, $filename);
+                }
+                
+                $validated['image_url'] = asset('storage/homepage-banners/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $validated['image_url'] = $request->input('image_url');
+            } else {
+                // Keep existing image if not provided
+                unset($validated['image_url']);
+            }
+            
+            $banner->update($validated);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil diperbarui',
+                'banner' => $banner
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/homepage/banners/{id}', function ($id) {
+        try {
+            $banner = \App\Models\HomepageBanner::where('banner_id', $id)->firstOrFail();
+            $banner->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Banner berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting banner: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus banner: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Category Routes
+    Route::get('/dashboard/homepage/categories/{id}', function ($id) {
+        try {
+            \Log::info('Fetching category with ID: ' . $id);
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->first();
+            
+            if (!$category) {
+                \Log::warning('Category not found with ID: ' . $id);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak ditemukan'
+                ], 404);
+            }
+            
+            \Log::info('Category found: ' . $category->name);
+            return response()->json([
+                'success' => true,
+                'category' => $category
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching category: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::post('/dashboard/homepage/categories', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:homepage_categories,slug',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            $imageUrl = null;
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path('storage/homepage-categories'), $filename);
+                $imageUrl = asset('storage/homepage-categories/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $imageUrl = $request->input('image_url');
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Foto kategori harus diisi (URL atau upload file)'
+                ], 422);
+            }
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            // Auto-generate sort_order if not provided or is 0
+            if (empty($validated['sort_order']) || $validated['sort_order'] == 0) {
+                $maxOrder = \App\Models\HomepageCategory::max('sort_order') ?? 0;
+                $validated['sort_order'] = $maxOrder + 1;
+            }
+            
+            $category = \App\Models\HomepageCategory::create([
+                'category_id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $validated['name'],
+                'slug' => $validated['slug'],
+                'image_url' => $imageUrl,
+                'link_url' => null, // Tidak digunakan lagi, kategori digunakan untuk filter
+                'sort_order' => $validated['sort_order'],
+                'is_active' => $validated['is_active'] ?? true
+            ]);
+            
+            // Reorder all categories to ensure sequential order
+            $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($allCategories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dibuat',
+                'category' => $category->fresh()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/homepage/categories/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->firstOrFail();
+            
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'slug' => 'nullable|string|max:120|unique:homepage_categories,slug,' . $id . ',category_id',
+                'image_url' => 'nullable|string',
+                'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'sort_order' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean'
+            ]);
+            
+            // Handle image upload
+            if ($request->hasFile('image_file')) {
+                // Delete old image if exists
+                if ($category->image_url && strpos($category->image_url, asset('storage/homepage-categories')) === 0) {
+                    $oldFile = str_replace(asset('storage/homepage-categories'), public_path('storage/homepage-categories'), $category->image_url);
+                    if (file_exists($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+                
+                $file = $request->file('image_file');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path('storage/homepage-categories'), $filename);
+                $validated['image_url'] = asset('storage/homepage-categories/' . $filename);
+            } elseif ($request->filled('image_url')) {
+                $validated['image_url'] = $request->input('image_url');
+            } else {
+                // Keep existing image if not provided
+                unset($validated['image_url']);
+            }
+            
+            if (empty($validated['slug'])) {
+                $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            }
+            
+            // Auto-generate sort_order if not provided or is 0
+            if (empty($validated['sort_order']) || $validated['sort_order'] == 0) {
+                $maxOrder = \App\Models\HomepageCategory::where('category_id', '!=', $id)->max('sort_order') ?? 0;
+                $validated['sort_order'] = $maxOrder + 1;
+            }
+            
+            // Remove link_url from update (not used anymore)
+            unset($validated['link_url']);
+            $validated['link_url'] = null;
+            
+            $category->update($validated);
+            
+            // Reorder all categories to ensure sequential order
+            $allCategories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($allCategories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil diperbarui',
+                'category' => $category->fresh()
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/homepage/categories/{id}', function ($id) {
+        try {
+            $category = \App\Models\HomepageCategory::where('category_id', $id)->firstOrFail();
+            $category->delete();
+            
+            // Reorder remaining categories
+            $categories = \App\Models\HomepageCategory::orderBy('sort_order')->orderBy('created_at')->get();
+            $order = 1;
+            foreach ($categories as $cat) {
+                if ($cat->sort_order != $order) {
+                    $cat->update(['sort_order' => $order]);
+                }
+                $order++;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Kategori berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus kategori: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    // Articles Management
+    Route::get('/dashboard/articles', function () {
+        $articles = \App\Models\Article::with(['user', 'categories'])->orderByDesc('created_at')->get();
+        $categories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+        return view('dashboard.articles', compact('articles', 'categories'));
+    })->name('dashboard.articles');
+    
+    Route::get('/dashboard/articles/{id}', function ($id) {
+        $article = \App\Models\Article::with('categories')->findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'article' => $article
+        ]);
+    });
+    
+    Route::post('/dashboard/articles', function (\Illuminate\Http\Request $request) {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'category_ids' => 'required|string', // JSON string from FormData
+                'content' => 'required|string',
+                'featured_image_url' => 'nullable|url',
+                'featured_image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120'
+            ]);
+            
+            $categoryIds = json_decode($validated['category_ids'], true);
+            if (!is_array($categoryIds) || count($categoryIds) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pilih minimal satu kategori'
+                ], 422);
+            }
+            
+            // Handle image upload
+            $featuredImage = null;
+            if ($request->hasFile('featured_image_file')) {
+                $file = $request->file('featured_image_file');
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $directory = public_path('storage/articles');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $file->move($directory, $filename);
+                $featuredImage = 'storage/articles/' . $filename;
+            } elseif ($request->filled('featured_image_url')) {
+                $featuredImage = $validated['featured_image_url'];
+            }
+            
+            $article = \App\Models\Article::create([
+                'article_id' => (string) \Illuminate\Support\Str::uuid(),
+                'author_id' => Auth::user()->user_id,
+                'title' => $validated['title'],
+                'content' => $validated['content'],
+                'featured_image' => $featuredImage
+            ]);
+            
+            // Attach categories
+            $article->categories()->attach($categoryIds);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil dibuat',
+                'article' => $article->load('categories')
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error creating article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::put('/dashboard/articles/{id}', function (\Illuminate\Http\Request $request, $id) {
+        try {
+            $article = \App\Models\Article::findOrFail($id);
+            
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'category_ids' => 'required|string', // JSON string from FormData
+                'content' => 'required|string',
+                'featured_image_url' => 'nullable|url',
+                'featured_image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120'
+            ]);
+            
+            $categoryIds = json_decode($validated['category_ids'], true);
+            if (!is_array($categoryIds) || count($categoryIds) === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pilih minimal satu kategori'
+                ], 422);
+            }
+            
+            // Handle image upload
+            $featuredImage = $article->featured_image; // Keep existing if not updated
+            if ($request->hasFile('featured_image_file')) {
+                // Delete old image if exists
+                if ($article->featured_image && (strpos($article->featured_image, 'storage/') === 0 || strpos($article->featured_image, '/storage/') === 0)) {
+                    $oldPath = strpos($article->featured_image, '/') === 0 ? public_path($article->featured_image) : public_path($article->featured_image);
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
+                }
+                $file = $request->file('featured_image_file');
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $directory = public_path('storage/articles');
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $file->move($directory, $filename);
+                $featuredImage = 'storage/articles/' . $filename;
+            } elseif ($request->filled('featured_image_url')) {
+                $featuredImage = $validated['featured_image_url'];
+            }
+            
+            $article->update([
+                'title' => $validated['title'],
+                'content' => $validated['content'],
+                'featured_image' => $featuredImage
+            ]);
+            
+            // Sync categories
+            $article->categories()->sync($categoryIds);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil diperbarui',
+                'article' => $article->load('categories')
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    
+    Route::delete('/dashboard/articles/{id}', function ($id) {
+        try {
+            $article = \App\Models\Article::findOrFail($id);
+            $article->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Artikel berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting article: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus artikel: ' . $e->getMessage()
+            ], 500);
+        }
+    });
+    Route::get('/api/customers', [\App\Http\Controllers\CustomerController::class, 'getCustomers'])->name('api.customers');
+    Route::get('/api/customers/{id}', [\App\Http\Controllers\CustomerController::class, 'show'])->name('api.customers.show');
+    Route::post('/api/customers/{id}/toggle-status', [\App\Http\Controllers\CustomerController::class, 'toggleStatus'])->name('api.customers.toggle-status');
+});
+    
+// Chat API Routes - Accessible by both buyer/visitor and seller/admin
+Route::middleware('auth.session')->group(function() {
+    Route::prefix('api/chat')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
+        Route::get('/unread-count', [\App\Http\Controllers\ChatController::class, 'getUnreadCount'])->name('chat.unread-count');
+        // Route dengan orderId harus didefinisikan sebelum route tanpa parameter
+        // UUID pattern: 8-4-4-4-12 hex characters with dashes
+        Route::get('/get-or-create/{orderId}', [\App\Http\Controllers\ChatController::class, 'getOrCreateChat'])
+            ->where('orderId', '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+            ->name('chat.get-or-create.order');
+        Route::get('/get-or-create', [\App\Http\Controllers\ChatController::class, 'getOrCreateChat'])->name('chat.get-or-create');
+        Route::get('/{chatId}/messages', [\App\Http\Controllers\ChatController::class, 'getMessages'])
+            ->where('chatId', '[a-f0-9\-]{36}')
+            ->name('chat.messages');
+        Route::post('/{chatId}/send', [\App\Http\Controllers\ChatController::class, 'sendMessage'])
+            ->where('chatId', '[a-f0-9\-]{36}')
+            ->name('chat.send');
+        Route::delete('/delete-history/{buyerId}', [\App\Http\Controllers\ChatController::class, 'deleteChatHistory'])
+            ->where('buyerId', '[a-f0-9\-]{36}')
+            ->name('chat.delete-history');
+        
+        // Admin routes
+        Route::prefix('admin')->group(function () {
+            Route::get('/buyers', [\App\Http\Controllers\ChatController::class, 'getBuyerList'])->name('chat.admin.buyers');
+            Route::get('/buyer/{buyerId}/messages', [\App\Http\Controllers\ChatController::class, 'getMessagesByBuyer'])
+                ->where('buyerId', '[a-f0-9\-]{36}')
+                ->name('chat.admin.buyer.messages');
+        });
+    });
     
     // Product CRUD API
     Route::post('/dashboard/products', function (\Illuminate\Http\Request $request) {
@@ -337,11 +2002,36 @@ Route::middleware(['auth.session','admin'])->group(function() {
             
             // Save image if provided
             if (!empty($validated['image'])) {
+                $imageUrl = $validated['image'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    // Decode base64 image
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    
+                    // Generate unique filename
+                    $filename = Str::uuid() . '.' . $extension;
+                    $destinationPath = storage_path('app/public/products');
+                    
+                    // Create directory if it doesn't exist
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    
+                    // Save file
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    
+                    // Use asset URL
+                    $imageUrl = asset('storage/products/' . $filename);
+                }
+                
                 \App\Models\ProductImage::create([
                     'product_image_id' => (string) Str::uuid(),
                     'product_id' => $product->product_id,
                     'name' => $product->name . '.jpg',
-                    'url' => $validated['image'],
+                    'url' => $imageUrl,
                 ]);
             }
             
@@ -398,15 +2088,50 @@ Route::middleware(['auth.session','admin'])->group(function() {
             
             // Update image if provided
             if (!empty($validated['image'])) {
+                $imageUrl = $validated['image'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    // Decode base64 image
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    
+                    // Generate unique filename
+                    $filename = Str::uuid() . '.' . $extension;
+                    $destinationPath = storage_path('app/public/products');
+                    
+                    // Create directory if it doesn't exist
+                    if (!file_exists($destinationPath)) {
+                        mkdir($destinationPath, 0755, true);
+                    }
+                    
+                    // Delete old image file if exists
+                    $existingImage = $product->images->first();
+                    if ($existingImage && $existingImage->url && strpos($existingImage->url, 'storage/products/') !== false) {
+                        $oldFilename = basename($existingImage->url);
+                        $oldPath = $destinationPath . '/' . $oldFilename;
+                        if (file_exists($oldPath)) {
+                            @unlink($oldPath);
+                        }
+                    }
+                    
+                    // Save file
+                    file_put_contents($destinationPath . '/' . $filename, $imageData);
+                    
+                    // Use asset URL
+                    $imageUrl = asset('storage/products/' . $filename);
+                }
+                
                 $existingImage = $product->images->first();
                 if ($existingImage) {
-                    $existingImage->update(['url' => $validated['image']]);
+                    $existingImage->update(['url' => $imageUrl]);
                 } else {
                     \App\Models\ProductImage::create([
                         'product_image_id' => (string) Str::uuid(),
                         'product_id' => $product->product_id,
                         'name' => $product->name . '.jpg',
-                        'url' => $validated['image'],
+                        'url' => $imageUrl,
                     ]);
                 }
             }
@@ -449,6 +2174,70 @@ Route::middleware(['auth.session','admin'])->group(function() {
     })->name('dashboard.products.delete');
     
     // Order Management API
+    // Validate Payment (Admin confirms payment received)
+    Route::post('/dashboard/orders/{id}/validate-payment', function ($id) {
+        try {
+            $order = \App\Models\Order::where('order_id', $id)->firstOrFail();
+            
+            if ($order->payment_status !== 'processing') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pesanan tidak dalam status proses pembayaran'
+                ], 400);
+            }
+            
+            // PERBAIKAN: Kurangi stok saat payment divalidasi (hanya sekali)
+            // Cek apakah payment_status sudah pernah "paid" sebelumnya untuk mencegah duplikasi
+            // Jika sudah pernah "paid", tidak perlu mengurangi stok lagi
+            if ($order->payment_status === 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran sudah divalidasi sebelumnya'
+                ], 400);
+            }
+            
+            // Load order details dengan product terlebih dahulu
+            $order->load('orderDetail.product');
+            
+            // Cek stok untuk semua produk sebelum mengurangi
+            foreach ($order->orderDetail as $detail) {
+                $product = $detail->product;
+                if ($product && $product->stock < $detail->qty) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stok tidak mencukupi untuk produk: ' . $product->name . '. Stok tersedia: ' . $product->stock
+                    ], 400);
+                }
+            }
+            
+            // Jika semua stok cukup, kurangi stok untuk semua produk (HANYA SEKALI)
+            foreach ($order->orderDetail as $detail) {
+                $product = $detail->product;
+                if ($product) {
+                    // Kurangi stok (hanya sekali, saat payment divalidasi)
+                    $product->stock -= $detail->qty;
+                    $product->save();
+                }
+            }
+            
+            // Setelah stok berhasil dikurangi, update payment status
+            $order->payment_status = 'paid';
+            $order->paid_at = now();
+            $order->save();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil divalidasi. Status pesanan sekarang "Lunas" dan stok telah dikurangi.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error validating payment: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memvalidasi pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    })->name('dashboard.orders.validate-payment');
+    
     Route::post('/dashboard/orders/{id}/ship', function ($id) {
         try {
             $order = \App\Models\Order::with('orderDetail.product')->where('order_id', $id)->firstOrFail();
@@ -464,26 +2253,27 @@ Route::middleware(['auth.session','admin'])->group(function() {
             if ($order->payment_status !== 'paid') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Pesanan belum dibayar. Tidak dapat mengirim pesanan sebelum pembayaran selesai.'
+                    'message' => 'Pesanan belum dibayar atau pembayaran belum divalidasi. Tidak dapat mengirim pesanan sebelum pembayaran divalidasi.'
                 ], 400);
+            }
+            
+            // Generate tracking number when shipping (only if not exists)
+            if (empty($order->tracking_number)) {
+                $order->tracking_number = generateTrackingNumber($order->shipping_service);
             }
             
             // Update order status to "dikirim" (not "selesai" yet)
             $order->status = 'dikirim';
             $order->save();
             
-            // Reduce stock for each product in order
-            foreach ($order->orderDetail as $detail) {
-                $product = $detail->product;
-                if ($product) {
-                    $newStock = max(0, $product->stock - $detail->qty);
-                    $product->update(['stock' => $newStock]);
-                }
-            }
+            // PERBAIKAN: Stok TIDAK dikurangi di sini karena sudah dikurangi saat checkout
+            // Stok sudah dikurangi saat checkout (baris 2080-2082 di cart.checkout route)
+            // Jika dikurangi lagi di sini, stok akan berkurang 2 kali (double reduction)
+            // Hanya update status order, tidak perlu mengurangi stok lagi
             
             return response()->json([
                 'success' => true,
-                'message' => 'Pesanan berhasil dikirim dan stok telah dikurangi'
+                'message' => 'Pesanan berhasil dikirim. Nomor resi: ' . $order->tracking_number
             ]);
         } catch (\Exception $e) {
             \Log::error('Error shipping order: ' . $e->getMessage());
@@ -525,8 +2315,64 @@ Route::middleware(['auth.session','admin'])->group(function() {
 
 // Other Pages
 Route::get('/articles', function () {
-    return view('articles');
+    $query = \App\Models\Article::with(['user', 'categories']);
+    
+    // Filter by category slug
+    if (request('category')) {
+        $categorySlug = request('category');
+        $query->whereHas('categories', function($q) use ($categorySlug) {
+            $q->where('slug', $categorySlug)->where('is_active', true);
+        });
+    }
+    
+    $articles = $query->orderByDesc('created_at')->paginate(12);
+    $categories = \App\Models\ArticleCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get();
+    return view('articles', compact('articles', 'categories'));
 })->name('articles');
+
+// Article Detail Page
+Route::get('/articles/{id}', function ($id) {
+    $article = \App\Models\Article::with(['user', 'categories', 'comments.user', 'comments.replies.user'])->findOrFail($id);
+    return view('article-detail', compact('article'));
+})->name('article.detail');
+
+// Article Comments API
+Route::middleware('auth.session')->group(function() {
+    // Post comment
+    Route::post('/api/articles/{id}/comments', function ($id, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'content' => 'required|string|max:1000',
+            'parent_id' => 'nullable|uuid|exists:article_comments,comment_id'
+        ]);
+        
+        $article = \App\Models\Article::findOrFail($id);
+        
+        $comment = \App\Models\Comment::create([
+            'article_id' => $article->article_id,
+            'user_id' => Auth::user()->user_id,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'content' => $validated['content']
+        ]);
+        
+        $comment->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'comment' => $comment
+        ]);
+    })->name('api.article.comment');
+    
+    // Delete comment (only own comment)
+    Route::delete('/api/comments/{id}', function ($id) {
+        $comment = \App\Models\Comment::where('comment_id', $id)
+            ->where('user_id', Auth::user()->user_id)
+            ->firstOrFail();
+        
+        $comment->delete();
+        
+        return response()->json(['success' => true]);
+    })->name('api.comment.delete');
+});
 
 Route::get('/marketplace', function () {
     return view('marketplace');
@@ -548,6 +2394,10 @@ Route::middleware('auth.session')->group(function(){
     // Cart Routes
     // Cart Page
     Route::get('/cart', function () {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk melihat keranjang');
+        }
+        
         $user = Auth::user();
         $cartItems = \App\Models\Cart::with(['product.images'])
             ->where('user_id', $user->user_id)
@@ -655,11 +2505,16 @@ Route::middleware('auth.session')->group(function(){
             $subtotal += $item->product->price * $item->qty;
         }
         
+        // Refresh product to get latest stock
+        $product->refresh();
+        
         return response()->json([
             'success' => true,
             'message' => 'Keranjang berhasil diperbarui',
             'item_total' => $product->price * $validated['qty'],
-            'subtotal' => $subtotal
+            'subtotal' => $subtotal,
+            'stock' => $product->stock, // Return latest stock
+            'qty' => $validated['qty'] // Return updated qty
         ]);
     })->name('cart.update');
     
@@ -721,18 +2576,21 @@ Route::middleware('auth.session')->group(function(){
             'phone' => 'required|string',
             'notes' => 'nullable|string',
             'shipping_service' => 'required|string',
-            'payment_method' => 'required|string|in:QRIS,Transfer Bank'
+            'payment_method' => 'required|string|in:QRIS,Transfer Bank',
+            'selected_cart_ids' => 'required|array',
+            'selected_cart_ids.*' => 'required|string|exists:carts,cart_id'
         ]);
         
         $user = Auth::user();
         
-        // Get all cart items
+        // Get only selected cart items
         $cartItems = \App\Models\Cart::with(['product'])
             ->where('user_id', $user->user_id)
+            ->whereIn('cart_id', $validated['selected_cart_ids'])
             ->get();
         
         if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Keranjang kosong'], 400);
+            return response()->json(['message' => 'Tidak ada produk yang dipilih'], 400);
         }
         
         // Check stock for all items
@@ -778,6 +2636,9 @@ Route::middleware('auth.session')->group(function(){
         $order = \App\Models\Order::create($orderData);
         
         // Create order details for each cart item
+        // PERBAIKAN: Stok TIDAK dikurangi di sini (saat checkout)
+        // Stok akan dikurangi saat payment status menjadi "paid" (setelah admin validasi pembayaran)
+        // Ini mencegah stok berkurang jika pembayaran gagal atau order dibatalkan
         foreach ($cartItems as $item) {
             \App\Models\OrderDetail::create([
                 'order_detail_id' => (string) Str::uuid(),
@@ -787,13 +2648,13 @@ Route::middleware('auth.session')->group(function(){
                 'price' => $item->product->price
             ]);
             
-            // Reduce stock
-            $item->product->stock -= $item->qty;
-            $item->product->save();
+            // TIDAK mengurangi stok di sini - akan dikurangi saat payment divalidasi
         }
         
-        // Clear cart
-        \App\Models\Cart::where('user_id', $user->user_id)->delete();
+        // Clear only selected cart items
+        \App\Models\Cart::where('user_id', $user->user_id)
+            ->whereIn('cart_id', $validated['selected_cart_ids'])
+            ->delete();
         
         return response()->json([
             'success' => true,
@@ -803,59 +2664,356 @@ Route::middleware('auth.session')->group(function(){
         ]);
     })->name('cart.checkout');
     
+    // Checkout Page (GET) - Show checkout form
+    Route::get('/checkout', function () {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu');
+        }
+        
+        $user = Auth::user();
+        $selectedCartIds = request()->get('items', []);
+        
+        if (empty($selectedCartIds)) {
+            return redirect()->route('cart')->with('error', 'Pilih produk terlebih dahulu');
+        }
+        
+        $cartItems = \App\Models\Cart::with(['product.images'])
+            ->where('user_id', $user->user_id)
+            ->whereIn('cart_id', $selectedCartIds)
+            ->get();
+        
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart')->with('error', 'Tidak ada produk yang dipilih');
+        }
+        
+        // Calculate totals
+        $subtotal = 0;
+        foreach ($cartItems as $item) {
+            $subtotal += $item->product->price * $item->qty;
+        }
+        
+        // Shipping cost (default)
+        $shippingCost = 10000;
+        $total = $subtotal + $shippingCost;
+        
+        return view('store.checkout', compact('cartItems', 'subtotal', 'shippingCost', 'total', 'selectedCartIds'));
+    })->middleware('auth.session')->name('checkout');
+    
     // Buyer Orders Page
     Route::get('/orders', function () {
         $user = Auth::user();
-        $orders = \App\Models\Order::with(['orderDetail.product.images'])
+        $orders = \App\Models\Order::with(['orderDetail.product.images', 'orderDetail.product.reviews' => function($q) use ($user) {
+            $q->where('user_id', $user->user_id);
+        }])
             ->where('user_id', $user->user_id)
             ->orderByDesc('created_at')
             ->get();
         return view('store.orders', compact('orders'));
     })->name('orders');
+    
+    // Product Review API
+    Route::post('/api/products/{id}/reviews', function ($id, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'order_id' => 'required|uuid|exists:orders,order_id',
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'nullable|string|max:1000',
+            'images' => 'nullable|array|max:5',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'removed_images' => 'nullable|array'
+        ]);
+        
+        $product = \App\Models\Product::findOrFail($id);
+        $user = Auth::user();
+        
+        // Check if order belongs to user and contains this product
+        $order = \App\Models\Order::where('order_id', $validated['order_id'])
+            ->where('user_id', $user->user_id)
+            ->where('status', 'selesai')
+            ->firstOrFail();
+        
+        $orderDetail = \App\Models\OrderDetail::where('order_id', $order->order_id)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        // Check if review already exists
+        $existingReview = \App\Models\ProductReview::where('product_id', $product->product_id)
+            ->where('user_id', $user->user_id)
+            ->where('order_id', $order->order_id)
+            ->first();
+        
+        // Handle removed images
+        $removedImages = $validated['removed_images'] ?? [];
+        $finalImages = [];
+        
+        // If editing existing review, start with existing images
+        if ($existingReview && $existingReview->image) {
+            $oldImages = is_array($existingReview->image) ? $existingReview->image : [$existingReview->image];
+            // Keep images that are not in removed_images list
+            foreach ($oldImages as $oldImage) {
+                if ($oldImage && !in_array($oldImage, $removedImages)) {
+                    $finalImages[] = $oldImage;
+                } else if ($oldImage && in_array($oldImage, $removedImages)) {
+                    // Delete removed image from storage
+                    $oldPath = str_replace('storage/', '', $oldImage);
+                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                    }
+                }
+            }
+        }
+        
+        // Handle new image uploads
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $filename = \Illuminate\Support\Str::uuid() . '.' . $image->getClientOriginalExtension();
+                $path = $image->storeAs('reviews', $filename, 'public');
+                $finalImages[] = 'storage/' . $path;
+            }
+        }
+        
+        $updateData = [
+                'rating' => $validated['rating'],
+                'review' => $validated['review']
+        ];
+        
+        // Update images (can be empty array if all removed)
+        $updateData['image'] = !empty($finalImages) ? $finalImages : null;
+        
+        if ($existingReview) {
+            $existingReview->update($updateData);
+            $review = $existingReview;
+        } else {
+            $review = \App\Models\ProductReview::create([
+                'product_id' => $product->product_id,
+                'user_id' => $user->user_id,
+                'order_id' => $order->order_id,
+                'rating' => $validated['rating'],
+                'review' => $validated['review'],
+                'image' => !empty($finalImages) ? $finalImages : null
+            ]);
+        }
+        
+        $review->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'review' => $review
+        ]);
+    })->name('api.product.review');
+    
+    // Reply to Review API
+    Route::post('/api/products/{id}/reviews/{reviewId}/reply', function ($id, $reviewId, \Illuminate\Http\Request $request) {
+        $validated = $request->validate([
+            'reply' => 'required|string|max:1000'
+        ]);
+        
+        $product = \App\Models\Product::findOrFail($id);
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::create([
+            'product_id' => $product->product_id,
+            'user_id' => $user->user_id,
+            'parent_id' => $parentReview->review_id,
+            'rating' => 0, // Replies don't have ratings
+            'review' => $validated['reply']
+        ]);
+        
+        $reply->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'reply' => $reply
+        ]);
+    })->name('api.product.review.reply');
+    
+    // Delete Reply API
+    Route::delete('/api/products/{id}/reviews/{reviewId}/reply/{replyId}', function ($id, $reviewId, $replyId, \Illuminate\Http\Request $request) {
+        $product = \App\Models\Product::findOrFail($id);
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->where('product_id', $product->product_id)
+            ->firstOrFail();
+        
+        $user = Auth::user();
+        
+        $reply = \App\Models\ProductReview::where('review_id', $replyId)
+            ->where('parent_id', $parentReview->review_id)
+            ->where('user_id', $user->user_id) // Only allow user to delete their own reply
+            ->firstOrFail();
+        
+        $reply->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Balasan berhasil dihapus'
+        ]);
+    })->name('api.product.review.reply.delete');
 });
 
 // Monitoring API dengan ML Integration (sensor + ML predictions + anomaly detection + status)
 Route::get('/api/monitoring/tools', function () {
+    // Set headers to prevent caching
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
     try {
         $mlService = new \App\Services\MachineLearningService();
+        
+        // Get threshold from database (ALWAYS FRESH - no cache)
+        // Prioritas: 1) Profile dari query parameter, 2) Default profile
+        $profileKey = request()->query('profile', 'default');
+        
+        // Force fresh query - clear any model cache
+        \App\Models\ThresholdProfile::clearBootedModels();
+        \App\Models\ThresholdValue::clearBootedModels();
+        
+        $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', $profileKey)
+            ->with('thresholdValues')
+            ->first();
+        
+        // Jika profile tidak ditemukan, gunakan default
+        if (!$thresholdProfile) {
+            $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', 'default')
+                ->with('thresholdValues')
+                ->first();
+        }
+        
+        $thresholds = [];
+        if ($thresholdProfile) {
+            foreach ($thresholdProfile->thresholdValues as $value) {
+                if ($value->sensor_type === 'amonia_ppm') {
+                    $thresholds['ammonia'] = [
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_max' => (float) $value->warn_max,
+                        'danger_max' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'suhu_c') {
+                    $thresholds['temperature'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'danger_low' => (float) $value->danger_min,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'kelembaban_rh') {
+                    $thresholds['humidity'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->ideal_min, // Use ideal_min as warn_low
+                        'warn_high' => (float) $value->warn_max,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'cahaya_lux') {
+                    $thresholds['light'] = [
+                        'ideal_low' => (float) $value->ideal_min,
+                        'ideal_high' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->warn_min,
+                        'warn_high' => (float) $value->warn_max,
+                    ];
+                }
+            }
+        }
+        
+        // Fallback to default thresholds if database is empty
+        if (empty($thresholds)) {
+            $thresholds = [
+                'temperature' => ['ideal_min' => 23, 'ideal_max' => 34, 'danger_low' => 20, 'danger_high' => 37],
+                'humidity' => ['ideal_min' => 50, 'ideal_max' => 70, 'warn_low' => 50, 'warn_high' => 80, 'danger_high' => 80],
+                'ammonia' => ['ideal_max' => 20, 'warn_max' => 35, 'danger_max' => 35],
+                'light' => ['ideal_low' => 20, 'ideal_high' => 40, 'warn_low' => 10, 'warn_high' => 60],
+            ];
+        }
     
     // Gunakan waktu realtime dengan timezone WIB
     $now = now()->setTimezone('Asia/Jakarta');
     
-    // Ambil data real dari database sensor (ToolsDetail)
-    // Jika tidak ada data, gunakan data terakhir yang ada atau data default yang masuk akal
+    // Ambil data real dari database sensor_readings
+    // ML Service membutuhkan minimal 30 data points
     $history = [];
     
-    // Generate history data dengan nilai default yang konsisten (bukan random)
-    // ML Service membutuhkan minimal 30 data points, jadi kita generate 30 data
-    // Data setiap 1 jam sekali - menggunakan waktu realtime
-    // TODO: Ganti dengan data real dari database sensor jika tersedia
-    for ($i = 29; $i >= 0; $i--) {
-        // Format timestamp dengan WIB (Waktu Indonesia Barat) - waktu realtime
-        $timestamp = $now->copy()->subHours($i)->format('Y-m-d H:00');
-        $hour = (int) $now->copy()->subHours($i)->format('H');
+    try {
+        // Ambil 30 data terakhir dari database, diurutkan dari yang paling lama
+        $sensorReadings = \App\Models\SensorReading::orderBy('recorded_at', 'asc')
+            ->limit(30)
+            ->get();
         
-        // Nilai default yang konsisten berdasarkan waktu
-        // Berdasarkan prediksi ML yang menunjukkan nilai ratusan (287 lux), dataset training menggunakan nilai ratusan
-        $baseTemp = 25;
-        $baseHumidity = 65;
-        $baseAmmonia = 10;
-        // Cahaya: siang hari 250-350 lux, malam hari 150-250 lux (sesuai dengan prediksi ML ~287 lux)
-        $baseLight = ($hour >= 6 && $hour <= 18) ? 300 : 200;
-        
-        // Variasi kecil berdasarkan waktu (siang lebih panas, malam lebih dingin)
-        $tempVariation = ($hour >= 12 && $hour <= 18) ? 1.5 : (($hour >= 6 && $hour <= 11) ? 0.5 : -0.5);
-        
-        $history[] = [
-            'time' => $timestamp,
-            'temperature' => round($baseTemp + $tempVariation + (sin($i * 0.1) * 0.5), 1),
-            'humidity' => round($baseHumidity + (sin($i * 0.15) * 3), 1),
-            'ammonia' => round(max(5, $baseAmmonia + (sin($i * 0.2) * 2)), 1),
-            'light' => round($baseLight + (sin($i * 0.1) * 30), 0)  // Variasi lebih kecil: ±30 lux
-        ];
+        if ($sensorReadings->count() > 0) {
+            // Konversi data dari database ke format yang dibutuhkan
+            foreach ($sensorReadings as $reading) {
+                $history[] = [
+                    'time' => $reading->recorded_at->format('Y-m-d H:00'),
+                    'temperature' => (float) $reading->suhu_c,
+                    'humidity' => (float) $reading->kelembaban_rh,
+                    'ammonia' => (float) $reading->amonia_ppm,
+                    'light' => (float) $reading->cahaya_lux
+                ];
+            }
+            
+            // Jika data kurang dari 30, generate data default untuk melengkapi
+            $needed = 30 - count($history);
+            if ($needed > 0) {
+                $lastReading = $sensorReadings->last();
+                $lastTime = $lastReading->recorded_at;
+                
+                for ($i = 1; $i <= $needed; $i++) {
+                    $timestamp = $lastTime->copy()->addHours($i);
+                    $hour = (int) $timestamp->format('H');
+                    $isDaytime = ($hour >= 6 && $hour <= 18);
+                    $baseTemp = $isDaytime ? 28 : 26;
+                    $random = mt_rand(0, 100) / 100;
+                    
+                    $history[] = [
+                        'time' => $timestamp->format('Y-m-d H:00'),
+                        'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                        'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                        'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                        'light' => round(10 + ($random * 50), 1) // 10-60 lux (threshold range)
+                    ];
+                }
+            }
+        } else {
+            // Jika tidak ada data di database, generate 30 data default
+            for ($i = 29; $i >= 0; $i--) {
+                $timestamp = $now->copy()->subHours($i);
+                $hour = (int) $timestamp->format('H');
+                $isDaytime = ($hour >= 6 && $hour <= 18);
+                $baseLight = $isDaytime ? 300 : 200;
+                $baseTemp = $isDaytime ? 28 : 26;
+                
+                $history[] = [
+                    'time' => $timestamp->format('Y-m-d H:00'),
+                    'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                    'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                    'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                    'light' => round($baseLight + mt_rand(-50, 50), 0)
+                ];
+            }
+        }
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error fetching sensor data: ' . $e->getMessage());
+        // Fallback: generate 30 data default
+        for ($i = 29; $i >= 0; $i--) {
+            $timestamp = $now->copy()->subHours($i);
+            $hour = (int) $timestamp->format('H');
+            $isDaytime = ($hour >= 6 && $hour <= 18);
+            $baseTemp = $isDaytime ? 28 : 26;
+            $random = mt_rand(0, 100) / 100;
+            
+            $history[] = [
+                'time' => $timestamp->format('Y-m-d H:00'),
+                'temperature' => round($baseTemp + (mt_rand(-20, 20) / 10), 1),
+                'humidity' => round(60 + (mt_rand(-100, 100) / 10), 1),
+                'ammonia' => round(12 + (mt_rand(-40, 40) / 10), 1),
+                'light' => round(10 + ($random * 50), 1) // 10-60 lux (threshold range)
+            ];
+        }
     }
 
     $latest = end($history);
+    $latestSensor = $latest; // For threshold validation
 
     // Get ML predictions dengan error handling
     try {
@@ -863,8 +3021,631 @@ Route::get('/api/monitoring/tools', function () {
         $pred6 = $mlResults['prediction_6h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
         $pred24 = $mlResults['prediction_24h'] ?? ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
         $anomalies = $mlResults['anomalies'] ?? [];
-        $currentStatus = $mlResults['status'] ?? ['label' => 'tidak diketahui', 'severity' => 'warning', 'message' => 'Status tidak dapat ditentukan'];
+        $mlStatus = $mlResults['status'] ?? ['label' => 'tidak diketahui', 'severity' => 'warning', 'message' => 'Status tidak dapat ditentukan'];
         $mlMetadata = $mlResults['ml_metadata'] ?? [];
+        
+        // ============================================
+        // PROBABILITY ADJUSTMENT BASED ON NEW THRESHOLDS
+        // ============================================
+        
+        // Helper function: Calculate threshold score berdasarkan threshold baru dari database
+        $calculateThresholdScore = function($sensorData, $thresholds) {
+            $issues = 0;
+            $criticalIssues = 0;
+            $warnings = 0;
+            
+            // Validasi setiap sensor dengan threshold BARU
+            // Suhu
+            $temp = $sensorData['temperature'] ?? $sensorData['suhu_c'] ?? 0;
+            $suhuTh = $thresholds['temperature'] ?? null;
+            if ($suhuTh) {
+                if ($temp < ($suhuTh['danger_low'] ?? 20) || $temp > ($suhuTh['danger_high'] ?? 37)) {
+                    $criticalIssues++;
+                } elseif ($temp < ($suhuTh['ideal_min'] ?? 23) || $temp > ($suhuTh['ideal_max'] ?? 34)) {
+                    $warnings++;
+                }
+            }
+            
+            // Kelembaban
+            $humidity = $sensorData['humidity'] ?? $sensorData['kelembaban_rh'] ?? 0;
+            $kelembabanTh = $thresholds['humidity'] ?? null;
+            if ($kelembabanTh) {
+                if ($humidity > ($kelembabanTh['danger_high'] ?? 80)) {
+                    $criticalIssues++;
+                } elseif ($humidity < ($kelembabanTh['ideal_min'] ?? 50) || $humidity > ($kelembabanTh['warn_high'] ?? 80)) {
+                    $warnings++;
+                }
+            }
+            
+            // Amonia
+            $amonia = $sensorData['ammonia'] ?? $sensorData['amonia_ppm'] ?? 0;
+            $amoniaTh = $thresholds['ammonia'] ?? null;
+            if ($amoniaTh) {
+                if ($amonia > ($amoniaTh['danger_max'] ?? 35)) {
+                    $criticalIssues++;
+                } elseif ($amonia >= ($amoniaTh['warn_max'] ?? 35)) {
+                    $warnings++;
+                }
+            }
+            
+            // Cahaya
+            $cahaya = $sensorData['light'] ?? $sensorData['cahaya_lux'] ?? 0;
+            $cahayaTh = $thresholds['light'] ?? null;
+            if ($cahayaTh) {
+                if ($cahaya < ($cahayaTh['warn_low'] ?? 10) || $cahaya > ($cahayaTh['warn_high'] ?? 60)) {
+                    $criticalIssues++;
+                } elseif ($cahaya < ($cahayaTh['ideal_low'] ?? 20) || $cahaya > ($cahayaTh['ideal_high'] ?? 40)) {
+                    $warnings++;
+                }
+            }
+            
+            // Hitung probability berdasarkan threshold validation
+            $thresholdProb = ['BAIK' => 0, 'PERHATIAN' => 0, 'BURUK' => 0];
+            
+            if ($criticalIssues >= 3) {
+                $thresholdProb['BURUK'] = 0.9;
+                $thresholdProb['PERHATIAN'] = 0.1;
+                $thresholdProb['BAIK'] = 0.0;
+            } elseif ($criticalIssues >= 2) {
+                $thresholdProb['BURUK'] = 0.7;
+                $thresholdProb['PERHATIAN'] = 0.3;
+                $thresholdProb['BAIK'] = 0.0;
+            } elseif ($criticalIssues >= 1 || $warnings >= 2) {
+                $thresholdProb['BURUK'] = 0.3;
+                $thresholdProb['PERHATIAN'] = 0.6;
+                $thresholdProb['BAIK'] = 0.1;
+            } elseif ($warnings >= 1) {
+                $thresholdProb['PERHATIAN'] = 0.8;
+                $thresholdProb['BAIK'] = 0.2;
+                $thresholdProb['BURUK'] = 0.0;
+            } else {
+                // Semua sensor dalam range ideal
+                $thresholdProb['BAIK'] = 0.95;
+                $thresholdProb['PERHATIAN'] = 0.05;
+                $thresholdProb['BURUK'] = 0.0;
+            }
+            
+            return $thresholdProb;
+        };
+        
+        // Helper function: Adjust probabilities berdasarkan threshold baru
+        $adjustProbabilitiesBasedOnThreshold = function($mlProbabilities, $thresholdScore, $sensorData, $thresholds) {
+            // Base probabilities dari ML model
+            $baseProb = [
+                'BAIK' => (float)($mlProbabilities['BAIK'] ?? 0),
+                'PERHATIAN' => (float)($mlProbabilities['PERHATIAN'] ?? 0),
+                'BURUK' => (float)($mlProbabilities['BURUK'] ?? 0)
+            ];
+            
+            // Combine ML probability dengan threshold score (weighted)
+            $mlWeight = 0.6;  // 60% dari ML
+            $thresholdWeight = 0.4;  // 40% dari threshold validation
+            
+            $adjustedProb = [
+                'BAIK' => ($baseProb['BAIK'] * $mlWeight) + ($thresholdScore['BAIK'] * $thresholdWeight),
+                'PERHATIAN' => ($baseProb['PERHATIAN'] * $mlWeight) + ($thresholdScore['PERHATIAN'] * $thresholdWeight),
+                'BURUK' => ($baseProb['BURUK'] * $mlWeight) + ($thresholdScore['BURUK'] * $thresholdWeight)
+            ];
+            
+            // Normalize (pastikan total = 1.0)
+            $total = array_sum($adjustedProb);
+            if ($total > 0) {
+                foreach ($adjustedProb as $key => $value) {
+                    $adjustedProb[$key] = $value / $total;
+                }
+            }
+            
+            return $adjustedProb;
+        };
+        
+        // Get ML probabilities (original dari model)
+        $mlProbabilities = $mlStatus['probability'] ?? [
+            'BAIK' => 0.0,
+            'PERHATIAN' => 0.0,
+            'BURUK' => 0.0
+        ];
+        
+        // Calculate threshold score berdasarkan threshold BARU dari database
+        // Jika thresholds kosong, gunakan default threshold score (semua BAIK)
+        if (empty($thresholds)) {
+            $thresholdScore = ['BAIK' => 0.95, 'PERHATIAN' => 0.05, 'BURUK' => 0.0];
+        } else {
+            $thresholdScore = $calculateThresholdScore($latestSensor, $thresholds);
+        }
+        
+        // Adjust probability (combine ML + Threshold)
+        // Jika thresholds kosong, gunakan ML probabilities saja (weight 100% ML)
+        if (empty($thresholds)) {
+            $adjustedProbabilities = $mlProbabilities;
+        } else {
+            $adjustedProbabilities = $adjustProbabilitiesBasedOnThreshold(
+                $mlProbabilities,
+                $thresholdScore,
+                $latestSensor,
+                $thresholds
+            );
+        }
+        
+        // Determine final status dari adjusted probability
+        $finalStatusFromAdjustedProb = array_search(max($adjustedProbabilities), $adjustedProbabilities);
+        $finalConfidenceFromAdjustedProb = max($adjustedProbabilities);
+        
+        // Log untuk debugging
+        \Illuminate\Support\Facades\Log::info('=== PROBABILITY ADJUSTMENT ===', [
+            'ml_probabilities_original' => $mlProbabilities,
+            'threshold_score' => $thresholdScore,
+            'adjusted_probabilities' => $adjustedProbabilities,
+            'final_status_from_adjusted' => $finalStatusFromAdjustedProb,
+            'final_confidence_from_adjusted' => $finalConfidenceFromAdjustedProb
+        ]);
+        
+        // Update ML status dengan adjusted probabilities
+        $mlStatus['probability'] = $adjustedProbabilities;
+        $mlStatus['ml_probabilities_original'] = $mlProbabilities; // Simpan original untuk reference
+        $mlStatus['threshold_score'] = $thresholdScore; // Simpan threshold score untuk debugging
+        
+        // ============================================
+        // THRESHOLD VALIDATION & HYBRID DECISION
+        // ============================================
+        $currentStatus = $mlStatus; // Default: use ML status (dengan adjusted probabilities)
+        
+        // Helper functions untuk hybrid decision
+        $calculateAgreement = function($mlStatus, $thresholdStatus, $mlConfidence) {
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            
+            $mlValue = $statusValue[$mlLabel] ?? 1;
+            $thresholdValue = $statusValue[$thresholdLabel] ?? 1;
+            
+            if ($mlValue == $thresholdValue) {
+                return 1.0;
+            }
+            
+            if (abs($mlValue - $thresholdValue) == 1) {
+                if ($thresholdValue > $mlValue) {
+                    return 0.3; // Threshold lebih kritis, agreement rendah
+                } else {
+                    return 0.6; // ML lebih kritis, agreement medium
+                }
+            }
+            
+            return 0.1; // Agreement sangat rendah
+        };
+        
+        $determineFinalStatus = function($mlStatus, $thresholdStatus, $agreementScore, $criticalIssues, $thresholdIssues) {
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            
+            // ✅ LOG INPUT
+            \Illuminate\Support\Facades\Log::info('=== FINAL STATUS DETERMINATION ===', [
+                'ml_status' => $mlLabel,
+                'threshold_status' => $thresholdLabel,
+                'agreement_score' => $agreementScore,
+                'critical_issues' => $criticalIssues,
+                'threshold_issues' => $thresholdIssues
+            ]);
+            
+            // PRIORITAS 1: Jika threshold validation BAIK dan 0 issues → HARUS BAIK
+            if ($thresholdLabel == 'BAIK' && $thresholdIssues == 0 && $criticalIssues == 0) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (hard override - semua sensor aman)');
+                return 'BAIK';
+            }
+            
+            // PRIORITAS 2: Jika 3+ critical issues → HARUS BURUK (safety first)
+            if ($criticalIssues >= 3) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (hard override - 3+ critical issues)');
+                return 'BURUK';
+            }
+            
+            // PRIORITAS 3: Jika 2 critical issues → BURUK
+            if ($criticalIssues >= 2) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (2 critical issues)');
+                return 'BURUK';
+            }
+            
+            // PRIORITAS 4: Jika threshold BAIK dan ML juga BAIK → BAIK
+            if ($thresholdLabel == 'BAIK' && $mlLabel == 'BAIK') {
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (agreement)');
+                return 'BAIK';
+            }
+            
+            // PRIORITAS 5: Agreement tinggi → gunakan ML
+            if ($agreementScore >= 0.8) {
+                \Illuminate\Support\Facades\Log::info('→ Decision: ' . $mlLabel . ' (high agreement)');
+                return $mlLabel;
+            }
+            
+            // PRIORITAS 6: Ambil yang lebih kritis
+            $finalStatus = ($statusValue[$thresholdLabel] ?? 1) > ($statusValue[$mlLabel] ?? 1)
+                ? $thresholdLabel
+                : $mlLabel;
+            
+            \Illuminate\Support\Facades\Log::info('→ Decision: ' . $finalStatus . ' (weighted - more critical)');
+            return $finalStatus;
+        };
+        
+        $calculateFinalConfidence = function($mlConfidence, $thresholdStatus, $mlStatus, $agreementScore, $criticalThresholdIssues, $finalStatus) {
+            $baseConfidence = $mlConfidence;
+            $mlLabel = strtoupper($mlStatus['label'] ?? 'BAIK');
+            $thresholdLabel = strtoupper($thresholdStatus);
+            $statusValue = ['BAIK' => 0, 'PERHATIAN' => 1, 'BURUK' => 2];
+            
+            // CRITICAL RULE: Jika ada 3+ critical issues
+            if ($criticalThresholdIssues >= 3) {
+                if ($finalStatus == 'BURUK') {
+                    return min(0.85, $baseConfidence + 0.2); // Boost confidence
+                } else {
+                    return max(0.3, $baseConfidence - 0.4); // Large penalty
+                }
+            }
+            
+            // Agreement bonus
+            if ($mlLabel == $thresholdLabel) {
+                $baseConfidence = min($baseConfidence + 0.05, 1.0);
+            }
+            
+            // Disagreement penalty
+            if ($mlLabel != $thresholdLabel) {
+                $penalty = 0.0;
+                
+                if (($statusValue[$thresholdLabel] ?? 1) > ($statusValue[$mlLabel] ?? 1)) {
+                    $penalty = 0.40; // Large penalty
+                } else {
+                    $penalty = 0.20; // Small penalty
+                }
+                
+                $baseConfidence = max($baseConfidence - $penalty, 0.1);
+            }
+            
+            // Critical issues boost
+            if ($criticalThresholdIssues >= 2) {
+                $baseConfidence = max($baseConfidence, 0.6);
+            }
+            
+            return round($baseConfidence, 2);
+        };
+        
+        // Apply threshold validation jika ada ML status dan threshold
+        if ($mlStatus && $latestSensor && !empty($thresholds)) {
+            // ============================================
+            // STEP 1: Log threshold yang digunakan
+            // ============================================
+            \Illuminate\Support\Facades\Log::info('=== THRESHOLD YANG DIGUNAKAN ===', [
+                'profile' => $profileKey,
+                'thresholds' => $thresholds
+            ]);
+            
+            // ============================================
+            // STEP 2: Validasi threshold (MENGIKUTI LOGIKA FRONTEND)
+            // ============================================
+            $temp = (float) ($latestSensor['temperature'] ?? 0);
+            $humid = (float) ($latestSensor['humidity'] ?? 0);
+            $ammonia = (float) ($latestSensor['ammonia'] ?? 0);
+            $light = (float) ($latestSensor['light'] ?? 0);
+            
+            // Ambil threshold values
+            $tempIdealMin = (float) ($thresholds['temperature']['ideal_min'] ?? 23);
+            $tempIdealMax = (float) ($thresholds['temperature']['ideal_max'] ?? 34);
+            $tempDangerLow = (float) ($thresholds['temperature']['danger_low'] ?? 20);
+            $tempDangerHigh = (float) ($thresholds['temperature']['danger_high'] ?? 37);
+            
+            $humidIdealMin = (float) ($thresholds['humidity']['ideal_min'] ?? 50);
+            $humidIdealMax = (float) ($thresholds['humidity']['ideal_max'] ?? 70);
+            $humidWarnLow = (float) ($thresholds['humidity']['warn_low'] ?? 50);
+            $humidWarnHigh = (float) ($thresholds['humidity']['warn_high'] ?? 80);
+            $humidDangerHigh = (float) ($thresholds['humidity']['danger_high'] ?? 80);
+            
+            $ammoniaIdealMax = (float) ($thresholds['ammonia']['ideal_max'] ?? 20);
+            $ammoniaWarnMax = (float) ($thresholds['ammonia']['warn_max'] ?? 35);
+            $ammoniaDangerMax = (float) ($thresholds['ammonia']['danger_max'] ?? 35);
+            
+            $lightIdealLow = (float) ($thresholds['light']['ideal_low'] ?? 20);
+            $lightIdealHigh = (float) ($thresholds['light']['ideal_high'] ?? 40);
+            $lightWarnLow = (float) ($thresholds['light']['warn_low'] ?? 10);
+            $lightWarnHigh = (float) ($thresholds['light']['warn_high'] ?? 60);
+            
+            // Validasi threshold (LOGIKA SAMA DENGAN FRONTEND)
+            $thresholdBasedLabel = 'baik';
+            $thresholdIssues = 0;
+            $criticalThresholdIssues = 0;
+            $warningThresholdIssues = 0;
+            $sensorIssues = [];
+            
+            // Suhu
+            if ($temp >= $tempIdealMin && $temp <= $tempIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($temp < $tempDangerLow || $temp > $tempDangerHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Suhu', 'value' => $temp, 'status' => 'critical'];
+            } else {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Suhu', 'value' => $temp, 'status' => 'warning'];
+            }
+            
+            // Kelembaban
+            if ($humid >= $humidIdealMin && $humid <= $humidIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($humid > $humidDangerHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Kelembaban', 'value' => $humid, 'status' => 'critical'];
+            } elseif ($humid < $humidWarnLow || ($humid > $humidIdealMax && $humid <= $humidWarnHigh)) {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Kelembaban', 'value' => $humid, 'status' => 'warning'];
+            }
+            
+            // Amoniak
+            if ($ammonia <= $ammoniaIdealMax) {
+                // AMAN - tidak ada issue
+            } elseif ($ammonia > $ammoniaDangerMax) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Amoniak', 'value' => $ammonia, 'status' => 'critical'];
+            } elseif ($ammonia > $ammoniaWarnMax) {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Amoniak', 'value' => $ammonia, 'status' => 'warning'];
+            }
+            
+            // Cahaya (konversi dari ratusan ke puluhan)
+            $lightForCheck = $light / 10;
+            if ($lightForCheck >= $lightIdealLow && $lightForCheck <= $lightIdealHigh) {
+                // AMAN - tidak ada issue
+            } elseif ($lightForCheck < $lightWarnLow || $lightForCheck > $lightWarnHigh) {
+                $thresholdIssues++;
+                $criticalThresholdIssues++;
+                $thresholdBasedLabel = 'buruk';
+                $sensorIssues[] = ['sensor' => 'Cahaya', 'value' => $lightForCheck, 'status' => 'critical'];
+            } else {
+                $thresholdIssues++;
+                $warningThresholdIssues++;
+                if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+                $sensorIssues[] = ['sensor' => 'Cahaya', 'value' => $lightForCheck, 'status' => 'warning'];
+            }
+            
+            // Jika ada 3+ sensor di luar batas, pastikan status adalah BURUK
+            if ($thresholdIssues >= 3) {
+                $thresholdBasedLabel = 'buruk';
+            }
+            
+            // Normalisasi label
+            $mlLabel = strtolower($mlStatus['label'] ?? 'baik');
+            $thresholdLabel = strtolower($thresholdBasedLabel);
+            
+            // Log detail threshold validation
+            \Illuminate\Support\Facades\Log::info('=== THRESHOLD VALIDATION RESULT ===', [
+                'sensor_values' => [
+                    'temperature' => $temp,
+                    'humidity' => $humid,
+                    'ammonia' => $ammonia,
+                    'light' => $lightForCheck
+                ],
+                'thresholds_used' => [
+                    'temperature' => ['ideal_min' => $tempIdealMin, 'ideal_max' => $tempIdealMax, 'danger_low' => $tempDangerLow, 'danger_high' => $tempDangerHigh],
+                    'humidity' => ['ideal_min' => $humidIdealMin, 'ideal_max' => $humidIdealMax, 'danger_high' => $humidDangerHigh],
+                    'ammonia' => ['ideal_max' => $ammoniaIdealMax, 'danger_max' => $ammoniaDangerMax],
+                    'light' => ['ideal_low' => $lightIdealLow, 'ideal_high' => $lightIdealHigh, 'warn_low' => $lightWarnLow, 'warn_high' => $lightWarnHigh]
+                ],
+                'sensor_issues' => $sensorIssues,
+                'total_issues' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues,
+                'threshold_based_label' => $thresholdLabel,
+                'ml_label' => $mlLabel
+            ]);
+            
+            // Step 3: Calculate Agreement Score
+            $agreementScore = $calculateAgreement($mlStatus, $thresholdLabel, (float)($mlStatus['confidence'] ?? 0.7));
+            
+            // Step 4: Determine Final Status
+            // PRIORITAS: Gunakan adjusted probabilities sebagai primary source
+            // Tapi tetap lakukan safety checks dengan threshold validation
+            $adjustedStatusLabel = strtoupper($finalStatusFromAdjustedProb ?? 'BAIK');
+            
+            // Safety override: Jika ada 3+ critical issues, HARUS BURUK
+            if ($criticalThresholdIssues >= 3) {
+                $finalStatusLabel = 'BURUK';
+                \Illuminate\Support\Facades\Log::info('→ Decision: BURUK (safety override - 3+ critical issues)');
+            } 
+            // Safety override: Jika semua sensor aman (0 issues), HARUS BAIK
+            elseif ($thresholdIssues == 0 && $criticalThresholdIssues == 0) {
+                $finalStatusLabel = 'BAIK';
+                \Illuminate\Support\Facades\Log::info('→ Decision: BAIK (safety override - semua sensor aman)');
+            }
+            // Gunakan adjusted probability sebagai primary decision
+            else {
+                $finalStatusLabel = $adjustedStatusLabel;
+                \Illuminate\Support\Facades\Log::info('→ Decision: ' . $finalStatusLabel . ' (from adjusted probabilities)');
+            }
+            
+            // Step 5: Calculate Final Confidence
+            // ============================================
+            // KEYAKINAN (CONFIDENCE) DITENTUKAN BERDASARKAN:
+            // 1. Adjusted probability tertinggi (dari kombinasi ML + Threshold)
+            // 2. Agreement antara ML prediction dan threshold validation
+            // 3. Jumlah issues dari sensor
+            // ============================================
+            
+            // Base confidence: probabilitas tertinggi dari adjusted probabilities
+            $baseConfidence = $finalConfidenceFromAdjustedProb;
+            
+            // BOOST 1: Jika adjusted probability sesuai dengan threshold validation
+            if (strtoupper($thresholdLabel) == $finalStatusLabel) {
+                $baseConfidence = min($baseConfidence + 0.15, 1.0); // Boost lebih besar
+            }
+            
+            // BOOST 2: Untuk status BAIK dengan semua sensor aman (0 issues)
+            // Ini meningkatkan keyakinan karena semua sensor menunjukkan kondisi optimal
+            if ($finalStatusLabel === 'BAIK' && $thresholdIssues == 0 && $criticalThresholdIssues == 0) {
+                $baseConfidence = min($baseConfidence + 0.25, 1.0); // Boost besar untuk BAIK
+            }
+            
+            // BOOST 3: Agreement tinggi antara ML dan threshold
+            if ($agreementScore >= 0.8) {
+                $baseConfidence = min($baseConfidence + 0.1, 1.0);
+            }
+            
+            // PENALTY: Hanya untuk critical cases yang berbeda dengan threshold validation
+            if (strtoupper($thresholdLabel) != $finalStatusLabel && $criticalThresholdIssues >= 2) {
+                $baseConfidence = max($baseConfidence - 0.2, 0.3);
+            }
+            
+            // PENALTY: Agreement sangat rendah
+            if ($agreementScore < 0.2) {
+                $baseConfidence = max($baseConfidence - 0.15, 0.3);
+            }
+            
+            $finalConfidence = round($baseConfidence, 2);
+            
+            // Step 6: Determine if Manual Review Needed
+            // ============================================
+            // LOGIKA: Hanya perlu manual review untuk kasus yang benar-benar meragukan
+            // Jangan terlalu ketat untuk status BAIK dengan confidence tinggi
+            // ============================================
+            $needsManualReview = false;
+            
+            // KONDISI 1: Status BURUK dengan confidence rendah (< 60%)
+            // Ini perlu manual review karena status kritis tapi tidak yakin
+            if ($finalStatusLabel === 'BURUK' && $finalConfidence < 0.6) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: BURUK dengan confidence rendah');
+            }
+            // KONDISI 2: Ada 3+ critical issues (safety override)
+            // Ini perlu manual review karena kondisi sangat kritis
+            elseif ($criticalThresholdIssues >= 3) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: 3+ critical issues');
+            }
+            // KONDISI 3: Agreement sangat rendah (< 0.2) DAN confidence rendah (< 50%)
+            // Ini perlu manual review karena ML dan threshold tidak setuju
+            elseif ($agreementScore < 0.2 && $finalConfidence < 0.5) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: Agreement sangat rendah');
+            }
+            // KONDISI 4: Status BAIK tapi confidence sangat rendah (< 40%)
+            // Ini perlu manual review karena seharusnya BAIK tapi tidak yakin
+            elseif ($finalStatusLabel === 'BAIK' && $finalConfidence < 0.4) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: BAIK dengan confidence sangat rendah');
+            }
+            // KONDISI 5: Status PERHATIAN dengan confidence rendah (< 50%) DAN ada critical issues
+            elseif ($finalStatusLabel === 'PERHATIAN' && $finalConfidence < 0.5 && $criticalThresholdIssues > 0) {
+                $needsManualReview = true;
+                \Illuminate\Support\Facades\Log::info('→ Manual review needed: PERHATIAN dengan critical issues');
+            }
+            
+            // Jika tidak ada kondisi di atas, tidak perlu manual review
+            if (!$needsManualReview) {
+                \Illuminate\Support\Facades\Log::info('→ Tidak perlu manual review: Confidence cukup tinggi atau kondisi jelas');
+            }
+            
+            // Step 7: Update current status
+            $currentStatus['label'] = $finalStatusLabel;
+            $currentStatus['confidence'] = $finalConfidence;
+            $currentStatus['agreement_score'] = $agreementScore;
+            $currentStatus['needs_manual_review'] = $needsManualReview;
+            // ✅ Gunakan adjusted probabilities (bukan original dari model)
+            $currentStatus['probability'] = $adjustedProbabilities;
+            
+            // Update severity berdasarkan final status label (untuk warna banner)
+            $severityMap = [
+                'BAIK' => 'normal',
+                'PERHATIAN' => 'warning',
+                'BURUK' => 'critical'
+            ];
+            $currentStatus['severity'] = $severityMap[$finalStatusLabel] ?? 'normal';
+            
+            // Generate reasoning
+            if ($criticalThresholdIssues >= 3) {
+                $currentStatus['reasoning'] = "Terdapat {$criticalThresholdIssues} sensor dalam kondisi kritis. Kondisi ini membahayakan kesehatan ayam dan memerlukan tindakan segera.";
+            } else {
+                $reasoning = [];
+                if (strtoupper($mlLabel) == $finalStatusLabel) {
+                    $reasoning[] = "Model ML memprediksi kondisi ini berdasarkan pola historis.";
+                }
+                if (strtoupper($thresholdLabel) == $finalStatusLabel) {
+                    $reasoning[] = sprintf("Validasi threshold menunjukkan %d sensor di luar batas aman.", $thresholdIssues);
+                }
+                if ($mlLabel != $thresholdLabel) {
+                    $reasoning[] = "Terdapat perbedaan antara prediksi ML dan validasi threshold. Status dipilih berdasarkan kondisi yang lebih kritis.";
+                }
+                $currentStatus['reasoning'] = implode(' ', $reasoning);
+            }
+            
+            // Simpan original ML prediction (dari model yang dilatih dengan threshold lama)
+            $currentStatus['ml_prediction'] = [
+                'status' => strtoupper($mlLabel),
+                'probabilities' => $mlStatus['ml_probabilities_original'] ?? $mlStatus['probability'] ?? null,
+                'confidence' => (float)($mlStatus['confidence'] ?? 0.7)
+            ];
+            
+            // Simpan adjusted probabilities (sudah disesuaikan dengan threshold baru)
+            $currentStatus['adjusted_probabilities'] = $adjustedProbabilities;
+            $currentStatus['threshold_score'] = $thresholdScore;
+            
+            $currentStatus['threshold_validation'] = [
+                'status' => strtoupper($thresholdLabel),
+                'issues_count' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues,
+                'sensor_issues' => $sensorIssues
+            ];
+            
+            // Log final decision
+            \Illuminate\Support\Facades\Log::info('=== HYBRID ML + THRESHOLD DECISION ===', [
+                'ml_prediction' => $currentStatus['ml_prediction'],
+                'threshold_validation' => $currentStatus['threshold_validation'],
+                'agreement_score' => $agreementScore,
+                'final_status' => $finalStatusLabel,
+                'final_confidence' => $finalConfidence,
+                'needs_manual_review' => $needsManualReview,
+                'reasoning' => $currentStatus['reasoning']
+            ]);
+        } else {
+            // Jika threshold validation tidak tersedia, gunakan adjusted probabilities saja
+            // (probabilities sudah di-adjust sebelumnya)
+            $finalStatusLabelNoThreshold = strtoupper($finalStatusFromAdjustedProb ?? 'BAIK');
+            $currentStatus['label'] = $finalStatusLabelNoThreshold;
+            $currentStatus['confidence'] = $finalConfidenceFromAdjustedProb;
+            $currentStatus['probability'] = $adjustedProbabilities;
+            $currentStatus['ml_prediction'] = [
+                'status' => strtoupper($mlStatus['label'] ?? 'BAIK'),
+                'probabilities' => $mlStatus['ml_probabilities_original'] ?? $mlProbabilities,
+                'confidence' => (float)($mlStatus['confidence'] ?? 0.7)
+            ];
+            $currentStatus['adjusted_probabilities'] = $adjustedProbabilities;
+            $currentStatus['threshold_score'] = $thresholdScore;
+            
+            // Update severity berdasarkan final status label (untuk warna banner)
+            $severityMap = [
+                'BAIK' => 'normal',
+                'PERHATIAN' => 'warning',
+                'BURUK' => 'critical'
+            ];
+            $currentStatus['severity'] = $severityMap[$finalStatusLabelNoThreshold] ?? 'normal';
+            
+            // Set needs_manual_review untuk kasus tanpa threshold validation
+            // Hanya perlu manual review jika confidence sangat rendah
+            $currentStatus['needs_manual_review'] = ($finalConfidenceFromAdjustedProb < 0.4);
+            
+            \Illuminate\Support\Facades\Log::info('=== USING ADJUSTED PROBABILITIES (NO THRESHOLD VALIDATION) ===', [
+                'final_status' => $currentStatus['label'],
+                'adjusted_probabilities' => $adjustedProbabilities,
+                'ml_probabilities_original' => $mlProbabilities,
+                'severity' => $currentStatus['severity']
+            ]);
+        }
         
         // Pastikan pred6 dan pred24 adalah array dengan struktur yang benar
         if (!is_array($pred6) || !isset($pred6['temperature'])) {
@@ -1027,23 +3808,36 @@ Route::get('/api/monitoring/tools', function () {
     ];
 
     // Pastikan selalu menggunakan hasil dari ML service
-    $mlSource = $mlMetadata['source'] ?? (($mlResults && isset($mlResults['source'])) ? $mlResults['source'] : 'fallback');
+    // Cek source dari mlResults terlebih dahulu, lalu mlMetadata
+    $mlSource = 'fallback';
+    if (isset($mlResults) && isset($mlResults['source']) && $mlResults['source'] === 'ml_service') {
+        $mlSource = 'ml_service';
+    } elseif (isset($mlMetadata['source']) && $mlMetadata['source'] === 'ml_service') {
+        $mlSource = 'ml_service';
+    }
+    
     $isMLConnected = $mlService->testConnection();
+    
+    // Jika testConnection() true tapi source masih fallback, berarti ada masalah di getPredictions()
+    // Log untuk debugging
+    if ($isMLConnected && $mlSource === 'fallback') {
+        \Illuminate\Support\Facades\Log::warning('ML Service connected but getPredictions returned fallback', [
+            'mlResults_source' => $mlResults['source'] ?? 'not set',
+            'mlMetadata_source' => $mlMetadata['source'] ?? 'not set',
+            'has_mlResults' => isset($mlResults),
+            'has_mlMetadata' => isset($mlMetadata)
+        ]);
+    }
     
     // Jika ML service tidak terhubung, beri warning di meta
     if (!$isMLConnected && $mlSource === 'fallback') {
         \Illuminate\Support\Facades\Log::warning('ML Service tidak terhubung, menggunakan fallback prediction');
     }
 
-    // Kirim notifikasi Telegram (jika dikonfigurasi) - SEBELUM return response
-    try {
-        $telegramService = new \App\Services\TelegramNotificationService();
-        $forecast6SummaryForTelegram = isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary;
-        $telegramService->sendMonitoringNotification($latest, $currentStatus, $pred6, $anomalies, $forecast6SummaryForTelegram);
-    } catch (\Exception $telegramError) {
-        // Log error tapi jangan gagalkan response
-        \Illuminate\Support\Facades\Log::warning('Failed to send Telegram notification: ' . $telegramError->getMessage());
-    }
+    // NOTIFIKASI TELEGRAM DIHAPUS DARI ROUTE INI
+    // Notifikasi Telegram hanya dikirim melalui scheduler command (telegram:send-monitoring)
+    // yang berjalan setiap 5 menit dan hanya mengirim saat kondisi PERHATIAN atau BURUK
+    // Hal ini mencegah notifikasi spam saat user membuka/merefresh halaman monitoring
     
     return response()->json([
         'meta' => [
@@ -1054,13 +3848,13 @@ Route::get('/api/monitoring/tools', function () {
             'history_hours' => count($history),
             'history_count' => count($history),
             'ml_source' => $mlSource,
-            'ml_connected' => $isMLConnected,
+            'ml_connected' => (bool) $isMLConnected, 
             'ml_model_name' => $mlMetadata['model_name'] ?? null,
             'ml_model_version' => $mlMetadata['model_version'] ?? null,
             'ml_accuracy' => $mlMetadata['accuracy'] ?? null,
             'ml_confidence' => $mlMetadata['confidence'] ?? null,
             'ml_prediction_time' => $mlMetadata['prediction_time'] ?? null,
-            'data_source' => 'ml_service', // Selalu dari ML service (bukan dummy)
+            'data_source' => 'ml_service', 
             'warning' => !$isMLConnected ? 'ML Service tidak terhubung, menggunakan fallback prediction' : null
         ],
         'latest' => $latest,
@@ -1071,20 +3865,213 @@ Route::get('/api/monitoring/tools', function () {
         'forecast_summary_6h' => isset($mlResults) && isset($mlResults['forecast_summary_6h']) ? $mlResults['forecast_summary_6h'] : $forecast6Summary,
         'forecast_summary_24h' => isset($mlResults) && isset($mlResults['forecast_summary_24h']) ? $mlResults['forecast_summary_24h'] : $forecast24Summary,
         'anomalies' => $anomalies,
-        'ml_metadata' => $mlMetadata
+        'ml_metadata' => $mlMetadata,
+        'thresholds' => $thresholds // Tambahkan thresholds dari database
     ]);
     
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Error in monitoring API: ' . $e->getMessage());
         \Illuminate\Support\Facades\Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        // Check if it's a connection error to ML service
+        $isMLConnectionError = (
+            strpos($e->getMessage(), 'ML Service') !== false ||
+            strpos($e->getMessage(), 'Connection') !== false ||
+            strpos($e->getMessage(), 'timeout') !== false ||
+            strpos($e->getMessage(), 'Failed to connect') !== false
+        );
+        
         return response()->json([
             'error' => 'Internal server error',
             'message' => $e->getMessage(),
+            'ml_connection_error' => $isMLConnectionError,
             'meta' => [
                 'generated_at' => now()->toDateTimeString(),
                 'ml_connected' => false,
-                'error' => true
+                'error' => true,
+                'error_type' => $isMLConnectionError ? 'ml_connection' : 'general'
             ]
+        ], 500);
+    }
+});
+
+// Debug endpoint untuk testing threshold validation
+Route::get('/api/debug/threshold-validation', function () {
+    try {
+        $profileKey = request()->query('profile', 'default');
+        
+        // Clear cache
+        \App\Models\ThresholdProfile::clearBootedModels();
+        \App\Models\ThresholdValue::clearBootedModels();
+        
+        // Get threshold from database
+        $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', $profileKey)
+            ->with('thresholdValues')
+            ->first();
+        
+        if (!$thresholdProfile) {
+            $thresholdProfile = \App\Models\ThresholdProfile::where('profile_key', 'default')
+                ->with('thresholdValues')
+                ->first();
+        }
+        
+        $thresholds = [];
+        if ($thresholdProfile) {
+            foreach ($thresholdProfile->thresholdValues as $value) {
+                if ($value->sensor_type === 'amonia_ppm') {
+                    $thresholds['ammonia'] = [
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_max' => (float) $value->warn_max,
+                        'danger_max' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'suhu_c') {
+                    $thresholds['temperature'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'danger_low' => (float) $value->danger_min,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'kelembaban_rh') {
+                    $thresholds['humidity'] = [
+                        'ideal_min' => (float) $value->ideal_min,
+                        'ideal_max' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->ideal_min,
+                        'warn_high' => (float) $value->warn_max,
+                        'danger_high' => (float) $value->danger_max,
+                    ];
+                } elseif ($value->sensor_type === 'cahaya_lux') {
+                    $thresholds['light'] = [
+                        'ideal_low' => (float) $value->ideal_min,
+                        'ideal_high' => (float) $value->ideal_max,
+                        'warn_low' => (float) $value->warn_min,
+                        'warn_high' => (float) $value->warn_max,
+                    ];
+                }
+            }
+        }
+        
+        // Get latest sensor data
+        $latestSensor = \App\Models\SensorReading::orderBy('recorded_at', 'desc')->first();
+        
+        if (!$latestSensor) {
+            return response()->json([
+                'error' => 'No sensor data found'
+            ], 404);
+        }
+        
+        $temp = (float) ($latestSensor->temperature ?? 0);
+        $humid = (float) ($latestSensor->humidity ?? 0);
+        $ammonia = (float) ($latestSensor->ammonia ?? 0);
+        $light = (float) ($latestSensor->light ?? 0);
+        
+        // Validate thresholds (same logic as main route)
+        $thresholdBasedLabel = 'baik';
+        $thresholdIssues = 0;
+        $criticalThresholdIssues = 0;
+        $warningThresholdIssues = 0;
+        $sensorDetails = [];
+        
+        // Temperature
+        $tempIdealMin = (float) ($thresholds['temperature']['ideal_min'] ?? 23);
+        $tempIdealMax = (float) ($thresholds['temperature']['ideal_max'] ?? 34);
+        $tempDangerLow = (float) ($thresholds['temperature']['danger_low'] ?? 20);
+        $tempDangerHigh = (float) ($thresholds['temperature']['danger_high'] ?? 37);
+        
+        if ($temp >= $tempIdealMin && $temp <= $tempIdealMax) {
+            $sensorDetails['temperature'] = ['status' => 'aman', 'value' => $temp];
+        } elseif ($temp < $tempDangerLow || $temp > $tempDangerHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['temperature'] = ['status' => 'critical', 'value' => $temp];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['temperature'] = ['status' => 'warning', 'value' => $temp];
+        }
+        
+        // Humidity
+        $humidIdealMin = (float) ($thresholds['humidity']['ideal_min'] ?? 50);
+        $humidIdealMax = (float) ($thresholds['humidity']['ideal_max'] ?? 70);
+        $humidDangerHigh = (float) ($thresholds['humidity']['danger_high'] ?? 80);
+        
+        if ($humid >= $humidIdealMin && $humid <= $humidIdealMax) {
+            $sensorDetails['humidity'] = ['status' => 'aman', 'value' => $humid];
+        } elseif ($humid > $humidDangerHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['humidity'] = ['status' => 'critical', 'value' => $humid];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['humidity'] = ['status' => 'warning', 'value' => $humid];
+        }
+        
+        // Ammonia
+        $ammoniaIdealMax = (float) ($thresholds['ammonia']['ideal_max'] ?? 20);
+        $ammoniaDangerMax = (float) ($thresholds['ammonia']['danger_max'] ?? 35);
+        
+        if ($ammonia <= $ammoniaIdealMax) {
+            $sensorDetails['ammonia'] = ['status' => 'aman', 'value' => $ammonia];
+        } elseif ($ammonia > $ammoniaDangerMax) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['ammonia'] = ['status' => 'critical', 'value' => $ammonia];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['ammonia'] = ['status' => 'warning', 'value' => $ammonia];
+        }
+        
+        // Light
+        $lightForCheck = $light / 10;
+        $lightIdealLow = (float) ($thresholds['light']['ideal_low'] ?? 20);
+        $lightIdealHigh = (float) ($thresholds['light']['ideal_high'] ?? 40);
+        $lightWarnLow = (float) ($thresholds['light']['warn_low'] ?? 10);
+        $lightWarnHigh = (float) ($thresholds['light']['warn_high'] ?? 60);
+        
+        if ($lightForCheck >= $lightIdealLow && $lightForCheck <= $lightIdealHigh) {
+            $sensorDetails['light'] = ['status' => 'aman', 'value' => $lightForCheck];
+        } elseif ($lightForCheck < $lightWarnLow || $lightForCheck > $lightWarnHigh) {
+            $thresholdIssues++;
+            $criticalThresholdIssues++;
+            $thresholdBasedLabel = 'buruk';
+            $sensorDetails['light'] = ['status' => 'critical', 'value' => $lightForCheck];
+        } else {
+            $thresholdIssues++;
+            $warningThresholdIssues++;
+            if ($thresholdBasedLabel === 'baik') $thresholdBasedLabel = 'perhatian';
+            $sensorDetails['light'] = ['status' => 'warning', 'value' => $lightForCheck];
+        }
+        
+        return response()->json([
+            'profile' => $profileKey,
+            'sensor_data' => [
+                'temperature' => $temp,
+                'humidity' => $humid,
+                'ammonia' => $ammonia,
+                'light' => $light,
+                'light_for_check' => $lightForCheck
+            ],
+            'thresholds' => $thresholds,
+            'validation_result' => [
+                'status' => strtoupper($thresholdBasedLabel),
+                'issues_count' => $thresholdIssues,
+                'critical_issues' => $criticalThresholdIssues,
+                'warning_issues' => $warningThresholdIssues
+            ],
+            'sensor_details' => $sensorDetails,
+            'timestamp' => now()->toDateTimeString()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });

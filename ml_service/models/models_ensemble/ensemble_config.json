@@ -1,0 +1,16 @@
+{
+  "n_models": 3,
+  "model_files": [
+    "model_lstm_ensemble_1.h5",
+    "model_lstm_ensemble_2.h5",
+    "model_lstm_ensemble_3.h5"
+  ],
+  "method": "average",
+  "input_shape": [
+    30,
+    4
+  ],
+  "output_shape": [
+    4
+  ]
+}

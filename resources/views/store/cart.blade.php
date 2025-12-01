@@ -7,42 +7,66 @@
   <title>Keranjang Belanja - ChickPatrol Store</title>
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- SweetAlert2 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
+    :root {
+      --primary-green: #69B578;
+      --dark-green: #5a8c64;
+    }
     body { background:#FAFAF8; font-family: 'Inter', -apple-system, sans-serif; }
     
-    .navbar {
+    .cart-header {
       background: white;
-      border-bottom: 1px solid #e9ecef;
-      padding: 0.875rem 0;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    
-    .navbar-container {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
-      gap: 1.5rem;
+      justify-content: space-between;
     }
     
-    .navbar-brand {
-      font-size: 1.125rem;
-      font-weight: 700;
+    .cart-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .cart-header-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--primary-green);
+    }
+    
+    .cart-header-label {
+      font-size: 0.9375rem;
+      font-weight: 500;
       color: #2F2F2F;
-      text-decoration: none;
-      white-space: nowrap;
-      margin-right: 1rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .cart-header-delete {
+      color: var(--primary-green);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.25rem 0.5rem;
+      transition: all 0.2s;
+    }
+    
+    .cart-header-delete:hover {
+      color: var(--dark-green);
+      text-decoration: underline;
     }
     
     .cart-item {
@@ -52,13 +76,21 @@
       padding: 1.5rem;
       margin-bottom: 1rem;
       display: flex;
-      gap: 1.5rem;
+      gap: 1rem;
       align-items: center;
     }
     
+    .cart-item-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--primary-green);
+      flex-shrink: 0;
+    }
+    
     .cart-item-img {
-      width: 100px;
-      height: 100px;
+      width: 80px;
+      height: 80px;
       object-fit: cover;
       border-radius: 8px;
       flex-shrink: 0;
@@ -119,11 +151,18 @@
       border-color: #69B578;
     }
     
+    .cart-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+    
     .cart-item-total {
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       font-weight: 700;
       color: #2F2F2F;
-      min-width: 150px;
+      min-width: 120px;
       text-align: right;
     }
     
@@ -133,12 +172,68 @@
       color: #dc3545;
       cursor: pointer;
       padding: 0.5rem;
-      font-size: 1.25rem;
+      font-size: 1.125rem;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .cart-item-delete:hover {
       color: #c82333;
+    }
+    
+    .cart-item-wishlist {
+      background: none;
+      border: none;
+      color: #6c757d;
+      cursor: pointer;
+      padding: 0.5rem;
+      font-size: 1.125rem;
+      transition: all 0.2s;
+    }
+    
+    .cart-item-wishlist:hover {
+      color: #dc3545;
+    }
+    
+    .cart-item-wishlist.active {
+      color: #dc3545;
+    }
+    
+    @media (max-width: 768px) {
+      main {
+        padding: 1rem !important;
+      }
+      .cart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem !important;
+      }
+      .cart-item {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem !important;
+      }
+      .cart-item-img {
+        width: 100% !important;
+        height: 200px !important;
+      }
+      .cart-item-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: space-between;
+      }
+      .cart-item-total {
+        min-width: auto;
+        text-align: left;
+      }
+      .cart-summary {
+        position: relative !important;
+        width: 100% !important;
+        margin-top: 1rem;
+      }
     }
     
     .cart-summary {
@@ -148,6 +243,31 @@
       padding: 1.5rem;
       position: sticky;
       top: 80px;
+      margin-top: 0;
+      align-self: flex-start;
+      width: 100%;
+    }
+    
+    /* Align cart-summary with cart-header */
+    @media (min-width: 992px) {
+      .col-lg-4 .cart-summary {
+        /* Will be set dynamically by JavaScript for perfect alignment */
+        margin-top: 0;
+      }
+    }
+    
+    @media (min-width: 992px) {
+      .row.g-0 {
+        align-items: flex-start;
+      }
+      
+      .row.g-0 .col-lg-8 {
+        padding-right: 0.75rem;
+      }
+      
+      .row.g-0 .col-lg-4 {
+        padding-left: 0.75rem;
+      }
     }
     
     .summary-row {
@@ -190,74 +310,74 @@
   </style>
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-container">
-      <a href="{{ route('home') }}" class="navbar-brand">ChickPatrol</a>
-      
-      <div style="flex: 1;"></div>
-      
-      <div class="navbar-actions">
-        @if(Auth::check())
-          <a href="{{ route('cart') }}" class="text-gray-600 text-sm me-3 text-decoration-none position-relative" title="Keranjang">
-            <i class="fa-solid fa-shopping-cart me-1"></i> Keranjang
-            <span id="cartBadge" class="badge bg-danger position-absolute top-0 start-100 translate-middle" style="display: none;">0</span>
-          </a>
-          <a href="{{ route('orders') }}" class="text-gray-600 text-sm me-3 text-decoration-none" title="Pesanan Saya">
-            <i class="fa-solid fa-shopping-bag me-1"></i> Pesanan Saya
-          </a>
-          <a href="{{ route('profile') }}" class="text-gray-600 text-sm me-2 text-decoration-none">Halo, {{ Auth::user()->name }}</a>
-          <a href="{{ route('logout') }}" class="btn-outline-secondary">Logout</a>
-        @else
-          <a href="{{ route('login') }}" class="btn-outline-secondary">Masuk</a>
-          <a href="{{ route('register') }}" class="btn-primary">Daftar</a>
-        @endif
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <main class="container py-5">
-    <div class="row">
+    <div class="row g-0">
       <div class="col-lg-8">
-        <h2 class="mb-4">Keranjang Belanja</h2>
+        <h2 class="mb-3" style="margin-top: 0; line-height: 1.5;">Keranjang</h2>
+        
+        @if($cartItems->count() > 0)
+        <div class="cart-header">
+          <div class="cart-header-left">
+            <input type="checkbox" id="selectAll" class="cart-header-checkbox" onchange="toggleSelectAll()">
+            <label for="selectAll" class="cart-header-label">Pilih Semua ({{ $cartItems->count() }})</label>
+          </div>
+          <button class="cart-header-delete" onclick="deleteSelected()">
+            Hapus
+          </button>
+        </div>
+        @endif
         
         @forelse($cartItems as $item)
           <div class="cart-item" data-cart-id="{{ $item->cart_id }}">
+            <input type="checkbox" 
+                   class="cart-item-checkbox item-checkbox" 
+                   id="item-{{ $item->cart_id }}"
+                   data-cart-id="{{ $item->cart_id }}"
+                   data-price="{{ $item->product->price }}"
+                   data-qty="{{ $item->qty }}"
+                   onchange="updateSelection()"
+                   checked>
             @php
               $image = $item->product->images->first();
               $imageUrl = $image ? $image->url : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='40'%3E🍗%3C/text%3E%3C/svg%3E";
             @endphp
             
-            <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="cart-item-img">
+            <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="cart-item-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=';">
             
             <div class="cart-item-info">
               <div class="cart-item-name">{{ $item->product->name }}</div>
               <div class="cart-item-price">Rp {{ number_format($item->product->price, 0, ',', '.') }} / {{ $item->product->unit ?? 'kg' }}</div>
-              <div class="cart-item-stock">Stok: {{ $item->product->stock }}</div>
+              <div class="cart-item-stock" id="stock-{{ $item->cart_id }}">Stok: {{ $item->product->stock }}</div>
               
               <div class="cart-item-qty mt-3">
-                <button class="qty-btn" onclick="updateQty('{{ $item->cart_id }}', {{ $item->qty - 1 }})">
+                <button class="qty-btn" onclick="changeQty('{{ $item->cart_id }}', -1)" id="minus-{{ $item->cart_id }}">
                   <i class="fa-solid fa-minus"></i>
                 </button>
                 <input type="number" 
                        class="qty-input" 
+                       id="qty-{{ $item->cart_id }}"
                        value="{{ $item->qty }}" 
                        min="1" 
                        max="{{ $item->product->stock }}"
-                       onchange="updateQty('{{ $item->cart_id }}', this.value)">
-                <button class="qty-btn" onclick="updateQty('{{ $item->cart_id }}', {{ $item->qty + 1 }})">
+                       data-cart-id="{{ $item->cart_id }}"
+                       data-max-stock="{{ $item->product->stock }}"
+                       onchange="updateQtyFromInput('{{ $item->cart_id }}')">
+                <button class="qty-btn" onclick="changeQty('{{ $item->cart_id }}', 1)" id="plus-{{ $item->cart_id }}">
                   <i class="fa-solid fa-plus"></i>
                 </button>
               </div>
             </div>
             
-            <div class="cart-item-total">
-              Rp {{ number_format($item->product->price * $item->qty, 0, ',', '.') }}
+            <div class="cart-item-actions">
+              <div class="cart-item-total" id="total-{{ $item->cart_id }}">
+                Rp {{ number_format($item->product->price * $item->qty, 0, ',', '.') }}
+              </div>
+              <button class="cart-item-delete" onclick="deleteItem('{{ $item->cart_id }}')" title="Hapus">
+                <i class="fa-solid fa-trash"></i>
+              </button>
             </div>
-            
-            <button class="cart-item-delete" onclick="deleteItem('{{ $item->cart_id }}')">
-              <i class="fa-solid fa-trash"></i>
-            </button>
           </div>
         @empty
           <div class="text-center py-12">
@@ -270,32 +390,16 @@
       
       <div class="col-lg-4">
         <div class="cart-summary">
-          <h4 class="mb-4">Ringkasan Belanja</h4>
-          
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span id="subtotal">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
-          </div>
-          
-          <div class="summary-row">
-            <span>Ongkir</span>
-            <span>Dihitung saat checkout</span>
-          </div>
+          <h4 class="mb-4">Ringkasan belanja</h4>
           
           <div class="summary-row summary-total">
             <span>Total</span>
-            <span id="total">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
+            <span id="total">Rp 0</span>
           </div>
           
-          @if($cartItems->count() > 0)
-            <button class="btn-checkout" onclick="checkout()">
-              <i class="fa-solid fa-shopping-bag me-2"></i>Checkout
-            </button>
-          @else
-            <button class="btn-checkout" disabled>
-              <i class="fa-solid fa-shopping-bag me-2"></i>Checkout
-            </button>
-          @endif
+          <button class="btn-checkout" id="checkoutBtn" onclick="checkout()" disabled>
+            <i class="fa-solid fa-shopping-bag me-2"></i>Beli (<span id="selectedCount">0</span>)
+          </button>
         </div>
       </div>
     </div>
@@ -364,41 +468,278 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/navbar.js') }}"></script>
   
   <script>
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
+    // Selection management
+    function updateSelection() {
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      const selectedCount = checkboxes.length;
+      let total = 0;
+      
+      checkboxes.forEach(checkbox => {
+        const price = parseFloat(checkbox.dataset.price);
+        const qty = parseInt(checkbox.dataset.qty);
+        total += price * qty;
+      });
+      
+      document.getElementById('selectedCount').textContent = selectedCount;
+      document.getElementById('total').textContent = 'Rp ' + total.toLocaleString('id-ID');
+      
+      const checkoutBtn = document.getElementById('checkoutBtn');
+      if (selectedCount > 0) {
+        checkoutBtn.disabled = false;
+      } else {
+        checkoutBtn.disabled = true;
+      }
+      
+      // Update select all checkbox
+      const allCheckboxes = document.querySelectorAll('.item-checkbox');
+      const selectAll = document.getElementById('selectAll');
+      if (selectAll) {
+        selectAll.checked = selectedCount === allCheckboxes.length && allCheckboxes.length > 0;
+        selectAll.indeterminate = selectedCount > 0 && selectedCount < allCheckboxes.length;
+      }
+    }
+    
+    function toggleSelectAll() {
+      const selectAll = document.getElementById('selectAll');
+      const checkboxes = document.querySelectorAll('.item-checkbox');
+      
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+      
+      updateSelection();
+    }
+    
+    function deleteSelected() {
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      if (checkboxes.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Peringatan',
+          text: 'Pilih produk yang ingin dihapus terlebih dahulu'
+        });
+        return;
+      }
+      
+      Swal.fire({
+        title: 'Hapus produk terpilih?',
+        text: `Anda akan menghapus ${checkboxes.length} produk dari keranjang`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const deletePromises = Array.from(checkboxes).map(checkbox => {
+            return fetch(`/cart/delete/${checkbox.dataset.cartId}`, {
+              method: 'DELETE',
+              headers: {
+                'X-CSRF-TOKEN': csrfToken
+              }
+            });
+          });
+          
+          Promise.all(deletePromises)
+            .then(() => {
+              Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: 'Produk berhasil dihapus dari keranjang'
+              }).then(() => {
+                location.reload();
+              });
+            })
+            .catch(err => {
+              Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Terjadi kesalahan saat menghapus produk'
+              });
+            });
+        }
+      });
+    }
+    
+    // Track ongoing requests to prevent race conditions
+    const updateQtyRequests = new Map();
+    const updateQtyLocks = new Set(); // Track which cart items are currently being updated
+    
+    // Change quantity with debounce
+    function changeQty(cartId, delta) {
+      // Prevent multiple simultaneous updates for same item
+      if (updateQtyLocks.has(cartId)) {
+        return;
+      }
+      
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      if (!qtyInput) return;
+      
+      const currentQty = parseInt(qtyInput.value) || 1;
+      const maxStock = parseInt(qtyInput.dataset.maxStock) || 999;
+      let newQty = currentQty + delta;
+      
+      // Validate bounds
+      if (newQty < 1) newQty = 1;
+      if (newQty > maxStock) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Stok Tidak Cukup',
+          text: `Stok tersedia: ${maxStock}`
+        });
+        newQty = maxStock;
+      }
+      
+      // Update input immediately for better UX
+      qtyInput.value = newQty;
+      
+      // Update quantity with debounce
+      updateQty(cartId, newQty);
+    }
+    
+    // Update quantity from input change
+    function updateQtyFromInput(cartId) {
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      if (!qtyInput) return;
+      
+      const newQty = parseInt(qtyInput.value) || 1;
+      const maxStock = parseInt(qtyInput.dataset.maxStock) || 999;
+      
+      // Validate bounds
+      if (newQty < 1) {
+        qtyInput.value = 1;
+        updateQty(cartId, 1);
+        return;
+      }
+      if (newQty > maxStock) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Stok Tidak Cukup',
+          text: `Stok tersedia: ${maxStock}`
+        });
+        qtyInput.value = maxStock;
+        updateQty(cartId, maxStock);
+        return;
+      }
+      
+      updateQty(cartId, newQty);
+    }
+    
+    // Update quantity with debounce and loading state
     function updateQty(cartId, newQty) {
       const qty = parseInt(newQty);
       if (qty < 1) return;
       
-      fetch(`/cart/update/${cartId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': csrfToken
-        },
-        body: JSON.stringify({ qty: qty })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          location.reload();
-        } else {
+      // Prevent multiple simultaneous updates for same item
+      if (updateQtyLocks.has(cartId)) {
+        return;
+      }
+      
+      // Cancel previous request if exists
+      if (updateQtyRequests.has(cartId)) {
+        clearTimeout(updateQtyRequests.get(cartId));
+      }
+      
+      // Disable buttons during request
+      const minusBtn = document.getElementById(`minus-${cartId}`);
+      const plusBtn = document.getElementById(`plus-${cartId}`);
+      const qtyInput = document.getElementById(`qty-${cartId}`);
+      
+      if (minusBtn) minusBtn.disabled = true;
+      if (plusBtn) plusBtn.disabled = true;
+      if (qtyInput) qtyInput.disabled = true;
+      
+      // Debounce: wait 500ms before sending request (increased from 300ms)
+      const timeoutId = setTimeout(() => {
+        // Lock this cart item
+        updateQtyLocks.add(cartId);
+        fetch(`/cart/update/${cartId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+          },
+          body: JSON.stringify({ qty: qty })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Update checkbox data-qty and item total
+            const checkbox = document.querySelector(`.item-checkbox[data-cart-id="${cartId}"]`);
+            if (checkbox) {
+              checkbox.dataset.qty = qty;
+              const totalEl = document.getElementById(`total-${cartId}`);
+              if (totalEl) {
+                const price = parseFloat(checkbox.dataset.price);
+                totalEl.textContent = 'Rp ' + (price * qty).toLocaleString('id-ID');
+              }
+              updateSelection();
+            }
+            
+            // Update stock display from response
+            const stockEl = document.getElementById(`stock-${cartId}`);
+            if (stockEl && data.stock !== undefined) {
+              stockEl.textContent = `Stok: ${data.stock}`;
+              // Update max attribute of input
+              if (qtyInput) {
+                qtyInput.dataset.maxStock = data.stock;
+                qtyInput.max = data.stock;
+              }
+            }
+            
+            // Update cart count if available
+            if (data.cart_count !== undefined) {
+              updateCartCount();
+            }
+          } else {
+            // Revert input value on error
+            if (qtyInput) {
+              qtyInput.value = qtyInput.dataset.lastValue || 1;
+            }
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: data.message || 'Gagal memperbarui keranjang'
+            });
+          }
+        })
+        .catch(err => {
+          console.error('Error updating quantity:', err);
+          // Revert input value on error
+          if (qtyInput) {
+            qtyInput.value = qtyInput.dataset.lastValue || qtyInput.value;
+          }
           Swal.fire({
             icon: 'error',
             title: 'Oops...',
-            text: data.message || 'Gagal memperbarui keranjang'
+            text: 'Terjadi kesalahan saat memperbarui jumlah'
           });
-        }
-      })
-      .catch(err => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Oops...',
-          text: 'Terjadi kesalahan'
+        })
+        .finally(() => {
+          // Re-enable buttons and unlock after a short delay
+          setTimeout(() => {
+            if (minusBtn) minusBtn.disabled = false;
+            if (plusBtn) plusBtn.disabled = false;
+            if (qtyInput) qtyInput.disabled = false;
+            updateQtyRequests.delete(cartId);
+            updateQtyLocks.delete(cartId);
+          }, 100);
         });
-      });
+      }, 500);
+      
+      updateQtyRequests.set(cartId, timeoutId);
+      
+      // Store last valid value before update
+      if (qtyInput) {
+        const currentValue = parseInt(qtyInput.value) || 1;
+        qtyInput.dataset.lastValue = currentValue;
+      }
     }
     
     function deleteItem(cartId) {
@@ -449,15 +790,42 @@
     }
     
     function checkout() {
-      const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
-      modal.show();
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      if (checkboxes.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Peringatan',
+          text: 'Pilih produk yang ingin dibeli terlebih dahulu'
+        });
+        return;
+      }
+      
+      const selectedCartIds = Array.from(checkboxes).map(cb => cb.dataset.cartId);
+      
+      // Redirect to checkout page with selected items
+      const params = new URLSearchParams();
+      selectedCartIds.forEach(id => {
+        params.append('items[]', id);
+      });
+      
+      window.location.href = '{{ route("checkout") }}?' + params.toString();
     }
     
     document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
+      if (!window.selectedCartIds || window.selectedCartIds.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Peringatan',
+          text: 'Pilih produk yang ingin dibeli terlebih dahulu'
+        });
+        return;
+      }
+      
       const formData = new FormData(this);
       const data = Object.fromEntries(formData);
+      data.selected_cart_ids = window.selectedCartIds;
       
       try {
         const response = await fetch('{{ route("cart.checkout") }}', {
@@ -490,6 +858,49 @@
           confirmButtonColor: '#dc3545'
         });
       }
+    });
+    
+    // Initialize selection on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      updateSelection();
+      
+      // Align cart summary with cart header dynamically
+      function alignCartSummary() {
+        if (window.innerWidth >= 992) {
+          const cartHeader = document.querySelector('.cart-header');
+          const cartSummary = document.querySelector('.cart-summary');
+          const colLeft = document.querySelector('.col-lg-8');
+          const colRight = document.querySelector('.col-lg-4');
+          const h2Title = document.querySelector('.col-lg-8 h2');
+          
+          if (cartHeader && cartSummary && colLeft && colRight && h2Title) {
+            // Get the top position of cart-header relative to its column
+            // cart-header starts right after h2, so we need h2 height + margin
+            const h2Height = h2Title.offsetHeight;
+            const h2MarginBottom = parseInt(window.getComputedStyle(h2Title).marginBottom) || 0;
+            const headerTop = h2Height + h2MarginBottom;
+            
+            // Set cart-summary margin-top to match cart-header top position
+            cartSummary.style.marginTop = headerTop + 'px';
+          }
+        } else {
+          // Reset margin-top on mobile
+          const cartSummary = document.querySelector('.cart-summary');
+          if (cartSummary) {
+            cartSummary.style.marginTop = '0';
+          }
+        }
+      }
+      
+      // Align on load (wait a bit for layout to settle)
+      setTimeout(alignCartSummary, 50);
+      
+      // Re-align on window resize
+      let resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(alignCartSummary, 100);
+      });
     });
   </script>
 </body>

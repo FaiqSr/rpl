@@ -2,31 +2,44 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Profil Saya - ChickPatrol</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
   <style>
-    body { background:#f8f9fa; font-family:'Inter',sans-serif; }
+    body { background:#FAFAF8; font-family:'Inter',sans-serif; }
     .profile-card { background:white; border:1px solid #e9ecef; border-radius:12px; padding:2rem; max-width:720px; margin:2rem auto; }
     .profile-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
     .avatar { width:64px; height:64px; border-radius:50%; background:#e9ecef; display:flex; align-items:center; justify-content:center; font-size:28px; color:#6c757d; }
     .section-title { font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:#6c757d; margin-top:1.5rem; }
     .btn-primary { background:#69B578; border:none; }
     .btn-primary:hover { background:#5aa267; }
+    
+    @media (max-width: 768px) {
+      .profile-card {
+        margin: 1rem !important;
+        padding: 1.5rem !important;
+      }
+      .profile-header {
+        flex-direction: column;
+        text-align: center;
+      }
+      .row {
+        margin: 0 !important;
+      }
+      .col-md-6 {
+        margin-bottom: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg bg-white border-bottom mb-3">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{{ route('home') }}">ChickPatrol</a>
-      <div class="ms-auto d-flex align-items-center gap-2">
-        <a href="{{ route('home') }}" class="btn btn-sm btn-outline-secondary">Home</a>
-        <a href="{{ route('logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
-      </div>
-    </div>
-  </nav>
+  @include('partials.navbar')
 
   <div class="profile-card">
     <div class="profile-header">
@@ -55,7 +68,7 @@
         <input type="text" name="phone" class="form-control" value="{{ old('phone', auth()->user()->phone) }}" placeholder="08xxxxxxxxxx">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Email (Tidak bisa diubah)</label>
+        <label class="form-label">Email</label>
         <input type="email" class="form-control" value="{{ auth()->user()->email }}" disabled>
       </div>
       <div class="col-12">
@@ -73,5 +86,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ asset('js/navbar.js') }}"></script>
 </body>
 </html>

@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Monitoring Alat - ChickPatrol Seller</title>
+  <title>Monitoring Kandang - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,124 +24,6 @@
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
-    
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -503,6 +385,13 @@
       .prediction-banner p {
         font-size: .65rem !important;
       }
+      .prediction-banner .prob-badge {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 0.5rem !important;
+      }
+      .prediction-banner p div {
+        font-size: 0.7rem !important;
+      }
     }
     .sensor-card {
       background: white;
@@ -588,6 +477,41 @@
       line-height:1.5; 
       font-weight: 400;
     }
+    .prediction-banner p div {
+      margin-bottom: 0.5rem;
+    }
+    .prediction-banner p div:last-child {
+      margin-bottom: 0;
+    }
+    /* Styling untuk probabilitas badge di banner */
+    .prediction-banner .prob-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .prediction-banner .prob-badge.badge-baik {
+      background: rgba(34, 197, 94, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+    .prediction-banner .prob-badge.badge-perhatian {
+      background: rgba(250, 204, 21, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(250, 204, 21, 0.4);
+    }
+    .prediction-banner .prob-badge.badge-buruk {
+      background: rgba(239, 68, 68, 0.25);
+      color: #ffffff;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Sticky Alert Bar dihapus - hanya pop-up alert yang digunakan */
     .chart-card {
       background: white;
       border: 1px solid #e9ecef;
@@ -826,64 +750,35 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Fantastic F</h6>
-        <p>Founder</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item active" onclick="toggleSubmenu()">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon rotate"></i>
-      </div>
-      <div class="sidebar-submenu show">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}" class="active">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
+    <div class="page-header">
+      <h1>Monitoring Kandang</h1>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="{{ route('export.pdf') }}" id="downloadPdfBtn" class="btn btn-sm btn-outline-danger" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-file-pdf"></i> Unduh Laporan PDF
+        </a>
+      </div>
+    </div>
+    
+    <script>
+      document.getElementById('downloadPdfBtn')?.addEventListener('click', function(e) {
+        const btn = this;
+        const originalHTML = btn.innerHTML;
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh...';
+        
+        // Reset setelah 10 detik jika masih loading
+        setTimeout(function() {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+          btn.innerHTML = originalHTML;
+        }, 10000);
+      });
+    </script>
     <!-- Monitoring Summary Banner (dynamic) -->
     <div id="predictionBanner" class="prediction-banner" style="display:none;">
       <span style="font-size: 2rem; opacity: 0.95;">📊</span>
@@ -1040,14 +935,17 @@
     const ANOMALIES_PER_PAGE = 5;
     const noAnomaly = document.getElementById('noAnomaly');
 
+    // Global variable untuk menyimpan thresholds dari API
+    let globalThresholds = {
+      temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
+      humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
+      ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
+      light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
+    };
+    
     // Fungsi untuk menentukan status sensor berdasarkan threshold (Premium Colors)
     function getSensorStatus(key, value){
-      const thresholds = {
-        temperature: { ideal_min: 23, ideal_max: 34, danger_low: 20, danger_high: 37 },
-        humidity: { ideal_min: 50, ideal_max: 70, warn_low: 50, warn_high: 80, danger_high: 80 },
-        ammonia: { ideal_max: 20, warn_max: 35, danger_max: 35 },
-        light: { ideal_low: 20, ideal_high: 40, warn_low: 10, warn_high: 60 }
-      };
+      const thresholds = globalThresholds;
       
       // Premium colors: #22C55E (hijau), #FACC15 (kuning), #EF4444 (merah)
       const premiumGreen = '#22C55E';
@@ -1143,10 +1041,8 @@
       const sensorStatus = getSensorStatus(key, value);
       
       // Format nilai dengan presisi yang sesuai
-      const formattedValue = (key === 'temperature' || key === 'humidity') ? 
-        parseFloat(value).toFixed(1) : 
-        (key === 'ammonia') ? parseFloat(value).toFixed(1) : 
-        Math.round(parseFloat(value));
+      // Semua sensor menggunakan 1 desimal untuk konsistensi
+      const formattedValue = parseFloat(value).toFixed(1);
       
       // Tentukan ikon sensor
       const sensorIcons = {
@@ -1207,36 +1103,103 @@
           return;
         }
       
-      // Format status label lebih profesional
+      // Format status label lebih profesional dan informatif
       const statusLabels = {
-        'baik': 'Kondisi Kandang Optimal',
-        'perhatian': 'Kondisi Kandang Perlu Perhatian',
-        'buruk': 'Kondisi Kandang Tidak Optimal',
+        'baik': 'Kandang dalam Kondisi Optimal',
+        'perhatian': 'Perhatian: Kondisi Kandang Perlu Tindakan',
+        'buruk': 'Peringatan: Kondisi Kandang Membahayakan',
         'tidak diketahui': 'Status Tidak Dapat Ditentukan'
       };
       
       const statusLabel = status.label || 'tidak diketahui';
       const statusText = statusLabels[statusLabel] || 'Kondisi Kandang ' + statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
       
-      // Format confidence - hanya di title
-      let confidenceText = '';
-      if (status.confidence !== undefined && status.confidence !== null) {
-        const confidencePercent = Math.round(status.confidence * 100);
-        confidenceText = ` (Tingkat Keyakinan: ${confidencePercent}%)`;
-      }
-      
-      // Title: hanya status dan confidence
+      // Title: hanya status (hilangkan confidence dari title untuk lebih clean)
       if (titleEl) {
-        titleEl.innerHTML = statusText + confidenceText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
+        titleEl.innerHTML = statusText + ' <span id="mlActiveBadge" class="badge bg-success ms-2" style="display:none;">ML Active</span>';
       }
       
-      // Detail: hanya message dan sumber (HILANGKAN duplikasi keyakinan dan prediksi)
+      // Detail: message yang informatif dengan struktur yang lebih profesional
       if (detailEl) {
+        let htmlContent = '';
+        
+        // 1. Message utama (action items)
+        let mainMessage = '';
         if (status.message) {
-          detailEl.textContent = status.message + ' | Hasil Analisis Machine Learning';
+          // Gunakan message dari ML service (sudah informatif)
+          mainMessage = status.message;
         } else {
-          detailEl.textContent = 'Hasil Analisis Machine Learning';
+          // Fallback message berdasarkan status
+          const fallbackMessages = {
+            'baik': 'Semua parameter sensor dalam batas aman. Tidak ada tindakan yang diperlukan saat ini.',
+            'perhatian': 'Beberapa parameter sensor di luar batas optimal. Lakukan pengecekan ventilasi, pakan, dan air minum.',
+            'buruk': 'Kondisi lingkungan membahayakan kesehatan ayam. Segera lakukan penyesuaian suhu, kelembaban, atau ventilasi.',
+          };
+          mainMessage = fallbackMessages[statusLabel] || 'Status tidak dapat ditentukan. Silakan refresh halaman.';
         }
+        
+        // Pisahkan message utama dari confidence/probabilitas jika ada
+        // Hapus bagian "(Tingkat keyakinan sistem: ...)" dari message jika ada
+        let cleanMessage = mainMessage;
+        if (cleanMessage.includes('(Tingkat keyakinan sistem:')) {
+          cleanMessage = cleanMessage.split('(Tingkat keyakinan sistem:')[0].trim();
+        }
+        
+        htmlContent += `<div style="margin-bottom: 0.5rem; line-height: 1.6;">${cleanMessage}</div>`;
+        
+        // 2. Informasi teknis (confidence & probabilitas) - dalam container terpisah
+        let techInfo = [];
+        
+        // Confidence level
+        if (status.confidence !== undefined && status.confidence !== null) {
+          const confidencePercent = Math.round(status.confidence * 100);
+          let confidenceLevel = '';
+          let confidenceIcon = '';
+          if (confidencePercent >= 80) {
+            confidenceLevel = 'Sangat yakin';
+            confidenceIcon = '✓';
+          } else if (confidencePercent >= 60) {
+            confidenceLevel = 'Cukup yakin';
+            confidenceIcon = '⚠';
+          } else {
+            confidenceLevel = 'Perlu verifikasi manual';
+            confidenceIcon = '⚠';
+          }
+          techInfo.push(`<span style="display: inline-flex; align-items: center; gap: 0.25rem;"><strong>${confidenceIcon} Keyakinan:</strong> ${confidenceLevel}</span>`);
+        }
+        
+        // Tampilkan manual review flag jika diperlukan (tanpa perbandingan detail)
+        if (status.needs_manual_review) {
+          techInfo.push(`<span style="display: inline-flex; align-items: center; gap: 0.25rem; color: #FEF3C7;"><strong>⚠️ Perlu Verifikasi Manual</strong></span>`);
+        }
+        
+        // Probabilitas detail (dari ML original) HANYA jika confidence < 80%
+        if (status.probability && status.confidence !== undefined && status.confidence < 0.8) {
+          const prob = status.probability;
+          const probBAIK = (prob.BAIK * 100).toFixed(1);
+          const probPERHATIAN = (prob.PERHATIAN * 100).toFixed(1);
+          const probBURUK = (prob.BURUK * 100).toFixed(1);
+          
+          // Format probabilitas dengan badge visual yang lebih profesional
+          const probHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap;">
+              <strong style="white-space: nowrap;">Probabilitas:</strong>
+              <span style="display: inline-flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="prob-badge badge-baik">BAIK ${probBAIK}%</span>
+                <span class="prob-badge badge-perhatian">PERHATIAN ${probPERHATIAN}%</span>
+                <span class="prob-badge badge-buruk">BURUK ${probBURUK}%</span>
+              </span>
+            </span>
+          `;
+          techInfo.push(probHTML);
+        }
+        
+        // Gabungkan informasi teknis dengan separator yang lebih jelas
+        if (techInfo.length > 0) {
+          htmlContent += `<div style="margin-top: 0.625rem; padding-top: 0.625rem; border-top: 1px solid rgba(255, 255, 255, 0.25); display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8125rem; opacity: 0.95; line-height: 1.5;">${techInfo.join('')}</div>`;
+        }
+        
+        detailEl.innerHTML = htmlContent;
       }
       
       // HILANGKAN prediksi 6 jam dari banner (jika elemen masih ada)
@@ -1260,9 +1223,11 @@
         const predictionBanner = document.getElementById('predictionBanner');
         if (predictionBanner) {
           const severity = status.severity || 'normal';
-          if (severity === 'critical' || severity === 'bahaya' || status.label?.includes('buruk') || status.label?.includes('tidak optimal')) {
+          // Tentukan warna banner berdasarkan status label (prioritas utama)
+          const statusLabelLower = (status.label || '').toLowerCase();
+          if (statusLabelLower === 'buruk' || statusLabelLower.includes('buruk') || severity === 'critical' || severity === 'bahaya' || status.label?.includes('tidak optimal')) {
               predictionBanner.style.background = 'linear-gradient(90deg, #EF4444, #DC2626)'; // Merah premium untuk bahaya
-          } else if (severity === 'warning' || severity === 'perhatian' || status.label?.includes('perhatian')) {
+          } else if (statusLabelLower === 'perhatian' || statusLabelLower.includes('perhatian') || severity === 'warning') {
               predictionBanner.style.background = 'linear-gradient(90deg, #FACC15, #FB923C)'; // Kuning-orange premium untuk perhatian
           } else {
               predictionBanner.style.background = 'linear-gradient(90deg, #22C55E, #16A34A)'; // Hijau premium untuk aman
@@ -1280,24 +1245,23 @@
       const ctx = document.getElementById('trendChart').getContext('2d');
       
       // Format labels: show every hour dengan format WIB (realtime)
+      // Gunakan waktu real-time saat ini untuk semua label
+      const now = new Date();
+      const nowYear = now.getFullYear();
+      const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const nowDay = String(now.getDate()).padStart(2, '0');
+      
       const historyLabels = history.map((p, i) => {
-        // Untuk data terakhir, gunakan waktu realtime saat ini
-        if (i === history.length - 1) {
-          const now = new Date();
-          const nowDay = String(now.getDate()).padStart(2, '0');
-          const nowMonth = String(now.getMonth() + 1).padStart(2, '0');
-          const nowHour = String(now.getHours()).padStart(2, '0');
-          const nowMinute = String(now.getMinutes()).padStart(2, '0');
-          return `${nowDay}/${nowMonth} ${nowHour}:${nowMinute}`;
-        }
+        // Hitung jam yang lalu dari waktu saat ini
+        const hoursAgo = history.length - 1 - i;
+        const labelTime = new Date(now.getTime() - hoursAgo * 3600 * 1000);
         
-        // Untuk data history lainnya, parse dari timestamp
-        const [datePart, timePart] = p.time.split(' ');
-        const [year, month, day] = datePart.split('-');
-        const [hour] = timePart.split(':');
+        const labelDay = String(labelTime.getDate()).padStart(2, '0');
+        const labelMonth = String(labelTime.getMonth() + 1).padStart(2, '0');
+        const labelHour = String(labelTime.getHours()).padStart(2, '0');
         
         // Format: "DD/MM HH:00"
-        return `${day}/${month} ${hour}:00`;
+        return `${labelDay}/${labelMonth} ${labelHour}:00`;
       });
       const predictionLabels = prediction.temperature.map((_,i)=>'+'+(i+1)+'h');
       const labels = [...historyLabels, ...predictionLabels];
@@ -1429,6 +1393,8 @@
             },
             y: {
               beginAtZero: false,
+              min: 0,
+              max: 100,
               grid: {
                 display: true,
                 color: 'rgba(0, 0, 0, 0.05)',
@@ -1440,6 +1406,7 @@
                   family: "'Inter', -apple-system, sans-serif"
                 },
                 color: '#6c757d',
+                stepSize: 10,
                 callback: function(value) {
                   return value.toFixed(0);
                 }
@@ -1514,40 +1481,109 @@
         return typeMap[typeLower] || { icon: '⚠️', badgeClass: 'unknown', label: (type || 'UNKNOWN').toUpperCase() };
       }
       
-      // Helper function untuk format deskripsi ringkas
-      function formatAnomalyDescription(message, value) {
+      // Helper function untuk format deskripsi ringkas dengan threshold dari database
+      function formatAnomalyDescription(message, value, sensorType) {
         if (!message) return 'Anomali terdeteksi';
         
-        // Extract nilai dan batas dari message jika ada
+        // Extract nilai dari message
         const valueMatch = message.match(/nilai:\s*([\d.]+)/i);
-        const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
         const unitMatch = message.match(/(lux|ppm|°C|%)/i);
         const unit = unitMatch ? unitMatch[1] : '';
         
-        if (valueMatch && thresholdMatch) {
-          const val = parseFloat(valueMatch[1]).toFixed(1);
-          const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
-          const direction = message.includes('di atas') ? 'di atas' : message.includes('di bawah') ? 'di bawah' : '';
-          return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+        // Tentukan threshold berdasarkan sensor type dari globalThresholds
+        // Pastikan menggunakan nilai yang sudah dikonversi ke number
+        let safeThreshold = '';
+        const sensorTypeLower = (sensorType || '').toLowerCase();
+        if (sensorTypeLower === 'temperature' || sensorTypeLower === 'suhu') {
+          const max = typeof globalThresholds.temperature?.ideal_max === 'number' 
+            ? globalThresholds.temperature.ideal_max 
+            : parseFloat(globalThresholds.temperature?.ideal_max) || 34;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'humidity' || sensorTypeLower === 'kelembaban') {
+          const max = typeof globalThresholds.humidity?.ideal_max === 'number' 
+            ? globalThresholds.humidity.ideal_max 
+            : parseFloat(globalThresholds.humidity?.ideal_max) || 70;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'ammonia' || sensorTypeLower === 'amoniak') {
+          const max = typeof globalThresholds.ammonia?.ideal_max === 'number' 
+            ? globalThresholds.ammonia.ideal_max 
+            : parseFloat(globalThresholds.ammonia?.ideal_max) || 20;
+          safeThreshold = max.toFixed(1);
+        } else if (sensorTypeLower === 'light' || sensorTypeLower === 'cahaya') {
+          const max = typeof globalThresholds.light?.ideal_high === 'number' 
+            ? globalThresholds.light.ideal_high 
+            : parseFloat(globalThresholds.light?.ideal_high) || 40;
+          safeThreshold = max.toFixed(1);
         }
         
-        // Jika ada z-score, format dengan z-score
-        const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
-        if (zScoreMatch && valueMatch) {
+        if (valueMatch) {
           const val = parseFloat(valueMatch[1]).toFixed(1);
-          const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
-          return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+          
+          // Jika ada z-score, format dengan z-score
+          const zScoreMatch = message.match(/z-score:\s*([\d.]+)/i);
+          if (zScoreMatch) {
+            const zScore = parseFloat(zScoreMatch[1]).toFixed(2);
+            return `Nilai: ${val} ${unit} (z-score: ${zScore})`;
+          }
+          
+          // Jika ada threshold dari database, gunakan itu
+          if (safeThreshold) {
+            return `Nilai: ${val} ${unit} (batas aman: ${safeThreshold} ${unit})`;
+          }
+          
+          // Fallback: coba extract dari message
+          const thresholdMatch = message.match(/(?:di atas|di bawah|batas aman|batas)\s*([\d.]+)/i);
+          if (thresholdMatch) {
+            const threshold = parseFloat(thresholdMatch[1]).toFixed(0);
+            return `Nilai: ${val} ${unit} (batas aman: ${threshold} ${unit})`;
+          }
         }
         
         // Fallback: gunakan message asli tapi ringkas (hapus duplikasi nilai)
         return message.replace(/\s*\(nilai:.*?\)/g, '').substring(0, 100);
       }
       
-      anomalyList.innerHTML = displayAnomalies.map(a => {
+      // Helper function untuk format timestamp anomali menjadi real-time
+      function formatAnomalyTime(anomalyTime, index) {
+        const now = new Date();
+        
+        // Jika ada waktu dari anomaly, coba parse dan hitung jam yang lalu
+        if (anomalyTime) {
+          try {
+            const anomalyDate = new Date(anomalyTime);
+            // Hitung perkiraan jam yang lalu berdasarkan index (anomali terbaru = 0 jam lalu)
+            // Asumsi: anomali terbaru terjadi dalam 1-2 jam terakhir
+            const hoursAgo = Math.min(index, 24); // Max 24 jam lalu
+            const displayTime = new Date(now.getTime() - (hoursAgo * 3600 * 1000));
+            
+            const day = String(displayTime.getDate()).padStart(2, '0');
+            const month = String(displayTime.getMonth() + 1).padStart(2, '0');
+            const hour = String(displayTime.getHours()).padStart(2, '0');
+            
+            return `${displayTime.getFullYear()}-${month}-${day} ${hour}:00`;
+          } catch (e) {
+            // Fallback jika parsing gagal
+          }
+        }
+        
+        // Fallback: gunakan waktu real-time dikurangi index (jam yang lalu)
+        const hoursAgo = Math.min(index, 24);
+        const displayTime = new Date(now.getTime() - (hoursAgo * 3600 * 1000));
+        const day = String(displayTime.getDate()).padStart(2, '0');
+        const month = String(displayTime.getMonth() + 1).padStart(2, '0');
+        const hour = String(displayTime.getHours()).padStart(2, '0');
+        
+        return `${displayTime.getFullYear()}-${month}-${day} ${hour}:00`;
+      }
+      
+      anomalyList.innerHTML = displayAnomalies.map((a, idx) => {
         // Tentukan severity berdasarkan type atau severity dari data
         const severity = a.severity || (a.type === 'unknown' ? 'warning' : 'critical');
         const typeInfo = getAnomalyTypeInfo(a.type);
-        const description = formatAnomalyDescription(a.message || '', a.value);
+        // Pastikan sensorType menggunakan format yang benar (lowercase)
+        const sensorType = (a.type || a.sensor_type || '').toLowerCase();
+        const description = formatAnomalyDescription(a.message || '', a.value, sensorType);
+        const formattedTime = formatAnomalyTime(a.time, startIndex + idx);
         
         return `
           <div class="anomaly-item" data-severity="${severity}">
@@ -1556,7 +1592,7 @@
                 <span class="anomaly-icon">${typeInfo.icon}</span>
                 <span>${typeInfo.label}</span>
               </span>
-              <span class="anomaly-timestamp">${a.time || ''}</span>
+              <span class="anomaly-timestamp">${formattedTime}</span>
             </div>
             <div class="anomaly-content">
               <div class="anomaly-title">${description}</div>
@@ -1621,7 +1657,7 @@
         const hum = 65 + (Math.random()*10-5);
         const ammo = Math.max(5, 10 + (Math.random()*7-3));
         const light = (i>=6 && i<=18)? 700 + (Math.random()*200-100) : 120 + (Math.random()*60-30);
-        history.push({time:hour, temperature:+temp.toFixed(1), humidity:+hum.toFixed(1), ammonia:+ammo.toFixed(1), light:Math.round(light)});
+        history.push({time:hour, temperature:+temp.toFixed(1), humidity:+hum.toFixed(1), ammonia:+ammo.toFixed(1), light:+light.toFixed(1)});
       }
       const latest = history[history.length-1];
       const predict = arr => {
@@ -1654,18 +1690,19 @@
         const risk = (min<low||max>high)?'potensi keluar batas aman':'dalam kisaran aman';
         return { metric, summary:`${metric} ${dir} (${min.toFixed?min.toFixed(2):min}–${max.toFixed?max.toFixed(2):max} ${unit}) ${risk}`, range:{min,max,unit}, trend:dir, risk };
       };
-      const forecast_summary_6h = [
-        sum(pred6.temperature,'Suhu','°C',20,30),
-        sum(pred6.humidity,'Kelembaban','%',55,75),
-        sum(pred6.ammonia,'Amoniak','ppm',0,25),
-        sum(pred6.light,'Cahaya','lux',200,900)
-      ];
-      const forecast_summary_24h = [
-        sum(pred24.temperature,'Suhu','°C',20,30),
-        sum(pred24.humidity,'Kelembaban','%',55,75),
-        sum(pred24.ammonia,'Amoniak','ppm',0,25),
-        sum(pred24.light,'Cahaya','lux',200,900)
-      ];
+        // Gunakan threshold dari globalThresholds untuk forecast summary
+        const forecast_summary_6h = [
+          sum(pred6.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+          sum(pred6.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+          sum(pred6.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+          sum(pred6.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+        ];
+        const forecast_summary_24h = [
+          sum(pred24.temperature,'Suhu','°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+          sum(pred24.humidity,'Kelembaban','%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+          sum(pred24.ammonia,'Amoniak','ppm', 0, globalThresholds.ammonia.ideal_max),
+          sum(pred24.light,'Cahaya','lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+        ];
       const anomalies = [];
       return { latest, history, prediction_6h:pred6, prediction_24h:pred24, status, anomalies, forecast_summary_6h, forecast_summary_24h };
     }
@@ -1716,6 +1753,9 @@
             <i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i>
             ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}
           </span>
+          <div style="margin-top: 8px; padding: 8px; background: rgba(255, 193, 7, 0.1); border-left: 3px solid #ffc107; border-radius: 4px; font-size: 0.75rem; line-height: 1.4;">
+            <strong>⚠️ Perhatian:</strong> ML Service tidak terhubung. Untuk menggunakan Random Forest, LSTM, dan Isolation Forest, jalankan <code>START_ML_SERVICE.bat</code> di folder root project.
+          </div>
         </div>`;
       }
       
@@ -1763,13 +1803,326 @@
       mlInfoCard.style.display = 'block';
     }
 
-    async function loadMonitoring(){
+    // ========== URGENT ALERT SYSTEM ==========
+    
+    // Check for urgent alerts
+    function checkUrgentAlerts(data) {
+      const { status, prediction_6h, anomalies, forecast_summary_6h } = data;
+      const alerts = [];
+      
+      // 1. Check status BURUK dengan confidence tinggi
+      // Status sudah menggunakan threshold dari database (dihitung di routes/web.php berdasarkan data sensor aktual)
+      if (status.label === 'buruk' && status.confidence >= 0.6) {
+        alerts.push({
+          type: 'critical',
+          title: '🚨 Peringatan: Kondisi Kandang Membahayakan',
+          message: status.message || 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam berdasarkan threshold yang tersimpan.',
+          action: 'Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan sesuai threshold yang tersimpan. Jika perlu, hubungi dokter hewan.',
+          urgency: 'high'
+        });
+      }
+      
+      // 2. Check prediksi 6h menunjukkan BURUK (probability > 0.55 dari threshold optimal)
+      // Status probability sudah menggunakan threshold dari database (dihitung di routes/web.php)
+      if (status.probability && status.probability.BURUK > 0.55) {
+        const burukProbability = (status.probability.BURUK * 100).toFixed(1);
+        const urgency = status.probability.BURUK > 0.70 ? 'high' : 'medium';
+        const type = status.probability.BURUK > 0.70 ? 'critical' : 'warning';
+        
+        alerts.push({
+          type: type,
+          title: '⚠️ Prediksi: Risiko Meningkat dalam 6 Jam',
+          message: `Model ML memprediksi kondisi kandang berpotensi memburuk (${burukProbability}% kemungkinan BURUK) berdasarkan threshold yang tersimpan.`,
+          action: 'Lakukan tindakan pencegahan: periksa ventilasi, suhu, kelembaban, dan cahaya sesuai threshold yang tersimpan.',
+          urgency: urgency
+        });
+      }
+      
+      // 3. Check anomali critical
+      // Anomali sudah menggunakan threshold dari database (melalui formatAnomalyDescription)
+      const criticalAnomalies = anomalies.filter(a => a.severity === 'critical');
+      if (criticalAnomalies.length > 0) {
+        // Ambil detail anomali dengan threshold yang benar
+        const anomalyDetails = criticalAnomalies.slice(0, 3).map(a => {
+          const sensorType = (a.type || a.sensor_type || '').toLowerCase();
+          let thresholdInfo = '';
+          
+          // Tentukan threshold info berdasarkan sensor type
+          if (sensorType === 'temperature' || sensorType === 'suhu') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.temperature?.ideal_max || 34}°C)`;
+          } else if (sensorType === 'humidity' || sensorType === 'kelembaban') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.humidity?.ideal_max || 70}%)`;
+          } else if (sensorType === 'ammonia' || sensorType === 'amoniak') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.ammonia?.ideal_max || 20} ppm)`;
+          } else if (sensorType === 'light' || sensorType === 'cahaya') {
+            thresholdInfo = ` (batas aman: ${globalThresholds.light?.ideal_high || 40} lux)`;
+          }
+          
+          return (a.message || a.type) + thresholdInfo;
+        }).join(', ');
+        
+        alerts.push({
+          type: 'critical',
+          title: `🚨 ${criticalAnomalies.length} Anomali Kritis Terdeteksi`,
+          message: anomalyDetails || criticalAnomalies.slice(0, 3).map(a => a.message || a.type).join(', '),
+          action: 'Segera periksa sensor dan kondisi kandang sesuai threshold yang tersimpan.',
+          urgency: 'high'
+        });
+      }
+      
+      // 4. Check forecast menunjukkan threshold akan dilampaui
+      // Pastikan menggunakan forecast_summary yang sudah menggunakan threshold dari database
+      if (forecast_summary_6h && Array.isArray(forecast_summary_6h)) {
+        forecast_summary_6h.forEach(forecast => {
+          // Cek apakah risk menunjukkan kondisi di luar batas aman atau potensi keluar batas
+          // forecast.risk sudah menggunakan threshold dari database (melalui globalThresholds)
+          if (forecast.risk && (forecast.risk.includes('di luar batas aman') || forecast.risk.includes('potensi keluar batas aman'))) {
+            // Tentukan urgency berdasarkan risk level
+            const urgency = forecast.risk.includes('di luar batas aman') ? 'high' : 'medium';
+            const type = forecast.risk.includes('di luar batas aman') ? 'critical' : 'warning';
+            
+            alerts.push({
+              type: type,
+              title: `⚠️ ${forecast.metric} Diprediksi ${forecast.risk.includes('di luar batas aman') ? 'Keluar Batas Aman' : 'Berpotensi Keluar Batas Aman'}`,
+              message: forecast.summary || `${forecast.metric} diprediksi ${forecast.risk.includes('di luar batas aman') ? 'keluar batas aman' : 'berpotensi keluar batas aman'} dalam 6 jam ke depan.`,
+              action: `Periksa dan sesuaikan ${forecast.metric.toLowerCase()} dalam beberapa jam ke depan sesuai threshold yang tersimpan.`,
+              urgency: urgency
+            });
+          }
+        });
+      }
+      
+      return alerts;
+    }
+    
+    // Show urgent alert pop-up
+    function showUrgentAlert(alert) {
+      const icon = alert.type === 'critical' ? 'error' : 'warning';
+      const confirmButtonColor = alert.type === 'critical' ? '#dc2626' : '#facc15';
+      
+      Swal.fire({
+        icon: icon,
+        title: alert.title,
+        html: `
+          <div style="text-align: left; margin-top: 1rem;">
+            <p style="margin-bottom: 0.75rem; font-size: 0.95rem; line-height: 1.6;">${alert.message}</p>
+            <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 8px; border-left: 4px solid ${confirmButtonColor};">
+              <strong style="color: ${confirmButtonColor}; display: block; margin-bottom: 0.5rem;">Tindakan Disarankan:</strong>
+              <p style="margin: 0; font-size: 0.875rem; line-height: 1.5;">${alert.action}</p>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'Saya Mengerti',
+        confirmButtonColor: confirmButtonColor,
+        allowOutsideClick: false,
+        allowEscapeKey: true,
+        showCloseButton: true,
+        width: '600px',
+        customClass: {
+          popup: 'alert-popup',
+          title: 'alert-title',
+          htmlContainer: 'alert-content'
+        }
+      });
+    }
+    
+    // Sticky Bar dihapus - hanya pop-up alert yang digunakan di halaman monitoring
+    
+    // Browser Push Notification
+    let notificationPermission = Notification.permission;
+    
+    async function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          notificationPermission = 'granted';
+          localStorage.setItem('notificationPermission', 'granted');
+        }
+      }
+    }
+    
+    function showBrowserNotification(title, options) {
+      if (!('Notification' in window)) {
+        return;
+      }
+      
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          body: options.body || '',
+          tag: options.tag || 'chickpatrol-alert',
+          requireInteraction: options.requireInteraction || false,
+          ...options
+        });
+      }
+    }
+    
+    function notifyUrgentAlert(alert) {
+      showBrowserNotification(alert.title, {
+        body: alert.message + '\n\n' + alert.action,
+        tag: `alert-${alert.type}-${Date.now()}`,
+        requireInteraction: alert.urgency === 'high'
+      });
+    }
+    
+    // Request notification permission on page load
+    if ('Notification' in window && Notification.permission === 'default') {
+      // Request permission after a short delay
+      setTimeout(() => {
+        requestNotificationPermission();
+      }, 2000);
+    }
+    
+    async function loadMonitoring(forceRefresh = false){
       sensorGrid.innerHTML = '<div class="loading-overlay">Memuat data sensor...</div>';
       try {
-        const res = await fetch('/api/monitoring/tools?t=' + Date.now(), { headers:{ 'Accept':'application/json' } });
-        if (!res.ok) throw new Error('HTTP '+res.status);
+        // Ambil profile yang dipilih dari localStorage (jika ada), atau gunakan 'default'
+        const selectedProfile = localStorage.getItem('selectedThresholdProfile') || 'default';
+        const res = await fetch(`/api/monitoring/tools?t=${Date.now()}&profile=${selectedProfile}`, { 
+          headers:{ 'Accept':'application/json' } 
+        });
+        
+        // Check if response is ok
+        if (!res.ok) {
+          let errorMessage = 'HTTP ' + res.status;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+            console.error('API Error:', errorData);
+          } catch (e) {
+            const errorText = await res.text();
+            console.error('API Error (text):', errorText);
+            errorMessage = errorText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        
         const data = await res.json();
-        const { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta } = data;
+        
+        // Check if response has error
+        if (data.error) {
+          throw new Error(data.message || data.error || 'Unknown error');
+        }
+        // Use let instead of const for forecast_summary variables since they may be reassigned
+        let { latest, history, prediction_6h, prediction_24h, status, anomalies, forecast_summary_6h, forecast_summary_24h, ml_metadata, meta, thresholds } = data;
+        
+        // Log informasi ML Status (Random Forest) untuk debugging
+        console.log('=== ML STATUS INFORMATION (Random Forest) ===');
+        console.log('Status Label:', status?.label || 'not set');
+        console.log('Status Confidence:', status?.confidence || 'not set');
+        console.log('Status Probability:', status?.probability || 'not set');
+        if (status?.probability) {
+          console.log('  - BAIK:', (status.probability.BAIK * 100).toFixed(1) + '%');
+          console.log('  - PERHATIAN:', (status.probability.PERHATIAN * 100).toFixed(1) + '%');
+          console.log('  - BURUK:', (status.probability.BURUK * 100).toFixed(1) + '%');
+        }
+        console.log('ML Metadata:', ml_metadata || 'not set');
+        if (ml_metadata) {
+          console.log('  - Model Name:', ml_metadata.model_name || 'not set');
+          console.log('  - Model Version:', ml_metadata.model_version || 'not set');
+          console.log('  - Source:', ml_metadata.source || 'not set');
+          console.log('  - Accuracy:', ml_metadata.accuracy ? (ml_metadata.accuracy * 100).toFixed(2) + '%' : 'N/A');
+          console.log('  - Prediction Time:', ml_metadata.prediction_time ? ml_metadata.prediction_time + 'ms' : 'N/A');
+          // Note: ml_metadata.confidence adalah string ("medium"/"low"/"high") dari ML service
+          // Confidence yang benar (angka 0-1) ada di status.confidence yang sudah di-adjust
+          console.log('  - Confidence (from ML service, string):', ml_metadata.confidence || 'N/A');
+          console.log('  - Confidence (adjusted, numeric):', status?.confidence ? (status.confidence * 100).toFixed(1) + '%' : 'N/A');
+        }
+        console.log('ML Source (from meta):', meta?.ml_source || 'not set');
+        console.log('ML Connected:', meta?.ml_connected || false);
+        console.log('==========================================');
+        
+        // Update global thresholds dengan data dari API (REPLACE, bukan merge)
+        if (thresholds) {
+          // Replace seluruh threshold dengan data dari API
+          // IMPORTANT: Convert string to number untuk perbandingan yang benar
+          if (thresholds.temperature) {
+            globalThresholds.temperature = {
+              ideal_min: parseFloat(thresholds.temperature.ideal_min) || globalThresholds.temperature.ideal_min,
+              ideal_max: parseFloat(thresholds.temperature.ideal_max) || globalThresholds.temperature.ideal_max,
+              danger_low: parseFloat(thresholds.temperature.danger_low) || globalThresholds.temperature.danger_low,
+              danger_high: parseFloat(thresholds.temperature.danger_high) || globalThresholds.temperature.danger_high
+            };
+          }
+          if (thresholds.humidity) {
+            globalThresholds.humidity = {
+              ideal_min: parseFloat(thresholds.humidity.ideal_min) || globalThresholds.humidity.ideal_min,
+              ideal_max: parseFloat(thresholds.humidity.ideal_max) || globalThresholds.humidity.ideal_max,
+              warn_low: parseFloat(thresholds.humidity.warn_low) || globalThresholds.humidity.warn_low,
+              warn_high: parseFloat(thresholds.humidity.warn_high) || globalThresholds.humidity.warn_high,
+              danger_high: parseFloat(thresholds.humidity.danger_high) || globalThresholds.humidity.danger_high
+            };
+          }
+          if (thresholds.ammonia) {
+            globalThresholds.ammonia = {
+              ideal_max: parseFloat(thresholds.ammonia.ideal_max) || globalThresholds.ammonia.ideal_max,
+              warn_max: parseFloat(thresholds.ammonia.warn_max) || globalThresholds.ammonia.warn_max,
+              danger_max: parseFloat(thresholds.ammonia.danger_max) || globalThresholds.ammonia.danger_max
+            };
+          }
+          if (thresholds.light) {
+            globalThresholds.light = {
+              ideal_low: parseFloat(thresholds.light.ideal_low) || globalThresholds.light.ideal_low,
+              ideal_high: parseFloat(thresholds.light.ideal_high) || globalThresholds.light.ideal_high,
+              warn_low: parseFloat(thresholds.light.warn_low) || globalThresholds.light.warn_low,
+              warn_high: parseFloat(thresholds.light.warn_high) || globalThresholds.light.warn_high
+            };
+          }
+          
+          // Debug log untuk memastikan threshold ter-update
+          console.log('Thresholds updated from API (as numbers):', globalThresholds);
+          console.log('Using profile:', selectedProfile);
+        }
+        
+        // Selalu regenerate forecast_summary menggunakan globalThresholds yang sudah ter-update
+        // Ini memastikan forecast_summary selalu sesuai dengan threshold yang aktif
+        // Helper function untuk generate forecast summary
+        const generateForecastSummary = (predictionData) => {
+            const sum = (series, metric, unit, low, high) => {
+            if (!series || !Array.isArray(series) || series.length === 0) {
+              return { metric, summary: `${metric} tidak tersedia`, range: {min: 0, max: 0, unit}, trend: 'stabil', risk: 'dalam kisaran aman' };
+            }
+            const min = Math.min(...series);
+            const max = Math.max(...series);
+            const trend = series[series.length-1] - series[0];
+            const dir = trend > 0.5 ? 'meningkat' : (trend < -0.5 ? 'menurun' : 'stabil');
+            const risk = (min < low || max > high) ? 'potensi keluar batas aman' : 'dalam kisaran aman';
+            return { 
+              metric, 
+              summary: `${metric} ${dir} (${min.toFixed ? min.toFixed(2) : min}–${max.toFixed ? max.toFixed(2) : max} ${unit}) ${risk}`, 
+              range: {min, max, unit}, 
+              trend: dir, 
+              risk 
+            };
+          };
+          
+          return [
+            sum(predictionData.temperature, 'Suhu', '°C', globalThresholds.temperature.ideal_min, globalThresholds.temperature.ideal_max),
+            sum(predictionData.humidity, 'Kelembaban', '%', globalThresholds.humidity.ideal_min, globalThresholds.humidity.ideal_max),
+            sum(predictionData.ammonia, 'Amoniak', 'ppm', 0, globalThresholds.ammonia.ideal_max),
+            sum(predictionData.light, 'Cahaya', 'lux', globalThresholds.light.ideal_low, globalThresholds.light.ideal_high)
+          ];
+        };
+        
+        // Regenerate forecast_summary menggunakan globalThresholds yang sudah ter-update
+        // Ini memastikan konsistensi antara threshold dan forecast summary
+        if (prediction_6h && prediction_24h) {
+          console.log('Regenerating forecast summary dengan threshold yang ter-update...');
+          forecast_summary_6h = generateForecastSummary(prediction_6h);
+          forecast_summary_24h = generateForecastSummary(prediction_24h);
+          console.log('Forecast Summary regenerated dengan threshold:', globalThresholds);
+          console.log('Forecast Summary 6h:', forecast_summary_6h);
+        } else {
+          console.warn('Prediction data tidak tersedia, menggunakan forecast_summary dari backend jika ada');
+          // Fallback: jika prediction tidak ada, gunakan dari backend atau buat default
+          if (!forecast_summary_6h || forecast_summary_6h.length === 0) {
+            forecast_summary_6h = [];
+            forecast_summary_24h = [];
+          }
+        }
+        
+        // Pastikan threshold sudah ter-update sebelum membuat sensor cards
         buildBanner(latest, status, forecast_summary_6h, meta);
         sensorGrid.innerHTML = [
           createSensorCard('temperature','Suhu', latest.temperature,'°C', history, prediction_6h.temperature),
@@ -1778,7 +2131,40 @@
           createSensorCard('light','Cahaya', latest.light,'lux', history, prediction_6h.light)
         ].join('');
         buildChart(history, prediction_6h);
+        // Pastikan globalThresholds sudah ter-update sebelum render anomalies
         renderAnomalies(anomalies);
+        
+        // ========== URGENT ALERT SYSTEM ==========
+        // Check for urgent alerts
+        const alerts = checkUrgentAlerts(data);
+        if (alerts.length > 0) {
+          // Show most urgent first
+          alerts.sort((a, b) => {
+            const urgencyOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+            return urgencyOrder[b.urgency] - urgencyOrder[a.urgency];
+          });
+          
+          // Show first alert immediately (pop-up)
+          setTimeout(() => {
+            showUrgentAlert(alerts[0]);
+            
+            // Send browser notification
+            notifyUrgentAlert(alerts[0]);
+            
+            // Queue other alerts (show after user closes first)
+            if (alerts.length > 1) {
+              setTimeout(() => {
+                alerts.slice(1).forEach((alert, index) => {
+                  setTimeout(() => {
+                    showUrgentAlert(alert);
+                    notifyUrgentAlert(alert);
+                  }, index * 3000);
+                });
+              }, 3000);
+            }
+          }, 1000);
+        }
+        
         // Forecast card
         const forecastCard = document.getElementById('forecastCard');
         const list6 = document.getElementById('forecastList6');
@@ -1814,25 +2200,51 @@
         // Data Preview panel
       } catch (e){
         console.error('Error loading monitoring data:', e);
-        sensorGrid.innerHTML = '<div class="alert alert-danger">Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</div>';
+        
+        // Get error message
+        const errorMessage = e.message || 'Unknown error';
+        const isMLConnectionError = errorMessage.includes('ML Service') || 
+                                     errorMessage.includes('Connection') || 
+                                     errorMessage.includes('timeout') ||
+                                     errorMessage.includes('Failed to connect') ||
+                                     errorMessage.includes('Connection refused');
+        
+        sensorGrid.innerHTML = `<div class="alert alert-danger">
+          <strong>Error:</strong> ${errorMessage}
+          <br><small>Gagal memuat data monitoring. Pastikan ML Service berjalan dan coba refresh halaman.</small>
+        </div>`;
         
         // Tampilkan pesan error yang jelas
         const errorBanner = document.getElementById('predictionBanner');
         if (errorBanner) {
           errorBanner.style.display = 'block';
           errorBanner.style.background = '#EF4444';
-          errorBanner.innerHTML = `
-            <i class="fa-solid fa-exclamation-triangle"></i>
-            <div>
-              <h5>Error Memuat Data</h5>
-              <p>Gagal terhubung ke ML Service. Pastikan:</p>
-              <ul style="margin:0.5rem 0; padding-left:1.5rem; font-size:0.9rem;">
-                <li>ML Service berjalan di http://localhost:5000</li>
-                <li>Service dapat diakses (test: curl http://localhost:5000/health)</li>
-                <li>Refresh halaman ini setelah service running</li>
-              </ul>
-            </div>
-        `;
+          
+          if (isMLConnectionError) {
+            errorBanner.innerHTML = `
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <div>
+                <h5>Error Memuat Data</h5>
+                <p>Gagal terhubung ke ML Service. Pastikan:</p>
+                <ul style="margin:0.5rem 0; padding-left:1.5rem; font-size:0.9rem;">
+                  <li>ML Service berjalan di http://localhost:5000</li>
+                  <li>Service dapat diakses (test: curl http://localhost:5000/health)</li>
+                  <li>Refresh halaman ini setelah service running</li>
+                </ul>
+                <p style="margin-top:0.5rem; font-size:0.85rem; color:#fee;"><strong>Detail Error:</strong> ${errorMessage}</p>
+              </div>
+            `;
+          } else {
+            errorBanner.innerHTML = `
+              <i class="fa-solid fa-exclamation-triangle"></i>
+              <div>
+                <h5>Error Memuat Data</h5>
+                <p>Terjadi kesalahan saat memuat data monitoring:</p>
+                <p style="margin:0.5rem 0; font-size:0.9rem;"><strong>${errorMessage}</strong></p>
+                <p style="margin-top:0.5rem; font-size:0.85rem;">Silakan refresh halaman atau hubungi administrator jika masalah berlanjut.</p>
+              </div>
+            `;
+          }
         }
         
         // Jangan tampilkan data preview jika error

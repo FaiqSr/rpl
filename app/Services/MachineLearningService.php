@@ -16,12 +16,14 @@ class MachineLearningService
 
     /**
      * Timeout untuk request ke ML service (detik)
+     * Ensemble LSTM membutuhkan waktu lebih lama, jadi timeout dinaikkan
      */
-    protected $timeout = 10;
+    protected $timeout = 30;
 
     public function __construct()
     {
-        $this->mlServiceUrl = env('ML_SERVICE_URL', null);
+        // Default to http://localhost:5000 if ML_SERVICE_URL is not set in .env
+        $this->mlServiceUrl = env('ML_SERVICE_URL', 'http://localhost:5000');
     }
 
     /**
@@ -54,6 +56,10 @@ class MachineLearningService
                     'has_prediction_24h' => isset($data['prediction_24h']),
                     'has_status' => isset($data['status']),
                     'has_anomalies' => isset($data['anomalies']),
+                    'status_code' => $response->status(),
+                    'has_model_name' => isset($data['model_name']),
+                    'has_ml_metadata' => isset($data['ml_metadata']),
+                    'model_name' => $data['model_name'] ?? $data['ml_metadata']['model_name'] ?? 'not set'
                 ]);
                 
                 // Pastikan prediction_6h dan prediction_24h memiliki struktur yang benar
@@ -66,6 +72,13 @@ class MachineLearningService
                 }
                 if (!is_array($pred24h) || !isset($pred24h['temperature'])) {
                     $pred24h = ['temperature' => [], 'humidity' => [], 'ammonia' => [], 'light' => []];
+                }
+                
+                // Pastikan semua keys ada
+                $requiredKeys = ['temperature', 'humidity', 'ammonia', 'light'];
+                foreach ($requiredKeys as $key) {
+                    if (!isset($pred6h[$key])) $pred6h[$key] = [];
+                    if (!isset($pred24h[$key])) $pred24h[$key] = [];
                 }
                 
                 return [
@@ -88,15 +101,17 @@ class MachineLearningService
             } else {
                 Log::warning('ML Service returned non-success status', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
+                    'url' => $this->mlServiceUrl . '/predict'
                 ]);
+                throw new \Exception('ML Service returned status ' . $response->status());
             }
         } catch (\Exception $e) {
             Log::warning('ML Service tidak tersedia, menggunakan prediksi sederhana: ' . $e->getMessage());
+            Log::warning('Exception details: ' . $e->getTraceAsString());
+            // Fallback ke prediksi sederhana jika ML service gagal
+            return $this->getSimplePredictions($history);
         }
-
-        // Fallback ke prediksi sederhana jika ML service gagal
-        return $this->getSimplePredictions($history);
     }
 
     /**
@@ -154,7 +169,7 @@ class MachineLearningService
                 'light' => $predict24($lights)
             ],
             'anomalies' => $this->detectAnomalies($history),
-            'status' => $this->classifyStatus(end($history)),
+            'status' => $this->classifyStatus(end($history), []), // Threshold akan diupdate di routes/web.php
             'ml_metadata' => [
                 'model_name' => 'Simple Linear Extrapolation',
                 'model_version' => '1.0',
@@ -224,11 +239,21 @@ class MachineLearningService
         if ($latest['ammonia'] > 25) $issues++;
         if ($latest['light'] < 200 && (int)date('G') >= 8 && (int)date('G') <= 17) $issues++;
 
+        // Probabilitas dummy untuk fallback (karena bukan dari model ML sebenarnya)
+        // Confidence rendah untuk fallback
+        $confidence = 0.5; // 50% confidence untuk fallback
+        
         if ($issues === 0) {
             return [
                 'label' => 'baik',
                 'severity' => 'normal',
-                'message' => 'Semua parameter dalam batas aman'
+                'message' => 'Semua parameter lingkungan dalam kondisi optimal. Kandang siap untuk pertumbuhan ayam yang sehat.',
+                'confidence' => $confidence,
+                'probability' => [
+                    'BAIK' => 0.7,
+                    'PERHATIAN' => 0.25,
+                    'BURUK' => 0.05
+                ]
             ];
         }
         // Hanya 3 status: baik, perhatian, buruk
@@ -236,13 +261,25 @@ class MachineLearningService
             return [
                 'label' => 'perhatian',
                 'severity' => 'warning',
-                'message' => 'Beberapa parameter perlu ditinjau'
+                'message' => 'Beberapa parameter lingkungan perlu diperhatikan. Lakukan pengecekan ventilasi, suhu, dan kelembaban. Periksa juga ketersediaan pakan dan air minum.',
+                'confidence' => $confidence,
+                'probability' => [
+                    'BAIK' => 0.1,
+                    'PERHATIAN' => 0.75,
+                    'BURUK' => 0.15
+                ]
             ];
         }
         return [
             'label' => 'buruk',
             'severity' => 'critical',
-            'message' => 'Banyak parameter bermasalah, lakukan pemeriksaan'
+            'message' => 'Kondisi lingkungan tidak optimal dan berpotensi membahayakan kesehatan ayam. Segera lakukan penyesuaian suhu, kelembaban, ventilasi, atau pencahayaan. Jika perlu, hubungi dokter hewan.',
+            'confidence' => $confidence,
+            'probability' => [
+                'BAIK' => 0.05,
+                'PERHATIAN' => 0.3,
+                'BURUK' => 0.65
+            ]
         ];
     }
 
@@ -260,8 +297,12 @@ class MachineLearningService
             $response = Http::timeout(5)->get($this->mlServiceUrl . '/health');
             if ($response->successful()) {
                 $data = $response->json();
-                return isset($data['status']) && $data['status'] === 'ok' && 
-                       isset($data['models_loaded']) && $data['models_loaded'] === true;
+                // Accept both 'ok' and 'healthy' as valid status
+                $statusOk = isset($data['status']) && ($data['status'] === 'ok' || $data['status'] === 'healthy');
+                // Check models_loaded (boolean) or all_models_loaded (boolean)
+                $modelsLoaded = (isset($data['models_loaded']) && $data['models_loaded'] === true) ||
+                               (isset($data['all_models_loaded']) && $data['all_models_loaded'] === true);
+                return $statusOk && $modelsLoaded;
             }
             return false;
         } catch (\Exception $e) {

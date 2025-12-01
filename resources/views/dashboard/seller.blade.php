@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,126 +21,19 @@
   <!-- SweetAlert2 -->
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" rel="stylesheet">
   
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
     
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-menu-item.active {
-      border-left: 3px solid #22C55E;
-      padding-left: calc(1rem - 3px);
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
     }
     
     .main-content {
@@ -167,24 +60,80 @@
     }
     
     .stat-card {
-      background: white;
-      border: 1px solid #e9ecef;
-      border-radius: 10px;
-      padding: 1.25rem;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .stat-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+      border-color: #d1d5db;
     }
     
     .stat-card-label {
-      font-size: 0.75rem;
-      color: #6c757d;
-      margin-bottom: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #6b7280;
+      margin-bottom: 0.75rem;
       display: block;
+      letter-spacing: 0.025em;
+      text-transform: uppercase;
     }
     
     .stat-card-value {
-      font-size: 1.75rem;
+      font-size: 1.875rem;
       font-weight: 700;
-      color: #2F2F2F;
+      color: #111827;
       margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      line-height: 1.2;
+    }
+    
+    .stat-card-value.revenue {
+      font-size: 1.5rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    
+    .stat-card-value.revenue > span:first-child {
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+    
+    .stat-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.375rem 0.625rem;
+      border-radius: 6px;
+      letter-spacing: 0.025em;
+    }
+    
+    .stat-trend.up {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #16a34a;
+      border: 1px solid #86efac;
+    }
+    
+    .stat-trend.down {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+    }
+    
+    .stat-trend.neutral {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      color: #6b7280;
+      border: 1px solid #d1d5db;
     }
     
     .content-card {
@@ -192,6 +141,7 @@
       border: 1px solid #e9ecef;
       border-radius: 10px;
       padding: 1.5rem;
+      margin-bottom: 1.5rem;
     }
     
     .content-card-title {
@@ -201,136 +151,352 @@
       margin-bottom: 1rem;
     }
     
-    .performa-badge {
-      display: inline-flex;
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-top: 1rem;
+    }
+    
+    .popular-product-item {
+      display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.25rem 0.75rem;
-      background: #f8f9fa;
-      border-radius: 6px;
+      gap: 1rem;
+      padding: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .popular-product-item:last-child {
+      border-bottom: none;
+    }
+    
+    .popular-product-image {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    
+    .popular-product-info {
+      flex: 1;
+    }
+    
+    .popular-product-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #2F2F2F;
+      margin-bottom: 0.25rem;
+    }
+    
+    .popular-product-stats {
       font-size: 0.75rem;
       color: #6c757d;
     }
     
-    .performa-value {
-      font-weight: 700;
-      color: #2F2F2F;
+    .stock-alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-left: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      background: #FFF3E0;
+      color: #FF9800;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #6c757d;
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+    
+    /* Skeleton Loaders */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s ease-in-out infinite;
+      border-radius: 4px;
+    }
+    
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+    
+    .skeleton-card {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    
+    .skeleton-text {
+      height: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .skeleton-title {
+      height: 2rem;
+      width: 60%;
+      margin-bottom: 0.5rem;
+    }
+    
+    .skeleton-chart {
+      height: 300px;
+      width: 100%;
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item active">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item" onclick="toggleSubmenu()" style="cursor: pointer;">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon"></i>
-      </div>
-      <div class="sidebar-submenu">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Dashboard Home</h1>
+      <h1>Dashboard</h1>
     </div>
     
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card">
+      <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='/dashboard/sales?filter=today'">
         <span class="stat-card-label">Penjualan Hari Ini</span>
-        <h2 class="stat-card-value">3</h2>
+        <h2 class="stat-card-value">
+          {{ number_format($salesToday ?? 0) }}
+          @if(isset($salesTodayChange))
+            @php
+              $trendClass = $salesTodayChange > 0 ? 'up' : ($salesTodayChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $salesTodayChange > 0 ? 'fa-arrow-up' : ($salesTodayChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($salesTodayChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
       </div>
       
-      <div class="stat-card">
+      <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='/dashboard/sales'">
         <span class="stat-card-label">Penjualan Perbulan</span>
-        <h2 class="stat-card-value">30</h2>
+        <h2 class="stat-card-value">
+          {{ number_format($salesThisMonth ?? 0) }}
+          @if(isset($salesMonthChange))
+            @php
+              $trendClass = $salesMonthChange > 0 ? 'up' : ($salesMonthChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $salesMonthChange > 0 ? 'fa-arrow-up' : ($salesMonthChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($salesMonthChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
       </div>
       
-      <div class="stat-card">
-        <span class="stat-card-label">Produk Aktif</span>
-        <h2 class="stat-card-value">2</h2>
+      <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='/dashboard/products'">
+        <span class="stat-card-label">Produk</span>
+        <h2 class="stat-card-value">
+          {{ number_format($activeProducts ?? 0) }}
+          @if(isset($activeProductsChange) && abs($activeProductsChange) > 0.1)
+            @php
+              $trendClass = $activeProductsChange > 0 ? 'up' : ($activeProductsChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $activeProductsChange > 0 ? 'fa-arrow-up' : ($activeProductsChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($activeProductsChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
       </div>
       
       <div class="stat-card">
         <span class="stat-card-label">Alat Aktif</span>
-        <h2 class="stat-card-value">1</h2>
+        <h2 class="stat-card-value">
+          {{ number_format($activeTools ?? 0) }}
+          @if(isset($activeToolsChange) && abs($activeToolsChange) > 0.1)
+            @php
+              $trendClass = $activeToolsChange > 0 ? 'up' : ($activeToolsChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $activeToolsChange > 0 ? 'fa-arrow-up' : ($activeToolsChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($activeToolsChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
       </div>
       
-      <div class="stat-card">
+      <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='/dashboard/reviews'">
         <span class="stat-card-label">Ulasan Baru</span>
-        <h2 class="stat-card-value">12</h2>
-      </div>
-      
-      <div class="stat-card">
-        <span class="stat-card-label">Chat Baru</span>
-        <h2 class="stat-card-value">12</h2>
+        <h2 class="stat-card-value">
+          {{ number_format($newReviews ?? 0) }}
+          @if(isset($newReviewsChange))
+            @php
+              $trendClass = $newReviewsChange > 0 ? 'up' : ($newReviewsChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $newReviewsChange > 0 ? 'fa-arrow-up' : ($newReviewsChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($newReviewsChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
       </div>
       
       <div class="stat-card">
         <span class="stat-card-label">Total Pendapatan Perbulan</span>
-        <h2 class="stat-card-value">12.000.00</h2>
+        <h2 class="stat-card-value revenue">
+          <span>Rp {{ number_format($totalRevenue ?? 0, 0, ',', '.') }}</span>
+          @if(isset($totalRevenueChange))
+            @php
+              $trendClass = $totalRevenueChange > 0 ? 'up' : ($totalRevenueChange < 0 ? 'down' : 'neutral');
+              $trendIcon = $totalRevenueChange > 0 ? 'fa-arrow-up' : ($totalRevenueChange < 0 ? 'fa-arrow-down' : 'fa-minus');
+            @endphp
+            <span class="stat-trend {{ $trendClass }}">
+              <i class="fa-solid {{ $trendIcon }}"></i>
+              {{ abs(round($totalRevenueChange, 1)) }}%
+            </span>
+          @endif
+        </h2>
+      </div>
+    </div>
+    
+    <!-- Chart Penjualan Produk -->
+    <div class="content-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="content-card-title" style="margin: 0;">
+          <i class="fa-solid fa-chart-line me-2"></i>Grafik Penjualan
+        </h3>
+        <div class="chart-range-selector" style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="chartRangeSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+            <option value="7days" {{ ($dateRange ?? '7days') === '7days' ? 'selected' : '' }}>7 Hari</option>
+            <option value="30days" {{ ($dateRange ?? '7days') === '30days' ? 'selected' : '' }}>30 Hari</option>
+            <option value="3months" {{ ($dateRange ?? '7days') === '3months' ? 'selected' : '' }}>3 Bulan</option>
+            <option value="1year" {{ ($dateRange ?? '7days') === '1year' ? 'selected' : '' }}>1 Tahun</option>
+          </select>
+          <div class="form-check form-switch" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <input class="form-check-input" type="checkbox" id="compareToggle" style="cursor: pointer;">
+            <label class="form-check-label" for="compareToggle" style="font-size: 0.75rem; color: #6c757d; cursor: pointer; margin: 0;">
+              Bandingkan
+            </label>
+          </div>
+          <button onclick="exportChart()" class="btn btn-sm btn-outline-secondary" title="Download Grafik">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </div>
+    
+    <!-- Chart Penjualan Per Produk -->
+    <div class="content-card">
+      <h3 class="content-card-title">
+        <i class="fa-solid fa-chart-pie me-2"></i>Penjualan Per Produk (Bulan Ini)
+      </h3>
+      <div class="chart-container">
+        <canvas id="productSalesChart"></canvas>
       </div>
     </div>
     
     <!-- Produk Terpopuler -->
     <div class="content-card">
-      <h3 class="content-card-title">Produk Terpopuler</h3>
-      <div class="text-muted" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
-        <p class="mb-0">Data produk terpopuler akan ditampilkan di sini</p>
+      <h3 class="content-card-title">
+        <i class="fa-solid fa-fire me-2"></i>Produk Terpopuler
+      </h3>
+      @if(isset($popularProducts) && $popularProducts->count() > 0)
+        <div>
+          @foreach($popularProducts as $product)
+            @php
+              $totalSold = $product->total_sold ?? 0;
+              // Ambil gambar dari database - gunakan field 'url' bukan 'image_url'
+              $firstImage = $product->images->first();
+              $imageUrl = null;
+              
+              if ($firstImage && !empty($firstImage->url)) {
+                $imageUrl = $firstImage->url;
+                
+                // Jika URL adalah path relatif (bukan URL lengkap), tambahkan asset path
+                if ($imageUrl && !filter_var($imageUrl, FILTER_VALIDATE_URL) && !str_starts_with($imageUrl, 'data:')) {
+                  // Cek apakah sudah ada 'storage/' di path
+                  if (str_starts_with($imageUrl, 'storage/')) {
+                    $imageUrl = asset($imageUrl);
+                  } else {
+                    $imageUrl = asset('storage/' . $imageUrl);
+                  }
+                }
+              }
+              
+              // Fallback ke placeholder jika tidak ada gambar
+              $placeholder = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4=';
+            @endphp
+            <div class="popular-product-item">
+              <img src="{{ $imageUrl ?? $placeholder }}" 
+                   alt="{{ $product->name }}" 
+                   class="popular-product-image"
+                   onerror="this.onerror=null; this.src='{{ $placeholder }}'">
+              <div class="popular-product-info">
+                <div class="popular-product-name">
+                  {{ $product->name }}
+                  @if(($product->stock ?? 0) < 10)
+                    <span class="stock-alert-badge" title="Stok Rendah">
+                      <i class="fa-solid fa-exclamation-triangle"></i> Stok Rendah
+                    </span>
+                  @endif
+                </div>
+                <div class="popular-product-stats">
+                  @php
+                    $avgRating = $product->avg_rating ?? 0;
+                    $totalReviews = $product->total_reviews ?? 0;
+                  @endphp
+                  @if($avgRating > 0)
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                      <div style="display: flex; gap: 2px;">
+                        @for($i = 1; $i <= 5; $i++)
+                          <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid' : 'fa-regular' }}" style="font-size: 0.7rem; color: {{ $i <= round($avgRating) ? '#FFC107' : '#E5E7EB' }};"></i>
+                        @endfor
+                      </div>
+                      <span style="font-size: 0.7rem; color: #6c757d; font-weight: 600;">{{ number_format($avgRating, 1) }}</span>
+                      <span style="font-size: 0.65rem; color: #9CA3AF;">({{ number_format($totalReviews) }} ulasan)</span>
+                    </div>
+                  @else
+                    <div style="font-size: 0.7rem; color: #9CA3AF; margin-bottom: 0.25rem;">Belum ada rating</div>
+                  @endif
+                  Terjual: {{ number_format($totalSold) }} unit | 
+                  Stok: {{ number_format($product->stock ?? 0) }} | 
+                  Harga: Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}
+                </div>
+              </div>
+            </div>
+          @endforeach
+        </div>
+      @else
+        <div class="empty-state">
+          <i class="fa-solid fa-box-open"></i>
+          <p class="mb-0">Belum ada data produk terpopuler</p>
       </div>
+      @endif
     </div>
   </main>
   
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
   
   <script>
     // SweetAlert Helper Functions
@@ -354,12 +520,157 @@
         });
     };
     
-    // Toggle Submenu
-    function toggleSubmenu() {
-        const submenu = document.querySelector('.sidebar-submenu');
-        const chevron = document.querySelector('.chevron-icon');
-        submenu.classList.toggle('show');
-        chevron.classList.toggle('rotate');
+    // Chart Range Selector
+    document.getElementById('chartRangeSelect')?.addEventListener('change', function() {
+      const range = this.value;
+      window.location.href = '/dashboard?chart_range=' + range;
+    });
+    
+    // Sales Chart
+    const salesChartData = @json($salesChartData ?? []);
+    const salesChartDataCompare = @json($salesChartDataCompare ?? []);
+    const salesCtx = document.getElementById('salesChart');
+    let salesChart = null;
+    
+    function updateChart(showCompare = false) {
+      if (!salesCtx || salesChartData.length === 0) return;
+      
+      const datasets = [{
+        label: 'Jumlah Penjualan',
+        data: salesChartData.map(item => item.sales),
+        borderColor: '#22C55E',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4
+      }];
+      
+      if (showCompare && salesChartDataCompare.length > 0) {
+        datasets.push({
+          label: 'Periode Sebelumnya',
+          data: salesChartDataCompare.map(item => item.sales),
+          borderColor: '#9CA3AF',
+          backgroundColor: 'rgba(156, 163, 175, 0.1)',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.4
+        });
+      }
+      
+      if (salesChart) {
+        salesChart.data.datasets = datasets;
+        salesChart.update();
+      } else {
+        salesChart = new Chart(salesCtx, {
+          type: 'line',
+          data: {
+            labels: salesChartData.map(item => item.date),
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // Initialize chart
+    if (salesCtx && salesChartData.length > 0) {
+      updateChart(false);
+    }
+    
+    // Comparison toggle
+    document.getElementById('compareToggle')?.addEventListener('change', function() {
+      updateChart(this.checked);
+    });
+    
+    // Export chart function
+    function exportChart() {
+      if (!salesChart) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Peringatan',
+          text: 'Grafik belum tersedia',
+          confirmButtonColor: '#22C55E'
+        });
+        return;
+      }
+      
+      const url = salesChart.toBase64Image('image/png', 1);
+      const link = document.createElement('a');
+      link.download = 'grafik-penjualan-' + new Date().toISOString().split('T')[0] + '.png';
+      link.href = url;
+      link.click();
+    }
+    
+    // Product Sales Chart (This Month)
+    const productSalesData = @json($productSalesData ?? []);
+    const productSalesCtx = document.getElementById('productSalesChart');
+    if (productSalesCtx && productSalesData.length > 0) {
+      new Chart(productSalesCtx, {
+        type: 'bar',
+        data: {
+          labels: productSalesData.map(item => item.name),
+          datasets: [{
+            label: 'Jumlah Terjual',
+            data: productSalesData.map(item => item.total_sold),
+            backgroundColor: [
+              'rgba(34, 197, 94, 0.8)',
+              'rgba(59, 130, 246, 0.8)',
+              'rgba(168, 85, 247, 0.8)',
+              'rgba(236, 72, 153, 0.8)',
+              'rgba(251, 146, 60, 0.8)'
+            ],
+            borderColor: [
+              '#22C55E',
+              '#3B82F6',
+              '#A855F7',
+              '#EC4899',
+              '#FB923C'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    } else if (productSalesCtx) {
+      productSalesCtx.parentElement.innerHTML = '<div class="empty-state"><i class="fa-solid fa-chart-bar"></i><p class="mb-0">Belum ada data penjualan produk bulan ini</p></div>';
     }
     
     // Show success message if redirected with success

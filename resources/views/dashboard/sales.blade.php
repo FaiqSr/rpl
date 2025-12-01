@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,127 +25,37 @@
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
     
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
-    
     .main-content {
       margin-left: 220px;
       padding: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+        overflow-x: auto;
+      }
     }
     
     .page-header {
@@ -302,6 +212,52 @@
       color: #6c757d;
     }
     
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-badge.paid {
+      background: #E8F5E9;
+      color: #22C55E;
+    }
+    
+    .status-badge.pending {
+      background: #FEF3C7;
+      color: #D97706;
+    }
+    
+    .status-badge.processing {
+      background: #E3F2FD;
+      color: #2196F3;
+    }
+    
+    .status-badge.cancelled {
+      background: #FFEBEE;
+      color: #EF4444;
+    }
+    
+    .status-badge.dikirim {
+      background: #E3F2FD;
+      color: #2196F3;
+    }
+    
+    .status-badge.selesai {
+      background: #E8F5E9;
+      color: #22C55E;
+    }
+    
+    .status-badge.dibatalkan {
+      background: #FFEBEE;
+      color: #EF4444;
+    }
+    
     .order-response-time {
       font-size: 0.875rem;
       color: #6c757d;
@@ -312,10 +268,22 @@
       gap: 1.5rem;
     }
     
+    .order-products-list {
+      margin-bottom: 1rem;
+    }
+    
     .order-product {
-      flex: 1;
       display: flex;
       gap: 1rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .order-product:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
     }
     
     .order-product-img {
@@ -338,9 +306,8 @@
     }
     
     .order-product-qty {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       color: #6c757d;
-      margin-bottom: 0.5rem;
     }
     
     .order-product-note {
@@ -444,7 +411,37 @@
     }
     
     .btn-accept:hover {
-      background: #5a9d66;
+      background: #16a34a;
+    }
+    
+    .btn-accept:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    .btn-ship {
+      background: #3B82F6;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-ship:hover:not(:disabled) {
+      background: #2563eb;
+    }
+    
+    .btn-ship:disabled {
+      background: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
     }
     
     .performa-badge {
@@ -465,73 +462,51 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item" onclick="toggleSubmenu()" style="cursor: pointer;">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon"></i>
-      </div>
-      <div class="sidebar-submenu">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item active">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="page-header">
-      <h1>Penjualan</h1>
-      <div class="search-box">
-        <i class="fa-solid fa-search"></i>
-        <input type="text" placeholder="Cari Produk">
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Penjualan</h1>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <a href="{{ route('dashboard.sales.export', array_merge(request()->all(), ['format' => 'excel'])) }}" class="btn btn-sm btn-outline-success">
+            <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+          </a>
+          <a href="{{ route('dashboard.sales.export', array_merge(request()->all(), ['format' => 'pdf'])) }}" class="btn btn-sm btn-outline-danger">
+            <i class="fa-solid fa-file-pdf me-1"></i> Export PDF
+          </a>
+          <div class="search-box">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" placeholder="Cari Produk">
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <!-- Content Card -->
+      
+      <!-- Statistics Cards -->
+      <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pendapatan Hari Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">Rp {{ number_format($salesStats['today_revenue'] ?? 0, 0, ',', '.') }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Hari Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['today_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Pending</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['pending_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pesanan Dikirim</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">{{ number_format($salesStats['shipped_orders'] ?? 0) }}</h2>
+        </div>
+        <div class="stat-card" style="background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.25rem;">
+          <span style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.5rem; display: block;">Pendapatan Bulan Ini</span>
+          <h2 style="font-size: 1.75rem; font-weight: 700; color: #2F2F2F; margin: 0;">Rp {{ number_format($salesStats['month_revenue'] ?? 0, 0, ',', '.') }}</h2>
+        </div>
+      </div>
+      
+      <!-- Content Card -->
     <div class="content-card">
       <!-- Filter Bar -->
       <div class="filter-bar">
@@ -546,12 +521,7 @@
       <div class="order-list">
         @forelse($orders as $order)
         @php
-          $detail = $order->orderDetail->first();
-          $product = $detail?->product;
           $qtyTotal = $order->orderDetail->sum('qty');
-          $unitPrice = $detail ? ($detail->price) : 0;
-          $productName = $product?->name ?? 'Produk';
-          $image = $product?->images?->first()?->url ?? null;
         @endphp
         <div class="order-item">
           <div class="order-header">
@@ -560,30 +530,43 @@
                 <i class="fa-solid fa-user"></i>
                 <span>{{ $order->buyer_name }}</span>
               </div>
-              <div class="order-date">
+              <div class="order-date" data-timestamp="{{ $order->created_at?->timestamp ?? time() }}">
                 <i class="fa-regular fa-clock"></i>
-                <span>{{ $order->created_at?->format('d M Y H:i') }} WIB</span>
+                <span class="order-time-text">{{ $order->created_at?->setTimezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</span>
               </div>
             </div>
             <div class="order-header-right">
               <span class="order-status">Status</span>
-              <span class="order-response-time">{{ ucfirst($order->status ?? 'pending') }}</span>
+              @php
+                $status = strtolower($order->status ?? 'pending');
+                $statusClass = in_array($status, ['paid', 'pending', 'processing', 'cancelled', 'dikirim', 'selesai', 'dibatalkan']) ? $status : 'pending';
+              @endphp
+              <span class="status-badge {{ $statusClass }}">{{ ucfirst($order->status ?? 'pending') }}</span>
             </div>
           </div>
           <div class="order-body">
+            <div class="order-products-list">
+              @foreach($order->orderDetail as $detail)
+                @php
+                  $product = $detail->product;
+                  $productName = $product?->name ?? 'Produk';
+                  $image = $product?->images?->first()?->url ?? null;
+                @endphp
             <div class="order-product">
               @if($image)
-                <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img">
+                    <img src="{{ $image }}" alt="{{ $productName }}" class="order-product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=';">
               @else
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='30'%3E🍗%3C/text%3E%3C/svg%3E" class="order-product-img" />
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj48cmVjdCB3aWR0aD0iODAiIGhlaWdodD0iODAiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+8J+RozwvdGV4dD48L3N2Zz4=" class="order-product-img" />
               @endif
               <div class="order-product-info">
                 <div class="order-product-name">{{ $productName }}</div>
-                <div class="order-product-qty">{{ $qtyTotal }} x Rp {{ number_format($unitPrice,0,',','.') }}</div>
+                    <div class="order-product-qty">{{ $detail->qty }} x Rp {{ number_format($detail->price,0,',','.') }} = Rp {{ number_format($detail->qty * $detail->price,0,',','.') }}</div>
+                  </div>
+                </div>
+              @endforeach
                 @if($order->notes)
-                  <div class="order-product-note">"{{ $order->notes }}"</div>
+                <div class="order-product-note mt-2">"{{ $order->notes }}"</div>
                 @endif
-              </div>
             </div>
             <div class="order-address">
               <div class="order-address-title">Alamat</div>
@@ -593,19 +576,21 @@
             <div class="order-courier">
               <div class="order-courier-title">Kurir</div>
               <div class="order-courier-info">{{ $order->shipping_service ?? 'Belum dipilih' }}</div>
-              @if($order->tracking_number)
+              @if($order->payment_status === 'paid' && $order->tracking_number)
                 <div class="order-courier-info mt-2">
                   <strong>Resi:</strong> {{ $order->tracking_number }}
                 </div>
                 <a href="https://cekresi.com/?resi={{ $order->tracking_number }}" target="_blank" class="order-courier-link">Cek Resi</a>
-              @else
+              @elseif($order->payment_status === 'paid')
                 <div class="order-courier-info mt-2 text-muted">Resi akan muncul setelah pesanan dikirim</div>
+              @else
+                <div class="order-courier-info mt-2 text-muted">Resi akan muncul setelah pembayaran diterima dan pesanan dikirim</div>
               @endif
             </div>
           </div>
           <div class="order-footer">
             <div class="order-footer-left">
-              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm btn-outline-primary" title="Chat Pembeli">
+              <a href="{{ route('dashboard.chat') }}" class="btn btn-sm" style="border: 1px solid #22C55E; color: #22C55E; background: transparent;" onmouseover="this.style.background='#22C55E'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#22C55E';" title="Chat Pembeli">
                 <i class="fa-solid fa-comment"></i> Chat Pembeli
               </a>
             </div>
@@ -616,7 +601,7 @@
               </div>
               <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                 @if($order->payment_method)
-                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-success' : 'bg-info' }}">
+                  <span class="badge {{ $order->payment_method === 'QRIS' ? 'bg-secondary' : 'bg-secondary' }}" style="{{ $order->payment_method === 'QRIS' ? 'background: #8B5CF6 !important; color: white;' : 'background: #6B7280 !important; color: white;' }}">
                     <i class="fa-solid fa-{{ $order->payment_method === 'QRIS' ? 'qrcode' : 'building-columns' }} me-1"></i>
                     {{ $order->payment_method }}
                   </span>
@@ -625,19 +610,34 @@
                   <span class="badge bg-success">
                     <i class="fa-solid fa-check-circle me-1"></i>Lunas
                   </span>
+                @elseif($order->payment_status === 'processing')
+                  <span class="badge bg-info">
+                    <i class="fa-solid fa-hourglass-half me-1"></i>Proses
+                  </span>
+                  <button class="btn btn-sm btn-success ms-2" onclick="validatePayment('{{ $order->order_id }}')" title="Validasi Pembayaran">
+                    <i class="fa-solid fa-check me-1"></i> Validasi Pembayaran
+                  </button>
                 @else
                   <span class="badge bg-warning text-dark">
                     <i class="fa-solid fa-clock me-1"></i>Menunggu Pembayaran
                   </span>
                 @endif
                 @if($order->status === 'pending')
-                  <button class="btn-accept" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" style="{{ $order->payment_status !== 'paid' ? 'opacity: 0.7;' : '' }}">Kirim Pesanan</button>
+                  <button class="btn-ship" onclick="shipOrder('{{ $order->order_id }}', '{{ $order->payment_status }}')" {{ $order->payment_status !== 'paid' ? 'disabled title="Pesanan hanya bisa dikirim setelah pembayaran divalidasi"' : '' }}>
+                    <i class="fa-solid fa-truck me-1"></i>Kirim Pesanan
+                  </button>
                 @elseif($order->status === 'dikirim')
-                  <span class="badge bg-info">Pesanan Dikirim</span>
+                  <span class="badge bg-info text-white">
+                    <i class="fa-solid fa-truck me-1"></i>Pesanan Dikirim
+                  </span>
                 @elseif($order->status === 'selesai')
-                  <span class="badge bg-success">Pesanan Selesai</span>
+                  <span class="badge bg-success text-white">
+                    <i class="fa-solid fa-check-circle me-1"></i>Pesanan Selesai
+                  </span>
                 @elseif($order->status === 'dibatalkan')
-                  <span class="badge bg-danger">Dibatalkan</span>
+                  <span class="badge bg-danger text-white">
+                    <i class="fa-solid fa-times-circle me-1"></i>Dibatalkan
+                  </span>
                 @endif
               </div>
             </div>
@@ -653,6 +653,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
   
   <script>
     // SweetAlert Helper Functions
@@ -684,14 +685,58 @@
         chevron.classList.toggle('rotate');
     }
     
+    // Validasi Pembayaran (Admin)
+    async function validatePayment(orderId) {
+        const result = await Swal.fire({
+            title: 'Validasi Pembayaran',
+            html: '<p>Apakah Anda yakin sudah menerima pembayaran dari pembeli?</p>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#22C55E',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Sudah Menerima Pembayaran',
+            cancelButtonText: 'Batal'
+        });
+        
+        if (result.isConfirmed) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/dashboard/orders/${orderId}/validate-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    await showSuccess(data.message || 'Pembayaran berhasil divalidasi');
+                    location.reload();
+                } else {
+                    await showError(data.message || 'Gagal memvalidasi pembayaran');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                await showError('Terjadi kesalahan saat memvalidasi pembayaran');
+            }
+        }
+    }
+    
     // Ship Order (Kirim Pesanan)
     async function shipOrder(orderId, paymentStatus) {
         // Check if payment is completed
         if (paymentStatus !== 'paid') {
+            let statusText = 'Menunggu Pembayaran';
+            if (paymentStatus === 'processing') {
+                statusText = 'Proses Pembayaran (Tunggu Validasi Admin)';
+            }
             await Swal.fire({
                 icon: 'warning',
-                title: 'Pesanan Belum Dibayar!',
-                html: '<p>Pesanan ini belum dibayar oleh pembeli. Anda tidak dapat mengirim pesanan sebelum pembayaran selesai.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> Menunggu Pembayaran</p>',
+                title: 'Pesanan Belum Lunas!',
+                html: '<p>Pesanan ini belum dibayar atau pembayaran belum divalidasi. Anda tidak dapat mengirim pesanan sebelum pembayaran divalidasi.</p><p class="text-muted mt-2"><strong>Status Pembayaran:</strong> ' + statusText + '</p>',
                 confirmButtonColor: '#FACC15',
                 confirmButtonText: 'Mengerti'
             });
@@ -700,7 +745,7 @@
         
         const result = await Swal.fire({
             title: 'Kirim Pesanan?',
-            text: 'Pesanan akan dikirim dan stok produk akan dikurangi. Tindakan ini tidak dapat dibatalkan.',
+            text: 'Pesanan akan dikirim. Tindakan ini tidak dapat dibatalkan.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#22C55E',
@@ -766,6 +811,39 @@
     @if(session('error'))
         showError('{{ session('error') }}');
     @endif
+    
+    // Real-time time display with WIB timezone
+    function formatWIBTime(timestamp) {
+      const date = new Date(timestamp * 1000);
+      const wibOffset = 7 * 60; // WIB is UTC+7
+      const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+      const wibTime = new Date(utc + (wibOffset * 60000));
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const day = String(wibTime.getDate()).padStart(2, '0');
+      const month = months[wibTime.getMonth()];
+      const year = wibTime.getFullYear();
+      const hours = String(wibTime.getHours()).padStart(2, '0');
+      const minutes = String(wibTime.getMinutes()).padStart(2, '0');
+      
+      return `${day} ${month} ${year} ${hours}:${minutes} WIB`;
+    }
+    
+    function updateOrderTimes() {
+      document.querySelectorAll('.order-date[data-timestamp]').forEach(function(element) {
+        const timestamp = parseInt(element.getAttribute('data-timestamp'));
+        const timeText = element.querySelector('.order-time-text');
+        if (timeText) {
+          timeText.textContent = formatWIBTime(timestamp);
+        }
+      });
+    }
+    
+    // Update times on page load and every second
+    document.addEventListener('DOMContentLoaded', function() {
+      updateOrderTimes();
+      setInterval(updateOrderTimes, 1000);
+    });
   </script>
 </body>
 </html>

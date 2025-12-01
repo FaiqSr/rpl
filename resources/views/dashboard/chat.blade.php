@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,125 +24,6 @@
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
-    
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 100;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -349,56 +230,87 @@
       padding: 1.5rem;
       overflow-y: auto;
       background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
     
     .chat-message {
       display: flex;
-      gap: 0.75rem;
+      flex-direction: column;
       margin-bottom: 1rem;
+      width: 100%;
     }
     
-    .chat-message.sent {
-      flex-direction: row-reverse;
-    }
-    
-    .chat-message-avatar {
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      background: #e9ecef;
-      flex-shrink: 0;
+    /* WhatsApp Style: Message Left (Received) */
+    .message-left {
+      align-self: flex-start;
+      max-width: 70%;
+      align-items: flex-start;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.875rem;
-      color: #6c757d;
+      flex-direction: column;
     }
     
-    .chat-message-content {
-      max-width: 60%;
+    /* WhatsApp Style: Message Right (Sent) */
+    .message-right {
+      align-self: flex-end;
+      max-width: 70%;
+      align-items: flex-end;
+      display: flex;
+      flex-direction: column;
     }
     
-    .chat-message-bubble {
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      background: white;
-      font-size: 0.875rem;
-      color: #2F2F2F;
-      line-height: 1.5;
-      word-wrap: break-word;
-    }
-    
-    .chat-message.sent .chat-message-bubble {
-      background: #22C55E;
-      color: white;
-    }
-    
-    .chat-message-time {
+    .message-sender-name {
       font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      padding: 0 0.5rem;
+      text-align: left;
+    }
+    
+    .message-bubble {
+      padding: 0.625rem 0.875rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      line-height: 1.4;
+      word-wrap: break-word;
+      max-width: 100%;
+      display: inline-block;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Left message (received) - white background */
+    .message-left .message-bubble {
+      background: #ffffff;
+      color: #2F2F2F;
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 4px;
+    }
+    
+    /* Right message (sent) - green background like WhatsApp */
+    .message-right .message-bubble {
+      background: #dcf8c6;
+      color: #2F2F2F;
+      border: none;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .message-time {
+      font-size: 0.6875rem;
       color: #6c757d;
       margin-top: 0.25rem;
       padding: 0 0.5rem;
     }
+    
+    .message-left .message-time {
+      text-align: left;
+    }
+    
+    .message-right .message-time {
+      text-align: right;
+    }
+    
     
     .chat-input-area {
       padding: 1rem 1.5rem;
@@ -486,61 +398,7 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item" onclick="toggleSubmenu()" style="cursor: pointer;">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon"></i>
-      </div>
-      <div class="sidebar-submenu">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item active">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
@@ -550,80 +408,32 @@
         <div class="chat-header">
           <h2>Chat</h2>
           <div class="chat-header-icons">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
-            <i class="fa-solid fa-pen-to-square"></i>
+            <i class="fa-solid fa-ellipsis-vertical" onclick="showChatMenu()" title="Menu"></i>
+            <i class="fa-solid fa-pen-to-square" onclick="startNewChat()" title="Chat Baru"></i>
           </div>
         </div>
         
         <div class="chat-search">
-          <input type="text" placeholder="🔍">
+          <input type="text" id="chatSearchInput" placeholder="🔍 Cari pembeli..." onkeyup="filterBuyerList(this.value)">
         </div>
         
-        <div class="chat-list">
-          <div class="chat-item active" onclick="selectChat(1)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(2)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(3)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
-          </div>
-          
-          <div class="chat-item" onclick="selectChat(4)">
-            <div class="chat-item-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-item-content">
-              <div class="chat-item-header">
-                <span class="chat-item-name">Ratna Sulawasti</span>
-                <span class="chat-item-time">12p</span>
-              </div>
-              <div class="chat-item-message">+62</div>
-            </div>
+        <div class="chat-list" id="chatList">
+          <div class="text-center p-4 text-gray-500">
+            <i class="fa-solid fa-spinner fa-spin"></i> Memuat chat...
           </div>
         </div>
       </div>
       
       <!-- Chat Main Area -->
       <div class="chat-main">
-        <div class="chat-main-header">
+        <div class="chat-main-header" id="chatMainHeader" style="display: none;">
           <div class="chat-main-header-left">
-            <div class="chat-main-header-avatar">
+            <div class="chat-main-header-avatar" id="chatHeaderAvatar">
               <i class="fa-solid fa-user"></i>
             </div>
             <div class="chat-main-header-info">
-              <h3>Ratna Sulawasti</h3>
-              <p>Online</p>
+              <h3 id="chatHeaderName">Pilih chat untuk memulai</h3>
+              <p id="chatHeaderStatus">-</p>
             </div>
           </div>
           <div class="chat-main-header-icons">
@@ -633,35 +443,16 @@
         </div>
         
         <div class="chat-messages" id="chatMessages">
-          <div class="chat-message">
-            <div class="chat-message-avatar">
-              <i class="fa-solid fa-user"></i>
-            </div>
-            <div class="chat-message-content">
-              <div class="chat-message-bubble">
-                Lorem ipsum dolor sit amet
-              </div>
-              <div class="chat-message-time">12:00</div>
-            </div>
-          </div>
-          
-          <div class="chat-message sent">
-            <div class="chat-message-avatar">
-              AF
-            </div>
-            <div class="chat-message-content">
-              <div class="chat-message-bubble">
-                Baik Terima kasih banyak
-              </div>
-              <div class="chat-message-time">12:01</div>
-            </div>
+          <div class="text-center p-8 text-gray-400">
+            <i class="fa-solid fa-comments" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-4">Pilih chat untuk memulai percakapan</p>
           </div>
         </div>
         
         <div class="chat-input-area">
           <div class="chat-input-wrapper">
             <input type="text" id="chatInput" placeholder="Ketik pesan disini..." onkeypress="handleEnter(event)">
-            <button class="chat-send-btn" onclick="sendMessage()">
+            <button class="chat-send-btn" onclick="sendAdminMessage()">
               Kirim
             </button>
           </div>
@@ -673,6 +464,8 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
+  <script src="{{ asset('js/chat-admin.js') }}"></script>
   
   <script>
     // SweetAlert Helper Functions
@@ -704,46 +497,299 @@
         chevron.classList.toggle('rotate');
     }
     
-    // Select Chat
-    function selectChat(id) {
+    // Set current admin user for chat-admin.js (must be set before chat-admin.js loads)
+    window.currentAdminUser = @json(Auth::user());
+    // Set currentUserId for WhatsApp-style positioning
+    window.currentUserId = @json(Auth::user()?->user_id);
+    
+    let currentChatId = null;
+    let currentChat = null;
+    let messagePollInterval = null;
+    
+    // Load chats list
+    async function loadChats() {
+        try {
+            const response = await fetch('/api/chat', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load chats');
+            
+            const chats = await response.json();
+            const chatList = document.getElementById('chatList');
+            
+            if (chats.length === 0) {
+                chatList.innerHTML = '<div class="text-center p-4 text-gray-500">Belum ada chat</div>';
+                return;
+            }
+            
+            chatList.innerHTML = chats.map(chat => {
+                const buyer = chat.buyer || {};
+                const order = chat.order || {};
+                const lastMessage = chat.last_message || (chat.latest_message ? chat.latest_message.message : null) || 'Belum ada pesan';
+                const lastMessageTime = chat.last_message_at ? formatTime(chat.last_message_at) : '';
+                const unreadCount = chat.seller_unread_count || 0;
+                const unreadBadge = unreadCount > 0 ? `<span class="badge bg-danger ms-2">${unreadCount}</span>` : '';
+                const orderInfo = order && order.order_id ? `<small class="text-muted d-block" style="font-size: 0.7rem;">Pesanan #${order.order_id.substring(0, 8)}</small>` : '';
+                
+                // Get buyer name - use actual name from database
+                const buyerName = buyer.name || buyer.email || 'Pembeli';
+                const buyerInitial = buyerName.charAt(0).toUpperCase();
+                
+                return `
+                    <div class="chat-item" onclick="selectChat('${chat.chat_id}')" data-chat-id="${chat.chat_id}">
+                        <div class="chat-item-avatar">
+                            ${buyerInitial}
+                        </div>
+                        <div class="chat-item-content">
+                            <div class="chat-item-header">
+                                <span class="chat-item-name">${escapeHtml(buyerName)} ${unreadBadge}</span>
+                                <span class="chat-item-time">${lastMessageTime}</span>
+                            </div>
+                            ${orderInfo}
+                            <div class="chat-item-message">${escapeHtml(lastMessage).substring(0, 40)}${lastMessage.length > 40 ? '...' : ''}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error('Error loading chats:', error);
+            document.getElementById('chatList').innerHTML = '<div class="text-center p-4 text-danger">Gagal memuat chat</div>';
+        }
+    }
+    
+    // Select Chat (Admin: select by chatId and buyerId)
+    async function selectChat(chatId, buyerId = null) {
+        currentChatId = chatId;
+        
+        // Update active state
         document.querySelectorAll('.chat-item').forEach(item => {
             item.classList.remove('active');
         });
-        event.currentTarget.classList.add('active');
+        document.querySelector(`[data-chat-id="${chatId}"]`)?.classList.add('active');
+        
+        // Load chat details and messages
+        await loadChatDetails(chatId);
+        await loadMessages(chatId);
+        
+        // Start polling for new messages
+        if (messagePollInterval) {
+            clearInterval(messagePollInterval);
+        }
+        messagePollInterval = setInterval(() => {
+            if (currentChatId) {
+                loadMessages(currentChatId);
+            }
+        }, 3000); // Poll every 3 seconds
+    }
+    
+    // Load chat details
+    async function loadChatDetails(chatId) {
+        try {
+            const response = await fetch(`/api/chat/get-or-create?chat_id=${chatId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load chat details');
+            
+            const chat = await response.json();
+            currentChat = chat;
+            
+            const buyer = chat.buyer || {};
+            const order = chat.order || {};
+            const buyerName = buyer.name || buyer.email || 'Pembeli';
+            const orderInfo = order && order.order_id ? ` (Pesanan #${order.order_id.substring(0, 8)})` : '';
+            document.getElementById('chatHeaderName').textContent = buyerName + orderInfo;
+            document.getElementById('chatHeaderStatus').textContent = 'Online';
+            document.getElementById('chatHeaderAvatar').innerHTML = buyerName.charAt(0).toUpperCase();
+            document.getElementById('chatMainHeader').style.display = 'flex';
+        } catch (error) {
+            console.error('Error loading chat details:', error);
+        }
+    }
+    
+    // Load messages
+    async function loadMessages(chatId) {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
+            
+            const response = await fetch(`/api/chat/${chatId}/messages`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken.content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) throw new Error('Failed to load messages');
+            
+            const messages = await response.json();
+            const chatMessages = document.getElementById('chatMessages');
+            const currentUser = @json(Auth::user());
+            
+            if (messages.length === 0) {
+                chatMessages.innerHTML = '<div class="text-center p-8 text-gray-400"><i class="fa-solid fa-comments" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-4">Belum ada pesan</p></div>';
+                return;
+            }
+            
+            chatMessages.innerHTML = messages.map(msg => {
+                // Di dashboard admin: pesan dari admin/seller (currentUser) = sent (kanan)
+                // Pesan dari buyer = received (kiri)
+                // Pastikan msg.message tidak null
+                const messageText = msg.message || '';
+                
+                // Admin: pesan dari admin = sent (kanan), pesan dari buyer = received (kiri)
+                // Use user_id (not id) for comparison
+                const isSent = msg.sender_id === currentUser?.user_id;
+                
+                const sender = msg.sender || {};
+                const senderInitials = sender.name ? sender.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
+                const time = formatTime(msg.created_at);
+                
+                return `
+                    <div class="chat-message ${isSent ? 'sent' : ''}">
+                        <div class="chat-message-avatar">${senderInitials}</div>
+                        <div class="chat-message-content">
+                            ${!isSent ? `<div class="chat-message-sender-name">${escapeHtml(sender.name || sender.email || 'User')}</div>` : ''}
+                            <div class="chat-message-bubble">${escapeHtml(messageText)}</div>
+                            <div class="chat-message-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (error) {
+            console.error('Error loading messages:', error);
+        }
     }
     
     // Send Message
-    function sendMessage() {
-        const input = document.getElementById('chatInput');
-        const message = input.value.trim();
-        
-        if (message) {
-            const chatMessages = document.getElementById('chatMessages');
-            const now = new Date();
-            const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message sent';
-            messageDiv.innerHTML = `
-                <div class="chat-message-avatar">AF</div>
-                <div class="chat-message-content">
-                    <div class="chat-message-bubble">${message}</div>
-                    <div class="chat-message-time">${time}</div>
-                </div>
-            `;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            input.value = '';
+    async function sendMessage() {
+        if (!currentChatId) {
+            showError('Pilih chat terlebih dahulu');
+            return;
         }
+        
+        const input = document.getElementById('chatInput');
+        if (!input) return;
+        
+        const message = input.value.trim();
+        if (!message) return;
+        
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
+
+            const response = await fetch(`/api/chat/${currentChatId}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken.content,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Failed to send message' }));
+                throw new Error(errorData.error || 'Failed to send message');
+            }
+            
+            input.value = '';
+            await loadMessages(currentChatId);
+            await loadChats(); // Refresh chat list to update last message
+        } catch (error) {
+            console.error('Error sending message:', error);
+            showError(error.message || 'Gagal mengirim pesan');
+        }
+    }
+    
+    // Helper function untuk show error
+    function showError(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message
+            });
+        } else {
+            alert(message);
+        }
+    }
+    
+    // Helper functions
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (minutes < 1) return 'Baru saja';
+        if (minutes < 60) return `${minutes}m`;
+        if (hours < 24) return `${hours}j`;
+        if (days < 7) return `${days}d`;
+        
+        return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     // Handle Enter Key
     function handleEnter(event) {
         if (event.key === 'Enter') {
-            sendMessage();
+            // Use sendAdminMessage if available (from chat-admin.js), otherwise use sendMessage
+            if (typeof sendAdminMessage === 'function') {
+                sendAdminMessage();
+            } else if (typeof sendMessage === 'function') {
+                sendMessage();
+            }
         }
     }
+    
+    // Initialize - Use admin functions from chat-admin.js
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set current admin user for chat-admin.js
+        window.currentAdminUser = @json(Auth::user());
+        // Set currentUserId for WhatsApp-style positioning
+        window.currentUserId = @json(Auth::user()?->user_id);
+        
+        console.log('Chat page loaded - Admin user:', window.currentAdminUser);
+        console.log('Chat page loaded - currentUserId:', window.currentUserId);
+        
+        // Use loadBuyerList from chat-admin.js instead of loadChats
+        if (typeof loadBuyerList === 'function') {
+            loadBuyerList();
+            // Refresh buyer list every 10 seconds
+            setInterval(loadBuyerList, 10000);
+        } else {
+            // Fallback to loadChats if chat-admin.js not loaded
+            loadChats();
+            setInterval(loadChats, 10000);
+        }
+    });
     
     // Show success message if redirected with success
     @if(session('success'))

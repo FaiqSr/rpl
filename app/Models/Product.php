@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Product extends BaseModel
 {
@@ -13,13 +14,25 @@ class Product extends BaseModel
     protected $table = 'products';
     protected $primaryKey = 'product_id';
     protected $fillable = [
+        'product_id',
         'name',
+        'slug',
         'description',
         'price',
         'stock',
         'category_id',
         'unit'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($model) {
+            if (empty($model->product_id)) {
+                $model->product_id = (string) Str::uuid();
+            }
+        });
+    }
 
     public function orderDetail(): HasMany
     {
@@ -29,5 +42,44 @@ class Product extends BaseModel
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class, 'product_id', 'product_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class, 'product_id', 'product_id')->orderBy('created_at', 'desc');
+    }
+
+    public function validReviews(): HasMany
+    {
+        // Only reviews with valid order_id (order still exists)
+        return $this->hasMany(ProductReview::class, 'product_id', 'product_id')
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->orderBy('created_at', 'desc');
+    }
+
+    public function getAverageRatingAttribute(): float
+    {
+        // Only count top-level reviews (not replies) with rating > 0 and valid order_id
+        // Always use query to ensure order exists (more reliable than checking loaded relation)
+        $avg = $this->reviews()
+            ->whereNull('parent_id')
+            ->where('rating', '>', 0)
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->avg('rating');
+        return $avg !== null ? (float) $avg : 0.0;
+    }
+
+    public function getTotalReviewsAttribute(): int
+    {
+        // Only count top-level reviews (not replies) with rating > 0 and valid order_id
+        // Always use query to ensure order exists (more reliable than checking loaded relation)
+        return $this->reviews()
+            ->whereNull('parent_id')
+            ->where('rating', '>', 0)
+            ->whereNotNull('order_id')
+            ->whereHas('order')
+            ->count();
     }
 }

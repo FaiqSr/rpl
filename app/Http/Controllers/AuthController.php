@@ -71,7 +71,13 @@ class AuthController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20', 'unique:users'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+            ],
         ], [
             'first_name.required' => 'Nama depan harus diisi',
             'last_name.required' => 'Nama belakang harus diisi',
@@ -83,6 +89,7 @@ class AuthController extends Controller
             'password.required' => 'Password harus diisi',
             'password.min' => 'Password minimal 8 karakter',
             'password.confirmed' => 'Konfirmasi password tidak cocok',
+            'password.regex' => 'Password harus mengandung minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol',
         ]);
 
         $user = User::create([

@@ -9,8 +9,8 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS via Vite -->
+    @vite(['resources/css/app.css'])
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -135,6 +135,30 @@
             font-size: 0.875rem;
         }
         
+        .password-input-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 1rem;
+            transition: color 0.2s ease;
+            z-index: 10;
+        }
+        
+        .password-toggle-icon:hover {
+            color: #69B578;
+        }
+        
+        .password-input-wrapper .form-control {
+            padding-right: 3rem;
+        }
+        
         .btn-primary {
             background-color: #2F2F2F;
             border: none;
@@ -176,17 +200,18 @@
         .btn-oauth {
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            padding: 0.6rem;
+            padding: 0.65rem 1rem;
             background: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
             font-weight: 500;
             transition: all 0.2s ease;
             cursor: pointer;
-            width: 48%;
+            width: 100%;
             font-size: 0.875rem;
+            color: #2F2F2F;
         }
         
         .btn-oauth:hover {
@@ -200,11 +225,13 @@
         .btn-oauth svg {
             width: 20px;
             height: 20px;
+            flex-shrink: 0;
         }
         
         .oauth-buttons {
             display: flex;
-            gap: 4%;
+            flex-direction: column;
+            gap: 0.75rem;
             margin-bottom: 1rem;
         }
         
@@ -278,6 +305,9 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
     
@@ -286,7 +316,7 @@
         // CSRF Token setup for AJAX
         document.addEventListener('DOMContentLoaded', function() {
             const token = document.querySelector('meta[name="csrf-token"]');
-            if (token) {
+            if (token && typeof axios !== 'undefined') {
                 window.axios = axios;
                 window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
             }

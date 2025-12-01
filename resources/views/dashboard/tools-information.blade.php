@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Manajemen Informasi - ChickPatrol Seller</title>
+  <title>Konfigurasi - ChickPatrol Seller</title>
   
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,160 +21,6 @@
   <style>
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
-    
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 1000;
-      transition: transform 0.3s ease;
-    }
-    
-    .sidebar-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 999;
-    }
-    
-    .sidebar-overlay.show {
-      display: block;
-    }
-    
-    .mobile-menu-toggle {
-      display: none;
-      position: fixed;
-      top: 1rem;
-      left: 1rem;
-      z-index: 1001;
-      background: white;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      padding: 0.5rem 0.75rem;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .mobile-menu-toggle i {
-      font-size: 1.25rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item.active {
-      color: #22C55E;
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
@@ -471,6 +317,76 @@
       margin: 0;
     }
     
+    /* Toggle Switch Styles - Premium */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 56px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 30px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-slider-button {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider .toggle-slider-button {
+      transform: translateX(26px);
+      box-shadow: 0 3px 8px rgba(34, 197, 94, 0.4), 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .toggle-switch input:focus + .toggle-slider {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
+    }
+    
+    .toggle-switch input:disabled + .toggle-slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background-color: #e2e8f0;
+    }
+    
+    .toggle-switch:hover input:not(:disabled) + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+    }
+    
+    .toggle-switch:hover input:not(:disabled):checked + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
     /* ML Model Information */
     .ml-info-grid {
       display: grid;
@@ -677,78 +593,46 @@
   <!-- Sidebar Overlay -->
   <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
   
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item active" onclick="toggleSubmenu()">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon rotate"></i>
-      </div>
-      <div class="sidebar-submenu show">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}" class="active">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
       <h1>
         <i class="fa-solid fa-info-circle me-2"></i>
-        Manajemen Informasi
+        Konfigurasi
       </h1>
     </div>
 
     <!-- Threshold Information -->
     <div class="chart-card">
-      <h6>
-        <i class="fa-solid fa-sliders me-2"></i>
-        Threshold Parameter Sensor
-      </h6>
-      <div class="threshold-grid">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h6 style="margin:0;">
+          <i class="fa-solid fa-sliders me-2"></i>
+          Threshold Parameter Sensor
+        </h6>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <select id="thresholdProfile" style="padding:.5rem; border:1px solid #ddd; border-radius:6px; font-size:.875rem;">
+            <option value="default">Default</option>
+            <option value="1-7">1-7 hari</option>
+            <option value="8-14">8-14 hari</option>
+            <option value="15-21">15-21 hari</option>
+            <option value="22-28">22-28 hari</option>
+            <option value="29+">29+ hari</option>
+          </select>
+          <button id="resetThresholdBtn" class="btn btn-sm btn-outline-warning" style="font-size:.875rem;">
+            <i class="fa-solid fa-rotate-left me-1"></i>Reset to Default
+          </button>
+          <button id="saveThresholdBtn" class="btn btn-sm btn-success" style="font-size:.875rem;">
+            <i class="fa-solid fa-save me-1"></i>Simpan
+          </button>
+        </div>
+      </div>
+      <div id="thresholdLoading" style="display:none; text-align:center; padding:2rem;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:2rem; color:#22C55E;"></i>
+        <p style="margin-top:.5rem; color:#6c757d;">Memuat threshold...</p>
+      </div>
+      <div id="thresholdForm" class="threshold-grid">
         <div class="threshold-card">
           <div class="threshold-header">
             <div class="threshold-icon">
@@ -759,18 +643,26 @@
               <div class="threshold-subtitle">Parameter Suhu Kandang</div>
             </div>
           </div>
-          <div class="threshold-ranges">
-            <div class="range-item">
-              <span class="range-badge ideal">Ideal</span>
-              <span class="range-value">23-34°C</span>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Min</span>
+              <input type="number" id="suhu_ideal_min" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="23">
+              <span style="color:#6c757d;">°C</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge warning">Warning</span>
-              <span class="range-value">20-23°C atau 34-37°C</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="suhu_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="34">
+              <span style="color:#6c757d;">°C</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge danger">Danger</span>
-              <span class="range-value">&lt;20°C atau &gt;37°C</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger Low</span>
+              <input type="number" id="suhu_danger_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="23">
+              <span style="color:#6c757d;">°C</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger High</span>
+              <input type="number" id="suhu_danger_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="34">
+              <span style="color:#6c757d;">°C</span>
             </div>
           </div>
         </div>
@@ -785,18 +677,26 @@
               <div class="threshold-subtitle">Parameter Kelembaban Udara</div>
             </div>
           </div>
-          <div class="threshold-ranges">
-            <div class="range-item">
-              <span class="range-badge ideal">Ideal</span>
-              <span class="range-value">50-70%</span>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Min</span>
+              <input type="number" id="kelembaban_ideal_min" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="50">
+              <span style="color:#6c757d;">%</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge warning">Warning</span>
-              <span class="range-value">&lt;50% atau &gt;70%</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="kelembaban_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="70">
+              <span style="color:#6c757d;">%</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge danger">Danger</span>
-              <span class="range-value">&gt;80%</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn High</span>
+              <input type="number" id="kelembaban_warn_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="80">
+              <span style="color:#6c757d;">%</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger High</span>
+              <input type="number" id="kelembaban_danger_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="80">
+              <span style="color:#6c757d;">%</span>
             </div>
           </div>
         </div>
@@ -811,18 +711,21 @@
               <div class="threshold-subtitle">Parameter Kadar Amoniak</div>
             </div>
           </div>
-          <div class="threshold-ranges">
-            <div class="range-item">
-              <span class="range-badge ideal">Ideal</span>
-              <span class="range-value">≤20 ppm</span>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="amonia_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="20">
+              <span style="color:#6c757d;">ppm</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge warning">Warning</span>
-              <span class="range-value">&gt;35 ppm</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn Max</span>
+              <input type="number" id="amonia_warn_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="35">
+              <span style="color:#6c757d;">ppm</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge danger">Danger</span>
-              <span class="range-value">&gt;35 ppm</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger Max</span>
+              <input type="number" id="amonia_danger_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="35">
+              <span style="color:#6c757d;">ppm</span>
             </div>
           </div>
         </div>
@@ -837,25 +740,33 @@
               <div class="threshold-subtitle">Parameter Intensitas Cahaya</div>
             </div>
           </div>
-          <div class="threshold-ranges">
-            <div class="range-item">
-              <span class="range-badge ideal">Ideal</span>
-              <span class="range-value">20-40 lux</span>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Low</span>
+              <input type="number" id="cahaya_ideal_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="20">
+              <span style="color:#6c757d;">lux</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge warning">Warning</span>
-              <span class="range-value">10-20 lux atau 40-60 lux</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal High</span>
+              <input type="number" id="cahaya_ideal_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="40">
+              <span style="color:#6c757d;">lux</span>
             </div>
-            <div class="range-item">
-              <span class="range-badge danger">Danger</span>
-              <span class="range-value">&lt;10 lux atau &gt;60 lux</span>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn Low</span>
+              <input type="number" id="cahaya_warn_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="10">
+              <span style="color:#6c757d;">lux</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn High</span>
+              <input type="number" id="cahaya_warn_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="60">
+              <span style="color:#6c757d;">lux</span>
             </div>
           </div>
         </div>
       </div>
-      <div style="margin-top:1rem; padding:.75rem; background:#fff3cd; border-radius:8px; font-size:.75rem; color:#856404; display:flex; align-items:center; gap:.5rem;">
-        <i class="fa-solid fa-lock"></i>
-        <span>Threshold ini tidak dapat diubah karena sudah diatur sesuai integrasi Machine Learning.</span>
+      <div style="margin-top:1rem; padding:.75rem; background:#d1ecf1; border-radius:8px; font-size:.75rem; color:#0c5460; display:flex; align-items:center; gap:.5rem;">
+        <i class="fa-solid fa-info-circle"></i>
+        <span>Threshold dapat disesuaikan sesuai umur ayam broiler. Setiap profile memiliki threshold yang berbeda.</span>
       </div>
     </div>
     
@@ -990,6 +901,29 @@
       </div>
     </div>
 
+    <!-- Ekspor Data -->
+    <div class="chart-card">
+      <h6>
+        <i class="fas fa-download me-2"></i>
+        Ekspor Data
+      </h6>
+      <div style="margin-top:.75rem;">
+        <p style="font-size:.8rem; color:#6c757d; margin-bottom:.75rem;">
+          Ekspor data sensor untuk laporan atau analisis lebih lanjut.
+        </p>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <a href="{{ route('export.csv') }}" class="btn btn-success" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
+            <i class="fas fa-file-csv me-2"></i>Ekspor CSV (Dataset)
+          </a>
+        </div>
+        <div style="margin-top:.75rem;">
+          <small style="font-size:.7rem; color:#6c757d; display:block; line-height:1.5;">
+            <strong>CSV:</strong> Dataset mentah (hanya nilai parameter, tanpa timestamp)
+          </small>
+        </div>
+      </div>
+    </div>
+
     <!-- Pengaturan Telegram -->
     <div class="chart-card">
       <h6>
@@ -1033,6 +967,46 @@
             </div>
           </div>
           
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.5rem;">
+              Notifikasi Otomatis
+            </label>
+            <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius:10px; border:1px solid #e9ecef; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:.85rem; font-weight:700; color:#2F2F2F; margin-bottom:.4rem; display:flex; align-items:center; gap:.5rem;">
+                  <i class="fa-solid fa-bell" style="color:#22C55E;"></i>
+                  Notifikasi Otomatis
+                </div>
+                <div style="font-size:.75rem; color:#6c757d; line-height:1.5; margin-bottom:.5rem;">
+                  Notifikasi akan dikirim otomatis ke Telegram berdasarkan kondisi kandang (1 jam untuk kondisi BAIK, 5 menit untuk PERHATIAN/BURUK).
+                </div>
+                <div style="display:flex; align-items:center; gap:.5rem;">
+                  <div id="notificationStatus" style="flex:1; font-size:.7rem; color:#6c757d; padding:.5rem; background:#fff; border-radius:6px; border:1px solid #e9ecef;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...
+                  </div>
+                  <button onclick="loadNotificationStatus()" title="Refresh status" style="padding:.4rem .6rem; background:#fff; border:1px solid #e9ecef; border-radius:6px; cursor:pointer; transition:all 0.2s;">
+                    <i class="fa-solid fa-sync-alt" style="font-size:.7rem; color:#6c757d;"></i>
+                  </button>
+                </div>
+              </div>
+              <div style="flex-shrink:0; display:flex; align-items:center; padding-top:.25rem;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="telegramNotificationsEnabled">
+                  <span class="toggle-slider">
+                    <span class="toggle-slider-button"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <small style="font-size:.7rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.75rem; padding:.5rem; background:#fff3cd; border-radius:6px; border-left:3px solid #facc15;">
+              <i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i>
+              <span><strong>Penting:</strong> Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.1rem .3rem; border-radius:3px; font-family:monospace;">php artisan schedule:work</code></span>
+            </small>
+              <i class="fa-solid fa-info-circle" style="color:#856404;"></i>
+              <span>Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.15rem .4rem; border-radius:4px; font-size:.65rem;">php artisan schedule:work</code></span>
+            </small>
+          </div>
+          
           <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
             <button type="button" id="testTelegramBtn" 
                     style="padding:.5rem 1rem; background:#17a2b8; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
@@ -1053,6 +1027,7 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
   
   <script>
     // Telegram Settings Functions
@@ -1068,6 +1043,11 @@
         statusText.innerHTML = '<i class="fa-solid fa-times-circle"></i> Belum terhubung ❌';
         return false;
       }
+      
+      // Show loading state
+      statusEl.style.background = '#e7f3ff';
+      statusEl.style.color = '#004085';
+      statusText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memeriksa koneksi...';
       
       try {
         const response = await fetch('/api/telegram/test', {
@@ -1136,13 +1116,17 @@
         const data = await response.json();
         
         if (data.success) {
+          // Update status connection setelah pesan test berhasil
+          setTimeout(() => {
+            checkTelegramStatus();
+          }, 500);
+          
           Swal.fire({
             icon: 'success',
             title: 'Pesan Terkirim!',
             text: 'Pesan test berhasil dikirim ke Telegram Anda.',
             confirmButtonColor: '#22C55E'
           });
-          checkTelegramStatus();
         } else {
           Swal.fire({
             icon: 'error',
@@ -1301,17 +1285,31 @@
         };
         
         const source = meta?.ml_source || mlData.source || 'fallback';
-        const connected = meta?.ml_connected || false;
+        // Handle boolean dari JSON (bisa true/false atau "True"/"False" dari PHP)
+        const connectedRaw = meta?.ml_connected;
+        const connected = connectedRaw === true || connectedRaw === 'True' || connectedRaw === 1 || (connectedRaw === undefined && source === 'ml_service');
         
         // Status Connection
         const statusEl = document.getElementById('mlConnectionStatus');
         if (statusEl) {
+          // Cek apakah benar-benar terhubung ke ML service
           if (connected && source === 'ml_service') {
             statusEl.innerHTML = '<span class="ml-status-badge connected"><i class="fa-solid fa-check-circle"></i> Terhubung ke ML Service</span>';
+          } else if (source === 'ml_service' && !connected) {
+            statusEl.innerHTML = '<span class="ml-status-badge disconnected"><i class="fa-solid fa-times-circle"></i> ML Service Tidak Tersedia</span>';
           } else {
             statusEl.innerHTML = `<span class="ml-status-badge ${source === 'fallback' ? 'fallback' : 'disconnected'}"><i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i> ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}</span>`;
           }
         }
+        
+        console.log('ML Connection Status:', { 
+          source, 
+          connected, 
+          connectedRaw, 
+          meta_ml_connected: meta?.ml_connected,
+          meta_ml_source: meta?.ml_source,
+          mlData_source: mlData?.source 
+        });
         
         // Accuracy
         const accuracyEl = document.getElementById('mlAccuracy');
@@ -1344,10 +1342,279 @@
       }
     }
     
+    // Helper functions for notifications
+    async function showSuccess(message) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: message,
+        confirmButtonColor: '#22C55E',
+        timer: 2000,
+        timerProgressBar: true
+      });
+    }
+    
+    async function showError(message) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: message,
+        confirmButtonColor: '#EF4444'
+      });
+    }
+    
+    // Threshold Management Functions
+    async function loadThresholdProfile(profileKey) {
+      const loading = document.getElementById('thresholdLoading');
+      const form = document.getElementById('thresholdForm');
+      
+      if (loading) loading.style.display = 'block';
+      if (form) form.style.display = 'none';
+      
+      try {
+        const response = await fetch(`/api/threshold/profile/${profileKey}`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load threshold profile');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.thresholds) {
+          // Fill form with threshold values
+          const thresholds = data.thresholds;
+          
+          // Amoniak
+          if (thresholds.amonia_ppm) {
+            document.getElementById('amonia_ideal_max').value = thresholds.amonia_ppm.ideal_max || '';
+            document.getElementById('amonia_warn_max').value = thresholds.amonia_ppm.warn_max || '';
+            document.getElementById('amonia_danger_max').value = thresholds.amonia_ppm.danger_max || '';
+          }
+          
+          // Suhu
+          if (thresholds.suhu_c) {
+            document.getElementById('suhu_ideal_min').value = thresholds.suhu_c.ideal_min || '';
+            document.getElementById('suhu_ideal_max').value = thresholds.suhu_c.ideal_max || '';
+            document.getElementById('suhu_danger_low').value = thresholds.suhu_c.danger_low || '';
+            document.getElementById('suhu_danger_high').value = thresholds.suhu_c.danger_high || '';
+          }
+          
+          // Kelembaban
+          if (thresholds.kelembaban_rh) {
+            document.getElementById('kelembaban_ideal_min').value = thresholds.kelembaban_rh.ideal_min || '';
+            document.getElementById('kelembaban_ideal_max').value = thresholds.kelembaban_rh.ideal_max || '';
+            document.getElementById('kelembaban_warn_high').value = thresholds.kelembaban_rh.warn_high || '';
+            document.getElementById('kelembaban_danger_high').value = thresholds.kelembaban_rh.danger_high || '';
+          }
+          
+          // Cahaya
+          if (thresholds.cahaya_lux) {
+            document.getElementById('cahaya_ideal_low').value = thresholds.cahaya_lux.ideal_low || '';
+            document.getElementById('cahaya_ideal_high').value = thresholds.cahaya_lux.ideal_high || '';
+            document.getElementById('cahaya_warn_low').value = thresholds.cahaya_lux.warn_low || '';
+            document.getElementById('cahaya_warn_high').value = thresholds.cahaya_lux.warn_high || '';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading threshold profile:', error);
+        await showError('Gagal memuat threshold profile');
+      } finally {
+        if (loading) loading.style.display = 'none';
+        if (form) form.style.display = 'grid';
+      }
+    }
+    
+    async function saveThreshold() {
+      const profileSelect = document.getElementById('thresholdProfile');
+      const profileKey = profileSelect ? profileSelect.value : 'default';
+      
+      // Prevent saving default profile
+      if (profileKey === 'default') {
+        await showError('Profile default tidak dapat diubah. Pilih profile umur tertentu untuk mengedit threshold.');
+        return;
+      }
+      
+      const loading = document.getElementById('thresholdLoading');
+      if (loading) loading.style.display = 'block';
+      
+      try {
+        const thresholds = {
+          amonia_ppm: {
+            ideal_max: parseFloat(document.getElementById('amonia_ideal_max').value) || null,
+            warn_max: parseFloat(document.getElementById('amonia_warn_max').value) || null,
+            danger_max: parseFloat(document.getElementById('amonia_danger_max').value) || null
+          },
+          suhu_c: {
+            ideal_min: parseFloat(document.getElementById('suhu_ideal_min').value) || null,
+            ideal_max: parseFloat(document.getElementById('suhu_ideal_max').value) || null,
+            danger_low: parseFloat(document.getElementById('suhu_danger_low').value) || null,
+            danger_high: parseFloat(document.getElementById('suhu_danger_high').value) || null
+          },
+          kelembaban_rh: {
+            ideal_min: parseFloat(document.getElementById('kelembaban_ideal_min').value) || null,
+            ideal_max: parseFloat(document.getElementById('kelembaban_ideal_max').value) || null,
+            warn_high: parseFloat(document.getElementById('kelembaban_warn_high').value) || null,
+            danger_high: parseFloat(document.getElementById('kelembaban_danger_high').value) || null
+          },
+          cahaya_lux: {
+            ideal_low: parseFloat(document.getElementById('cahaya_ideal_low').value) || null,
+            ideal_high: parseFloat(document.getElementById('cahaya_ideal_high').value) || null,
+            warn_low: parseFloat(document.getElementById('cahaya_warn_low').value) || null,
+            warn_high: parseFloat(document.getElementById('cahaya_warn_high').value) || null
+          }
+        };
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        const response = await fetch(`/api/threshold/profile/${profileKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken || ''
+          },
+          body: JSON.stringify(thresholds)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          await showSuccess(data.message || 'Threshold berhasil disimpan');
+          // Reload threshold values setelah save berhasil
+          await loadThresholdProfile(profileKey);
+          
+          // Trigger reload monitoring jika halaman monitoring terbuka
+          // Menggunakan localStorage event untuk komunikasi antar tab/window
+          localStorage.setItem('threshold_updated', Date.now().toString());
+          window.dispatchEvent(new Event('thresholdUpdated'));
+          
+          // Jika ada window monitoring, reload juga
+          if (window.opener && window.opener.loadMonitoring) {
+            window.opener.loadMonitoring();
+          }
+        } else {
+          await showError(data.message || 'Gagal menyimpan threshold');
+        }
+      } catch (error) {
+        console.error('Error saving threshold:', error);
+        await showError('Terjadi kesalahan saat menyimpan threshold');
+      } finally {
+        if (loading) loading.style.display = 'none';
+      }
+    }
+    
+    async function resetThresholdToDefault() {
+      const profileSelect = document.getElementById('thresholdProfile');
+      const profileKey = profileSelect ? profileSelect.value : 'default';
+      
+      if (profileKey === 'default') {
+        await showError('Profile default tidak dapat di-reset');
+        return;
+      }
+      
+      const result = await Swal.fire({
+        title: 'Reset ke Default?',
+        text: `Apakah Anda yakin ingin mengembalikan threshold profile "${profileSelect.options[profileSelect.selectedIndex].text}" ke nilai default?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#FACC15',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Reset',
+        cancelButtonText: 'Batal'
+      });
+      
+      if (result.isConfirmed) {
+        const loading = document.getElementById('thresholdLoading');
+        if (loading) loading.style.display = 'block';
+        
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+          
+          const response = await fetch(`/api/threshold/profile/${profileKey}/reset`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': csrfToken || ''
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            await showSuccess(data.message || 'Threshold berhasil di-reset ke default');
+            // Reload threshold values
+            await loadThresholdProfile(profileKey);
+          } else {
+            await showError(data.message || 'Gagal reset threshold');
+          }
+        } catch (error) {
+          console.error('Error resetting threshold:', error);
+          await showError('Terjadi kesalahan saat reset threshold');
+        } finally {
+          if (loading) loading.style.display = 'none';
+        }
+      }
+    }
+    
     // Initialize
     document.addEventListener('DOMContentLoaded', function(){
       // Load ML Information
       loadMLInfo();
+      
+      // Threshold Management
+      const profileSelect = document.getElementById('thresholdProfile');
+      const saveBtn = document.getElementById('saveThresholdBtn');
+      const resetBtn = document.getElementById('resetThresholdBtn');
+      
+      if (profileSelect) {
+        // Disable inputs for default profile
+        function toggleFormEditable(isEditable) {
+          const inputs = document.querySelectorAll('#thresholdForm input[type="number"]');
+          inputs.forEach(input => {
+            input.disabled = !isEditable;
+            input.style.opacity = isEditable ? '1' : '0.6';
+            input.style.cursor = isEditable ? 'text' : 'not-allowed';
+          });
+          
+          const saveBtn = document.getElementById('saveThresholdBtn');
+          if (saveBtn) {
+            saveBtn.disabled = !isEditable;
+            saveBtn.style.opacity = isEditable ? '1' : '0.6';
+            saveBtn.style.cursor = isEditable ? 'pointer' : 'not-allowed';
+          }
+        }
+        
+        // Load saved profile from localStorage, atau default jika tidak ada
+        const savedProfile = localStorage.getItem('selectedThresholdProfile') || 'default';
+        profileSelect.value = savedProfile;
+        
+        // Load profile on page load
+        loadThresholdProfile(savedProfile);
+        toggleFormEditable(savedProfile !== 'default');
+        
+        // Load profile when dropdown changes
+        profileSelect.addEventListener('change', function(e) {
+          const profileKey = e.target.value;
+          // Simpan pilihan ke localStorage
+          localStorage.setItem('selectedThresholdProfile', profileKey);
+          loadThresholdProfile(profileKey);
+          toggleFormEditable(profileKey !== 'default');
+        });
+      }
+      
+      if (saveBtn) {
+        saveBtn.addEventListener('click', saveThreshold);
+      }
+      
+      if (resetBtn) {
+        resetBtn.addEventListener('click', resetThresholdToDefault);
+      }
       
       // Telegram settings
       const telegramForm = document.getElementById('telegramSettingsForm');
@@ -1367,11 +1634,177 @@
       if (botTokenInput && chatIdInput) {
         botTokenInput.addEventListener('blur', checkTelegramStatus);
         chatIdInput.addEventListener('blur', checkTelegramStatus);
+        // Also check when test message is sent successfully
+        const originalTestTelegram = testTelegramMessage;
+        window.testTelegramMessage = async function() {
+          const result = await originalTestTelegram();
+          if (result) {
+            // If test message sent successfully, update status
+            setTimeout(checkTelegramStatus, 1000);
+          }
+          return result;
+        };
       }
       
       // Initial status check
       setTimeout(checkTelegramStatus, 500);
+      
+      // Load notification status
+      loadNotificationStatus();
+      
+      // Toggle notification switch
+      const notificationToggle = document.getElementById('telegramNotificationsEnabled');
+      if (notificationToggle) {
+        notificationToggle.addEventListener('change', toggleNotifications);
+      }
     });
+    
+    // Load notification status
+    async function loadNotificationStatus() {
+      const statusEl = document.getElementById('notificationStatus');
+      
+      // Show loading state
+      if (statusEl) {
+        statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...';
+        statusEl.style.color = '#6c757d';
+        statusEl.style.background = '#f8f9fa';
+        statusEl.style.borderColor = '#e9ecef';
+      }
+      
+      try {
+        // Add cache busting parameter
+        const cacheBuster = Date.now();
+        const response = await fetch(`/api/telegram/notification-status?_=${cacheBuster}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          cache: 'no-cache'
+        });
+        
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Try to parse JSON
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Error parsing JSON:', parseError);
+          throw new Error('Invalid JSON response');
+        }
+        
+        // Handle response
+        if (data && typeof data === 'object' && data.success) {
+          const enabled = data.enabled === true || data.enabled === 'true' || data.enabled === 1;
+          
+          const toggle = document.getElementById('telegramNotificationsEnabled');
+          if (toggle) {
+            toggle.checked = enabled;
+          }
+          
+          // Update status display
+          if (statusEl) {
+            if (enabled) {
+              statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim otomatis';
+              statusEl.style.color = '#155724';
+              statusEl.style.background = '#d4edda';
+              statusEl.style.borderColor = '#c3e6cb';
+            } else {
+              statusEl.innerHTML = '<i class="fa-solid fa-times-circle" style="color:#dc2626;"></i> <strong style="color:#dc2626;">Nonaktif</strong> - Notifikasi tidak akan dikirim';
+              statusEl.style.color = '#721c24';
+              statusEl.style.background = '#f8d7da';
+              statusEl.style.borderColor = '#f5c6cb';
+            }
+          }
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error loading notification status:', error);
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i> Error memuat status: ' + (error.message || 'Unknown error');
+          statusEl.style.color = '#856404';
+          statusEl.style.background = '#fff3cd';
+          statusEl.style.borderColor = '#ffeaa7';
+        }
+        
+        // DON'T auto-retry - just show error
+        // User can refresh manually if needed
+      }
+    }
+    
+    // Toggle notifications
+    async function toggleNotifications(event) {
+      const enabled = event.target.checked;
+      const toggle = event.target;
+      const statusEl = document.getElementById('notificationStatus');
+      toggle.disabled = true;
+      
+      // Update status display immediately (optimistic update)
+      if (statusEl) {
+        if (enabled) {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Mengaktifkan...';
+        } else {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menonaktifkan...';
+        }
+      }
+      
+      try {
+        const response = await fetch('/api/telegram/toggle-notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Reload status to get updated value
+          await loadNotificationStatus();
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: data.message,
+            confirmButtonColor: '#22C55E',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          // Revert toggle if failed
+          toggle.checked = !enabled;
+          await loadNotificationStatus(); // Reload to show correct status
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: data.message || 'Gagal mengubah status notifikasi',
+            confirmButtonColor: '#EF4444'
+          });
+        }
+      } catch (error) {
+        // Revert toggle if error
+        toggle.checked = !enabled;
+        await loadNotificationStatus(); // Reload to show correct status
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan saat mengubah status notifikasi',
+          confirmButtonColor: '#EF4444'
+        });
+      } finally {
+        toggle.disabled = false;
+      }
+    }
   </script>
 </body>
 </html>

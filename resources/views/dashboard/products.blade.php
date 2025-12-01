@@ -9,8 +9,8 @@
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS via Vite -->
+  @vite(['resources/css/app.css'])
   
   <!-- Google Fonts - Inter (Premium Typography) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,127 +25,66 @@
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
     body { background: #F8F9FB; margin: 0; }
     
-    .sidebar {
-      width: 220px;
-      background: white;
-      border-right: 1px solid #e9ecef;
-      min-height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-    
-    .sidebar-header {
-      padding: 1.25rem 1rem;
-      border-bottom: 1px solid #e9ecef;
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile {
-      padding: 1.25rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid #e9ecef;
-    }
-    
-    .sidebar-profile img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: #e9ecef;
-    }
-    
-    .sidebar-profile-info h6 {
-      margin: 0;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-profile-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: #6c757d;
-    }
-    
-    .sidebar-menu {
-      padding: 1rem 0;
-    }
-    
-    .sidebar-menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-menu-item:hover,
-    .sidebar-menu-item.active {
-      background: #f8f9fa;
-      color: #2F2F2F;
-    }
-    
-    .sidebar-menu-item.active {
-      border-left: 3px solid #69B578;
-      padding-left: calc(1rem - 3px);
-    }
-    
-    .sidebar-menu-item i {
-      width: 20px;
-      text-align: center;
-    }
-    
-    .sidebar-submenu {
-      display: none;
-      padding-left: 2.5rem;
-    }
-    
-    .sidebar-submenu.show {
-      display: block;
-    }
-    
-    .sidebar-submenu a {
-      display: block;
-      padding: 0.5rem 1rem;
-      color: #6c757d;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    .sidebar-submenu a:hover,
-    .sidebar-submenu a.active {
-      color: #22C55E;
-    }
-    
-    .chevron-icon {
-      margin-left: auto;
-      font-size: 0.7rem;
-      transition: transform 0.2s;
-    }
-    
-    .chevron-icon.rotate {
-      transform: rotate(180deg);
-    }
-    
-    .sidebar-footer {
-      position: absolute;
-      bottom: 1rem;
-      left: 0;
-      right: 0;
-      padding: 0 1rem;
-    }
     
     .main-content {
       margin-left: 220px;
       padding: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .filter-right {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .search-box {
+        width: 100%;
+      }
+      
+      .table {
+        font-size: 0.875rem;
+      }
+      
+      .table th,
+      .table td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .product-info {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .product-img {
+        width: 48px !important;
+        height: 48px !important;
+      }
     }
     
     .page-header {
@@ -233,6 +172,31 @@
       gap: 1rem;
     }
     
+    .sort-dropdown {
+      position: relative;
+    }
+    
+    .sort-dropdown select {
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: #f8f9fa;
+      color: #2F2F2F;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      padding-right: 2.5rem;
+    }
+    
+    .sort-dropdown select:focus {
+      outline: none;
+      border-color: #22C55E;
+      background-color: white;
+    }
+    
     .search-box {
       position: relative;
       width: 200px;
@@ -280,9 +244,9 @@
     }
     
     .product-table td {
-      padding: 1rem 1.5rem;
+      padding: 1.25rem 1.5rem;
       border-bottom: 1px solid #f8f9fa;
-      font-size: 0.875rem;
+      font-size: 0.95rem;
       color: #2F2F2F;
       vertical-align: middle;
     }
@@ -290,24 +254,26 @@
     .product-info {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 1rem;
     }
     
     .product-img {
-      width: 50px;
-      height: 50px;
+      width: 64px;
+      height: 64px;
       border-radius: 8px;
       object-fit: cover;
       background: #f8f9fa;
     }
     
     .product-name {
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1rem;
       color: #2F2F2F;
+      margin-bottom: 0.25rem;
     }
     
     .product-weight {
-      font-size: 0.75rem;
+      font-size: 0.875rem;
       color: #6c757d;
       margin-top: 0.25rem;
     }
@@ -330,19 +296,22 @@
       color: #6c757d;
     }
     
+    .stock-alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-left: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      background: #FFF3E0;
+      color: #FF9800;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    
     .status-badge.inactive {
       background: #f0f0f0;
       color: #6c757d;
-    }
-    
-    .checkbox-cell {
-      width: 40px;
-    }
-    
-    .checkbox-cell input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
     }
     
     .product-table tbody tr {
@@ -379,66 +348,12 @@
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      ChickPatrol Seller
-    </div>
-    
-    <div class="sidebar-profile">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23e9ecef'/%3E%3C/svg%3E" alt="Profile">
-      <div class="sidebar-profile-info">
-        <h6>Anto Farm</h6>
-        <p>Penjual</p>
-      </div>
-    </div>
-    
-    <div class="performa-badge mx-3 mt-3">
-      Performa Toko
-      <span class="performa-value">95/100</span>
-    </div>
-    
-    <nav class="sidebar-menu">
-      <a href="{{ route('dashboard') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-      </a>
-      <a href="{{ route('dashboard.products') }}" class="sidebar-menu-item active">
-        <i class="fa-solid fa-box"></i>
-        <span>Produk</span>
-      </a>
-      <div class="sidebar-menu-item" onclick="toggleSubmenu()" style="cursor: pointer;">
-        <i class="fa-solid fa-wrench"></i>
-        <span>Alat</span>
-        <i class="fa-solid fa-chevron-down chevron-icon"></i>
-      </div>
-      <div class="sidebar-submenu">
-        <a href="{{ route('dashboard.tools') }}">Daftar alat</a>
-        <a href="{{ route('dashboard.tools.monitoring') }}">Monitoring Alat</a>
-        <a href="{{ route('dashboard.tools.information') }}">Manajemen Informasi</a>
-      </div>
-      <a href="{{ route('dashboard.sales') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-shopping-cart"></i>
-        <span>Penjualan</span>
-      </a>
-      <a href="{{ route('dashboard.chat') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-comment"></i>
-        <span>Chat</span>
-      </a>
-    </nav>
-    
-    <div class="sidebar-footer">
-      <a href="{{ route('logout') }}" class="sidebar-menu-item">
-        <i class="fa-solid fa-right-from-bracket"></i>
-        <span>Logout</span>
-      </a>
-    </div>
-  </aside>
+  @include('layouts.sidebar')
   
   <!-- Main Content -->
   <main class="main-content">
     <div class="page-header">
-      <h1>Daftar Produk</h1>
+      <h1>Produk</h1>
       <button class="btn-add" onclick="addProduct()">
         <i class="fa-solid fa-plus"></i>
         Tambah Produk
@@ -453,9 +368,25 @@
           <button class="filter-tab active" data-filter="all">Semua Produk</button>
         </div>
         <div class="filter-right">
+          <div class="sort-dropdown">
+            <select id="categoryFilter">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+          <div class="sort-dropdown">
+            <select id="sortFilter">
+              <option value="">Urutkan</option>
+              <option value="name_asc">Nama A-Z</option>
+              <option value="name_desc">Nama Z-A</option>
+              <option value="price_asc">Harga Terendah</option>
+              <option value="price_desc">Harga Tertinggi</option>
+              <option value="stock_asc">Stok Terendah</option>
+              <option value="stock_desc">Stok Tertinggi</option>
+            </select>
+          </div>
           <div class="search-box">
             <i class="fa-solid fa-search"></i>
-            <input type="text" placeholder="Cari Produk">
+            <input type="text" id="searchInput" placeholder="Cari Produk">
           </div>
         </div>
       </div>
@@ -464,9 +395,6 @@
       <table class="product-table">
         <thead>
           <tr>
-            <th class="checkbox-cell">
-              <input type="checkbox" id="selectAll">
-            </th>
             <th>Info Produk</th>
             <th>Rating</th>
             <th>Harga</th>
@@ -475,81 +403,7 @@
           </tr>
         </thead>
         <tbody id="productTableBody">
-          <!-- Product Row 1 -->
-          <tr data-product-id="1" data-status="active">
-            <td class="checkbox-cell">
-              <input type="checkbox" class="product-checkbox">
-            </td>
-            <td>
-              <div class="product-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="product-img">
-                <div>
-                  <div class="product-name">Daging segar</div>
-                  <div class="product-weight">kg</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="rating-stars">
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-              </div>
-            </td>
-            <td>Rp 40.000</td>
-            <td>15</td>
-            <td>
-              <span class="status-badge active">Aktif</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(1)" title="Edit">
-                <i class="fa-solid fa-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(1)" title="Hapus">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-          
-          <!-- Product Row 2 -->
-          <tr data-product-id="2" data-status="inactive">
-            <td class="checkbox-cell">
-              <input type="checkbox" class="product-checkbox">
-            </td>
-            <td>
-              <div class="product-info">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E" alt="Product" class="product-img">
-                <div>
-                  <div class="product-name">Daging segar</div>
-                  <div class="product-weight">kg</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div class="rating-stars">
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-solid fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-                <i class="fa-regular fa-star"></i>
-              </div>
-            </td>
-            <td>Rp 40.000</td>
-            <td>15</td>
-            <td>
-              <span class="status-badge inactive">Tidak Aktif</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct(2)" title="Edit">
-                <i class="fa-solid fa-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(2)" title="Hapus">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </td>
-          </tr>
+          <!-- Product rows will be loaded dynamically -->
         </tbody>
       </table>
     </div>
@@ -576,9 +430,17 @@
                 <label for="productCategory" class="form-label">Kategori</label>
                 <select class="form-select" id="productCategory" required>
                   <option value="">Pilih Kategori</option>
-                  <option value="Daging Segar">Daging Segar</option>
-                  <option value="Telur">Telur</option>
-                  <option value="Daging Olahan">Daging Olahan</option>
+                  <option value="Ayam Potong Segar">Ayam Potong Segar</option>
+                  <option value="Dada Ayam">Dada Ayam</option>
+                  <option value="Ayam Karkas">Ayam Karkas</option>
+                  <option value="Jeroan Ayam">Jeroan Ayam</option>
+                  <option value="Produk Frozen">Produk Frozen</option>
+                  <option value="Produk Olahan Ayam">Produk Olahan Ayam</option>
+                  <option value="Obat & Vitamin Ayam">Obat & Vitamin Ayam</option>
+                  <option value="Pakan Ayam">Pakan Ayam</option>
+                  <option value="Peralatan Kandang">Peralatan Kandang</option>
+                  <option value="Robot ChickPatrol">Robot ChickPatrol</option>
+                  <option value="Lainnya">Lainnya</option>
                 </select>
               </div>
             </div>
@@ -595,9 +457,21 @@
               <div class="col-md-4">
                 <label for="productUnit" class="form-label">Satuan</label>
                 <select class="form-select" id="productUnit" required>
-                  <option value="kg">kg</option>
+                  <option value="kg">kg (Kilogram)</option>
+                  <option value="ekor">ekor</option>
                   <option value="butir">butir</option>
                   <option value="pack">pack</option>
+                  <option value="botol">botol</option>
+                  <option value="liter">liter</option>
+                  <option value="dosis">dosis</option>
+                  <option value="unit">unit</option>
+                  <option value="buah">buah</option>
+                  <option value="meter">meter</option>
+                  <option value="set">set</option>
+                  <option value="box">box</option>
+                  <option value="kaleng">kaleng</option>
+                  <option value="sachet">sachet</option>
+                  <option value="pcs">pcs (pieces)</option>
                 </select>
               </div>
             </div>
@@ -627,28 +501,143 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
   
   <script>
     // Product data from database
     @php
         $productsData = $products->map(function($product) {
             $firstImage = $product->images->first();
-            $imageUrl = $firstImage ? $firstImage->url : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23f8d7da'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23721c24' font-size='20'%3E🍗%3C/text%3E%3C/svg%3E";
+            $imageUrl = null;
+            
+            if ($firstImage && $firstImage->url) {
+                $imageUrl = $firstImage->url;
+                // Jika URL tidak dimulai dengan http atau data:, tambahkan asset()
+                if ($imageUrl && !preg_match('/^(https?:\/\/|data:)/', $imageUrl)) {
+                    // Jika sudah ada storage/products, gunakan asset
+                    if (strpos($imageUrl, 'storage/products/') !== false) {
+                        // Pastikan menggunakan URL lengkap
+                        if (strpos($imageUrl, '/') !== 0) {
+                            $imageUrl = '/' . $imageUrl;
+                        }
+                        $imageUrl = asset($imageUrl);
+                    } elseif (strpos($imageUrl, 'storage/') !== false) {
+                        if (strpos($imageUrl, '/') !== 0) {
+                            $imageUrl = '/' . $imageUrl;
+                        }
+                        $imageUrl = asset($imageUrl);
+                    } else {
+                        $imageUrl = asset('storage/' . $imageUrl);
+                    }
+                }
+            }
+            
+            // Fallback ke placeholder jika tidak ada gambar
+            if (!$imageUrl) {
+                $imageUrl = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4=";
+            }
+            
+            $avgRating = $product->average_rating;
+            $totalReviews = $product->total_reviews;
+            
+            // Tentukan kategori berdasarkan nama produk (lebih fleksibel)
+            $categoryName = 'Lainnya';
+            $productName = strtolower($product->name);
+            
+            // Produk Frozen - cek dulu karena bisa overlap dengan kategori lain
+            if (strpos($productName, 'beku') !== false || strpos($productName, 'frozen') !== false) {
+                $categoryName = 'Produk Frozen';
+            }
+            // Produk Olahan Ayam - cek sebelum kategori umum
+            elseif (strpos($productName, 'nugget') !== false || strpos($productName, 'sosis') !== false || 
+                    strpos($productName, 'karage') !== false || strpos($productName, 'popcorn') !== false || 
+                    strpos($productName, 'wings') !== false || strpos($productName, 'chicken wings') !== false) {
+                $categoryName = 'Produk Olahan Ayam';
+            }
+            // Dada Ayam - cek sebelum kategori umum ayam potong
+            elseif (strpos($productName, 'dada') !== false || strpos($productName, 'fillet') !== false || 
+                    strpos($productName, 'tenderloin') !== false || strpos($productName, 'slice') !== false || 
+                    strpos($productName, 'cube') !== false || strpos($productName, 'skinless') !== false || 
+                    strpos($productName, 'boneless') !== false || strpos($productName, 'premium') !== false) {
+                $categoryName = 'Dada Ayam';
+            }
+            // Ayam Karkas
+            elseif (strpos($productName, 'karkas') !== false || strpos($productName, 'carcass') !== false) {
+                $categoryName = 'Ayam Karkas';
+            }
+            // Jeroan Ayam
+            elseif (strpos($productName, 'hati') !== false || strpos($productName, 'ampela') !== false || 
+                    strpos($productName, 'jantung') !== false || strpos($productName, 'usus') !== false || 
+                    strpos($productName, 'paru') !== false || strpos($productName, 'jeroan') !== false ||
+                    strpos($productName, 'paket jeroan') !== false) {
+                $categoryName = 'Jeroan Ayam';
+            }
+            // Ayam Potong Segar - kategori umum untuk potongan ayam
+            elseif (strpos($productName, 'ayam potong') !== false || strpos($productName, 'ayam broiler') !== false || 
+                    strpos($productName, 'paha') !== false || strpos($productName, 'drumstick') !== false ||
+                    strpos($productName, 'thigh') !== false || strpos($productName, 'sayap') !== false || 
+                    strpos($productName, 'kulit') !== false || strpos($productName, 'kepala') !== false || 
+                    strpos($productName, 'ceker') !== false || strpos($productName, 'ayam utuh') !== false ||
+                    (strpos($productName, 'ayam') !== false && (strpos($productName, 'potong') !== false || 
+                     strpos($productName, 'segar') !== false || strpos($productName, 'utuh') !== false))) {
+                $categoryName = 'Ayam Potong Segar';
+            }
+            // Obat & Vitamin Ayam
+            elseif (strpos($productName, 'vitamin') !== false || strpos($productName, 'antibiotik') !== false || 
+                    strpos($productName, 'obat') !== false || strpos($productName, 'probiotik') !== false || 
+                    strpos($productName, 'multivitamin') !== false || strpos($productName, 'disinfectant') !== false || 
+                    strpos($productName, 'disinfektan') !== false || strpos($productName, 'electrolyte') !== false || 
+                    strpos($productName, 'suplemen') !== false || strpos($productName, 'antistress') !== false ||
+                    strpos($productName, 'vitachick') !== false || strpos($productName, 'vitamix') !== false) {
+                $categoryName = 'Obat & Vitamin Ayam';
+            }
+            // Pakan Ayam
+            elseif (strpos($productName, 'pakan') !== false || strpos($productName, 'vaksin') !== false || 
+                    strpos($productName, 'desinfektan air') !== false || strpos($productName, 'mineral feed') !== false ||
+                    strpos($productName, 'starter') !== false || strpos($productName, 'finisher') !== false ||
+                    strpos($productName, 'nd/ib') !== false) {
+                $categoryName = 'Pakan Ayam';
+            }
+            // Peralatan Kandang
+            elseif (strpos($productName, 'tempat') !== false || strpos($productName, 'nipple') !== false || 
+                    strpos($productName, 'selang') !== false || strpos($productName, 'lampu') !== false || 
+                    strpos($productName, 'pemanas') !== false || strpos($productName, 'timbangan') !== false || 
+                    strpos($productName, 'sensor') !== false || strpos($productName, 'tirai') !== false || 
+                    strpos($productName, 'keranjang') !== false || strpos($productName, 'kandang') !== false || 
+                    strpos($productName, 'sprayer') !== false || strpos($productName, 'mesin') !== false || 
+                    strpos($productName, 'knapsack') !== false || strpos($productName, 'termometer') !== false || 
+                    strpos($productName, 'exhaust') !== false || strpos($productName, 'blower') !== false ||
+                    strpos($productName, 'feeder') !== false || strpos($productName, 'drinker') !== false ||
+                    strpos($productName, 'brooder') !== false || strpos($productName, 'gasolec') !== false ||
+                    strpos($productName, 'infrared') !== false || strpos($productName, 'doc') !== false ||
+                    strpos($productName, 'plastik uv') !== false || strpos($productName, 'pencabut bulu') !== false) {
+                $categoryName = 'Peralatan Kandang';
+            }
+            // Robot ChickPatrol
+            elseif (strpos($productName, 'robot') !== false || strpos($productName, 'chickpatrol') !== false ||
+                    strpos($productName, 'chick patrol') !== false) {
+                $categoryName = 'Robot ChickPatrol';
+            }
             
             return [
                 'id' => $product->product_id,
                 'name' => $product->name,
-                'category' => 'Daging Segar',
+                'category' => $categoryName,
+                'category_id' => $product->category_id,
                 'price' => (float)$product->price,
                 'stock' => (int)$product->stock,
                 'unit' => $product->unit ?? 'kg',
-                'rating' => 0,
+                'rating' => round($avgRating, 1),
+                'total_reviews' => $totalReviews,
                 'description' => $product->description ?? '',
                 'image' => $imageUrl
             ];
         });
     @endphp
     let products = @json($productsData);
+    
+    // Get unique categories from products
+    const categories = [...new Set(products.map(p => p.category))].sort();
     
     // Calculate nextId for new products (using numeric counter for compatibility)
     let nextId = products.length > 0 ? products.length + 1 : 1;
@@ -839,36 +828,110 @@
         }
     }
     
+    // Sort Products Function
+    function sortProducts(productsArray, sortType) {
+        if (!sortType) return productsArray;
+        
+        const sorted = [...productsArray];
+        
+        switch(sortType) {
+            case 'name_asc':
+                sorted.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'name_desc':
+                sorted.sort((a, b) => b.name.localeCompare(a.name));
+                break;
+            case 'price_asc':
+                sorted.sort((a, b) => a.price - b.price);
+                break;
+            case 'price_desc':
+                sorted.sort((a, b) => b.price - a.price);
+                break;
+            case 'stock_asc':
+                sorted.sort((a, b) => (a.stock || 0) - (b.stock || 0));
+                break;
+            case 'stock_desc':
+                sorted.sort((a, b) => (b.stock || 0) - (a.stock || 0));
+                break;
+            default:
+                return sorted;
+        }
+        
+        return sorted;
+    }
+    
+    // Filter Products by Search
+    function filterProductsBySearch(productsArray, searchTerm) {
+        if (!searchTerm) return productsArray;
+        
+        const term = searchTerm.toLowerCase();
+        return productsArray.filter(product => 
+            product.name.toLowerCase().includes(term)
+        );
+    }
+    
+    // Filter Products by Category
+    function filterProductsByCategory(productsArray, categoryName) {
+        if (!categoryName) return productsArray;
+        
+        return productsArray.filter(product => 
+            product.category === categoryName
+        );
+    }
+    
     // Render Products Function
     function renderProducts() {
         const tbody = document.getElementById('productTableBody');
+        const sortType = document.getElementById('sortFilter').value;
+        const searchTerm = document.getElementById('searchInput').value;
+        const categoryName = document.getElementById('categoryFilter').value;
         
-        tbody.innerHTML = products.map(product => {
+        // Filter by category first
+        let filteredProducts = filterProductsByCategory(products, categoryName);
+        
+        // Then filter by search
+        filteredProducts = filterProductsBySearch(filteredProducts, searchTerm);
+        
+        // Finally sort filtered products
+        filteredProducts = sortProducts(filteredProducts, sortType);
+        
+        if (!filteredProducts || filteredProducts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Tidak ada produk yang ditemukan</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = filteredProducts.map(product => {
+            const rating = product.rating || 0;
+            const totalReviews = product.total_reviews || 0;
             const stars = Array(5).fill(0).map((_, i) => 
-                i < product.rating 
-                    ? '<i class="fa-solid fa-star"></i>'
-                    : '<i class="fa-regular fa-star"></i>'
+                i < Math.round(rating)
+                    ? '<i class="fa-solid fa-star text-warning"></i>'
+                    : '<i class="fa-regular fa-star text-gray-300"></i>'
             ).join('');
+            
+            const ratingDisplay = totalReviews > 0 
+                ? `<div class="rating-stars">${stars}</div><small class="text-muted">${rating.toFixed(1)} (${totalReviews})</small>`
+                : '<div class="rating-stars"><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i><i class="fa-regular fa-star text-gray-300"></i></div><small class="text-muted">Belum ada rating</small>';
             
             return `
                 <tr data-product-id="${product.id}">
-                    <td class="checkbox-cell">
-                        <input type="checkbox" class="product-checkbox">
-                    </td>
                     <td>
                         <div class="product-info">
-                            <img src="${product.image}" alt="Product" class="product-img">
+                            <img src="${product.image || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4='}" alt="Product" class="product-img" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNmM2Y0ZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UHJvZHVjdDwvdGV4dD48L3N2Zz4='; this.style.display='block';">
                             <div>
                                 <div class="product-name">${product.name}</div>
-                                <div class="product-weight">${product.unit}</div>
+                                <div class="product-weight">${product.unit || '-'}</div>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="rating-stars">${stars}</div>
+                        ${ratingDisplay}
                     </td>
-                    <td>Rp ${product.price.toLocaleString('id-ID')}</td>
-                    <td>${product.stock}</td>
+                    <td style="font-weight: 600; color: #22C55E; font-size: 1rem;">Rp ${product.price.toLocaleString('id-ID')}</td>
+                    <td style="font-weight: 500;">
+                        ${product.stock || 0}
+                        ${(product.stock || 0) < 10 ? '<span class="stock-alert-badge" title="Stok Rendah"><i class="fa-solid fa-exclamation-triangle"></i> Rendah</span>' : ''}
+                    </td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${product.id}')" title="Edit">
                             <i class="fa-solid fa-edit"></i>
@@ -887,7 +950,13 @@
     
     // Update Tab Counts
     function updateTabCounts() {
-        const allCount = products.length;
+        const searchTerm = document.getElementById('searchInput').value;
+        const categoryName = document.getElementById('categoryFilter').value;
+        
+        let filteredProducts = filterProductsByCategory(products, categoryName);
+        filteredProducts = filterProductsBySearch(filteredProducts, searchTerm);
+        const allCount = filteredProducts.length;
+        
         document.querySelectorAll('.filter-tab').forEach(tab => {
             const text = tab.textContent.trim().toLowerCase();
             if (text.includes('semua')) {
@@ -896,31 +965,36 @@
         });
     }
     
-    // Toggle Submenu
-    function toggleSubmenu() {
-        const submenu = document.querySelector('.sidebar-submenu');
-        const chevron = document.querySelector('.chevron-icon');
-        submenu.classList.toggle('show');
-        chevron.classList.toggle('rotate');
+    // Populate Category Filter
+    function populateCategoryFilter() {
+        const categoryFilter = document.getElementById('categoryFilter');
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
     }
     
-    // Search functionality
-    document.querySelector('.search-box input').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#productTableBody tr');
-        
-        rows.forEach(row => {
-            const productName = row.querySelector('.product-name').textContent.toLowerCase();
-            row.style.display = productName.includes(searchTerm) ? '' : 'none';
-        });
+    // Toggle Submenu
+    
+    // Category filter functionality
+    document.getElementById('categoryFilter').addEventListener('change', function() {
+        renderProducts();
     });
     
-    // Select all checkbox
-    document.getElementById('selectAll').addEventListener('change', function() {
-        document.querySelectorAll('.product-checkbox').forEach(cb => {
-            cb.checked = this.checked;
-        });
+    // Sort functionality
+    document.getElementById('sortFilter').addEventListener('change', function() {
+        renderProducts();
     });
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        renderProducts();
+    });
+    
+    // Initialize category filter on page load
+    populateCategoryFilter();
     
     // Image preview
     document.getElementById('productImage').addEventListener('change', function(e) {

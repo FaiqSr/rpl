@@ -32,12 +32,7 @@
                                 <path d="M4.49818 11.9163C4.07 10.6745 4.07 9.33001 4.49818 8.08819V5.51182H1.17273C-0.390909 8.62728 -0.390909 12.3773 1.17273 15.4927L4.49818 11.9163Z" fill="#FBBC04"/>
                                 <path d="M10.2 3.95818C11.6218 3.93637 13.0036 4.47092 14.0364 5.45637L16.8945 2.60182C15.1873 0.990002 12.9345 0.0981838 10.2 0.120002C6.33818 0.120002 2.77818 2.43455 1.17273 5.51183L4.49818 8.08819C5.28136 5.71637 7.54045 3.95818 10.2 3.95818Z" fill="#EA4335"/>
                             </svg>
-                        </button>
-                        
-                        <button type="button" class="btn-oauth" onclick="loginWithFacebook()">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 10C20 4.47715 15.5228 0 10 0C4.47715 0 0 4.47715 0 10C0 14.9912 3.65684 19.1283 8.4375 19.8785V12.8906H5.89844V10H8.4375V7.79688C8.4375 5.29063 9.93047 3.90625 12.2146 3.90625C13.3084 3.90625 14.4531 4.10156 14.4531 4.10156V6.5625H13.1922C11.95 6.5625 11.5625 7.3334 11.5625 8.125V10H14.3359L13.8926 12.8906H11.5625V19.8785C16.3432 19.1283 20 14.9912 20 10Z" fill="#1877F2"/>
-                            </svg>
+                            <span>Lanjutkan dengan Google</span>
                         </button>
                     </div>
                     
@@ -87,8 +82,12 @@
                         
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
+                            <div class="password-input-wrapper">
                             <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" 
-                                   placeholder="••••••••" required minlength="8">
+                                   placeholder="Minimal 8 karakter: huruf kapital, kecil, angka, simbol" required minlength="8">
+                                <i class="fas fa-eye password-toggle-icon" id="togglePassword" onclick="togglePasswordVisibility('password', 'togglePassword')"></i>
+                            </div>
+                            <small class="form-text text-muted">Password harus minimal 8 karakter dengan kombinasi huruf kapital, huruf kecil, angka, dan simbol</small>
                             @error('password')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -96,8 +95,11 @@
                         
                         <div class="mb-4">
                             <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+                            <div class="password-input-wrapper">
                             <input type="password" class="form-control @error('password_confirmation') is-invalid @enderror" id="password_confirmation" 
                                    name="password_confirmation" placeholder="••••••••" required>
+                                <i class="fas fa-eye password-toggle-icon" id="togglePasswordConfirmation" onclick="togglePasswordVisibility('password_confirmation', 'togglePasswordConfirmation')"></i>
+                            </div>
                             @error('password_confirmation')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -142,6 +144,17 @@
             return;
         }
         
+        // Validate password strength: must contain uppercase, lowercase, number, and symbol
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSymbol = /[@$!%*?&]/.test(password);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+            showError('Password harus mengandung huruf kapital, huruf kecil, angka, dan simbol!');
+            return;
+        }
+        
         // Show loading
         Swal.fire({
             title: 'Mendaftar...',
@@ -161,8 +174,20 @@
         showWarning('Fitur login dengan Google akan segera tersedia!');
     }
     
-    function loginWithFacebook() {
-        showWarning('Fitur login dengan Facebook akan segera tersedia!');
+    // Toggle password visibility
+    function togglePasswordVisibility(inputId, iconId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleIcon = document.getElementById(iconId);
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
     }
     
     // Show success message if redirected with success
