@@ -1145,84 +1145,64 @@
   @endif
   
   <script>
-    // Pagination: Tetap stay di posisi yang sama saat pindah page
-    (function() {
-      // Simpan posisi scroll sebelum navigate
+    // Pagination: Scroll ke posisi produk setelah page load (jika ada parameter page)
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('page')) {
+        // Tunggu sebentar untuk memastikan halaman sudah ter-render
+        setTimeout(function() {
+          const productGrid = document.getElementById('productGrid');
+          if (productGrid) {
+            // Scroll ke produk grid dengan offset untuk header
+            const offset = 100; // Offset untuk header/navbar
+            const elementPosition = productGrid.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }, 100);
+      }
+    });
+    
+    // Pagination: Prevent scroll to top saat klik pagination link
+    document.addEventListener('DOMContentLoaded', function() {
       const paginationLinks = document.querySelectorAll('.pagination-link');
       
       paginationLinks.forEach(function(link) {
         link.addEventListener('click', function(e) {
-          // Simpan posisi scroll saat ini ke sessionStorage
-          const currentScrollY = window.scrollY || window.pageYOffset;
-          sessionStorage.setItem('paginationScrollY', currentScrollY.toString());
-          sessionStorage.setItem('fromPagination', 'true');
+          // Simpan posisi scroll saat ini
+          const currentScrollPosition = window.pageYOffset;
+          
+          // Simpan posisi di sessionStorage
+          sessionStorage.setItem('scrollPosition', currentScrollPosition.toString());
+          sessionStorage.setItem('scrollToProductGrid', 'true');
         });
       });
       
-      // Restore posisi scroll setelah page load (jika dari pagination)
-      function restoreScrollPosition() {
-        if (sessionStorage.getItem('fromPagination') === 'true') {
-          const savedScrollY = sessionStorage.getItem('paginationScrollY');
-          
-          if (savedScrollY) {
-            const scrollY = parseInt(savedScrollY, 10);
+      // Restore scroll position setelah page load (jika dari pagination)
+      if (sessionStorage.getItem('scrollToProductGrid') === 'true') {
+        setTimeout(function() {
+          const productGrid = document.getElementById('productGrid');
+          if (productGrid) {
+            const offset = 100;
+            const elementPosition = productGrid.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
             
-            // Prevent default scroll behavior
-            window.scrollTo(0, scrollY);
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
             
-            // Restore scroll position setelah DOM ready
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(function() {
-                  window.scrollTo({
-                    top: scrollY,
-                    behavior: 'auto'
-                  });
-                }, 0);
-              });
-            } else {
-              // DOM sudah ready, restore langsung
-              setTimeout(function() {
-                window.scrollTo({
-                  top: scrollY,
-                  behavior: 'auto'
-                });
-              }, 0);
-            }
-            
-            // Fallback: restore lagi setelah konten ter-render
-            setTimeout(function() {
-              window.scrollTo({
-                top: scrollY,
-                behavior: 'auto'
-              });
-            }, 50);
-            
-            // Clear flag setelah restore
-            setTimeout(function() {
-              sessionStorage.removeItem('paginationScrollY');
-              sessionStorage.removeItem('fromPagination');
-            }, 500);
+            // Clear flag
+            sessionStorage.removeItem('scrollToProductGrid');
+            sessionStorage.removeItem('scrollPosition');
           }
-        }
+        }, 100);
       }
-      
-      // Prevent scroll ke atas saat page load
-      if (sessionStorage.getItem('fromPagination') === 'true') {
-        // Prevent default scroll
-        window.scrollTo(0, window.scrollY || 0);
-        
-        // Restore posisi
-        restoreScrollPosition();
-      }
-      
-      // Juga restore saat DOM ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', restoreScrollPosition);
-      } else {
-        restoreScrollPosition();
-      }
-    })();
+    });
   </script>
 </body>
 </html>
