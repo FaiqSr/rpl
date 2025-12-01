@@ -135,6 +135,30 @@
             font-size: 0.875rem;
         }
         
+        .password-input-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 1rem;
+            transition: color 0.2s ease;
+            z-index: 10;
+        }
+        
+        .password-toggle-icon:hover {
+            color: #69B578;
+        }
+        
+        .password-input-wrapper .form-control {
+            padding-right: 3rem;
+        }
+        
         .btn-primary {
             background-color: #2F2F2F;
             border: none;
@@ -176,17 +200,18 @@
         .btn-oauth {
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            padding: 0.6rem;
+            padding: 0.65rem 1rem;
             background: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
             font-weight: 500;
             transition: all 0.2s ease;
             cursor: pointer;
-            width: 48%;
+            width: 100%;
             font-size: 0.875rem;
+            color: #2F2F2F;
         }
         
         .btn-oauth:hover {
@@ -200,11 +225,13 @@
         .btn-oauth svg {
             width: 20px;
             height: 20px;
+            flex-shrink: 0;
         }
         
         .oauth-buttons {
             display: flex;
-            gap: 4%;
+            flex-direction: column;
+            gap: 0.75rem;
             margin-bottom: 1rem;
         }
         
