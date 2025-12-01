@@ -1048,7 +1048,7 @@
     // Function untuk update status real-time
     async function updateRobotStatus() {
         try {
-            const response = await fetch('/api/robots/status?t=' + Date.now(), {
+            const response = await fetch('/api/tools/status?t=' + Date.now(), {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -1062,55 +1062,56 @@
             
             const data = await response.json();
             
-            if (data.success && data.robots && data.robots.length > 0) {
-                data.robots.forEach(robot => {
+            if (data.success && data.tools && data.tools.length > 0) {
+                data.tools.forEach(tool => {
+                    const toolId = tool.tool_id;
                     // Update status indicator
-                    const statusIndicator = document.getElementById(`status-indicator-${robot.robot_id}`);
-                    const statusText = document.getElementById(`status-text-${robot.robot_id}`);
-                    const statusBadge = document.getElementById(`status-badge-${robot.robot_id}`);
-                    const lastActivity = document.getElementById(`last-activity-${robot.robot_id}`);
-                    const currentPosition = document.getElementById(`current-position-${robot.robot_id}`);
-                    const batteryLevel = document.getElementById(`battery-level-${robot.robot_id}`);
-                    const batteryBar = document.getElementById(`battery-bar-${robot.robot_id}`);
-                    const healthSummary = document.getElementById(`health-summary-${robot.robot_id}`);
+                    const statusIndicator = document.getElementById(`status-indicator-${toolId}`);
+                    const statusText = document.getElementById(`status-text-${toolId}`);
+                    const statusBadge = document.getElementById(`status-badge-${toolId}`);
+                    const lastActivity = document.getElementById(`last-activity-${toolId}`);
+                    const currentPosition = document.getElementById(`current-position-${toolId}`);
+                    const batteryLevel = document.getElementById(`battery-level-${toolId}`);
+                    const batteryBar = document.getElementById(`battery-bar-${toolId}`);
+                    const healthSummary = document.getElementById(`health-summary-${toolId}`);
                     
                     if (statusIndicator) {
-                        statusIndicator.className = `status-indicator ${robot.operational_status}`;
+                        statusIndicator.className = `status-indicator ${tool.operational_status}`;
                     }
                     if (statusText) {
-                        statusText.textContent = robot.status_text;
+                        statusText.textContent = tool.status_text;
                     }
                     if (statusBadge) {
-                        statusBadge.textContent = robot.status_text;
-                        statusBadge.className = `status-badge ${robot.status_badge_class}`;
+                        statusBadge.textContent = tool.status_text;
+                        statusBadge.className = `status-badge ${tool.status_badge_class}`;
                     }
                     if (lastActivity) {
-                        lastActivity.textContent = robot.last_activity_text;
+                        lastActivity.textContent = tool.last_activity_text;
                     }
-                    if (currentPosition && robot.current_position) {
-                        currentPosition.textContent = `📍 ${robot.current_position}`;
+                    if (currentPosition && tool.current_position) {
+                        currentPosition.textContent = `📍 ${tool.current_position}`;
                         currentPosition.style.display = 'block';
                     }
                     if (batteryLevel) {
-                        batteryLevel.textContent = `${robot.battery_level}%`;
+                        batteryLevel.textContent = `${tool.battery_level}%`;
                     }
                     if (batteryBar) {
-                        batteryBar.style.width = `${robot.battery_level}%`;
+                        batteryBar.style.width = `${tool.battery_level}%`;
                         // Change color based on battery level
-                        if (robot.battery_level > 50) {
+                        if (tool.battery_level > 50) {
                             batteryBar.className = 'progress-bar bg-success';
-                        } else if (robot.battery_level > 20) {
+                        } else if (tool.battery_level > 20) {
                             batteryBar.className = 'progress-bar bg-warning';
                         } else {
                             batteryBar.className = 'progress-bar bg-danger';
                         }
                     }
                     if (healthSummary) {
-                        healthSummary.textContent = robot.health_summary;
+                        healthSummary.textContent = tool.health_summary;
                     }
                     
-                    // Load maintenance info untuk setiap robot
-                    loadMaintenanceInfo(robot.robot_id);
+                    // Load maintenance info untuk setiap tool
+                    loadMaintenanceInfo(toolId);
                 });
             }
         } catch (error) {
@@ -1158,7 +1159,7 @@
                 }
             });
             
-            const response = await fetch(`/api/robots/${robotId}/start-patrol`, {
+            const response = await fetch(`/api/tools/${robotId}/start-patrol`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1220,7 +1221,7 @@
                         }
                     });
                     
-                    const response = await fetch(`/api/robots/${robotId}/stop-patrol`, {
+                    const response = await fetch(`/api/tools/${robotId}/stop-patrol`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1274,7 +1275,7 @@
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const response = await fetch(`/api/robots/${robotId}/return-to-base`, {
+                    const response = await fetch(`/api/tools/${robotId}/return-to-base`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1327,7 +1328,7 @@
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const response = await fetch(`/api/robots/${robotId}/emergency-stop`, {
+                    const response = await fetch(`/api/tools/${robotId}/emergency-stop`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1370,7 +1371,7 @@
     
     async function loadMaintenanceInfo(robotId) {
         try {
-            const response = await fetch(`/api/robots/${robotId}/maintenance`, {
+            const response = await fetch(`/api/tools/${robotId}/maintenance`, {
                 headers: {
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -1411,7 +1412,7 @@
     
     async function showMaintenanceModal(robotId) {
         try {
-            const response = await fetch(`/api/robots/${robotId}/maintenance`);
+            const response = await fetch(`/api/tools/${robotId}/maintenance`);
             const data = await response.json();
             
             if (data.success) {
