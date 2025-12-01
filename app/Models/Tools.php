@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Tools extends Model
 {
     protected $table = 'tools';
-    
+
     protected $primaryKey = 'id';
-    
+
     protected $fillable = [
         'tool_id', 'name', 'model', 'location',
         'operational_status', 'battery_level', 'last_activity_at',
@@ -66,7 +66,7 @@ class Tools extends Model
         if (!$this->last_activity_at) {
             return 'Belum ada aktivitas';
         }
-        
+
         $diff = $this->last_activity_at->diffForHumans();
         return "Terakhir aktif: {$diff}";
     }
