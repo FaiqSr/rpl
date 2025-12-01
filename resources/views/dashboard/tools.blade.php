@@ -912,7 +912,7 @@
         }
         
         tbody.innerHTML = filteredTools.map(tool => {
-            const robotId = tool.robot_id || 'CHICKPATROL-001'; // Fallback untuk kompatibilitas
+            const robotId = tool.tool_id || tool.robot_id || 'CHICKPATROL-001'; // Fallback untuk kompatibilitas
             
             return `
                 <tr data-tool-id="${tool.id}" data-robot-id="${robotId}" data-status="${tool.status}">
@@ -1056,13 +1056,18 @@
             });
             
             if (!response.ok) {
-                console.error('Failed to fetch robot status');
+                console.error('Failed to fetch tool status:', response.status, response.statusText);
                 return;
             }
             
             const data = await response.json();
             
-            if (data.success && data.tools && data.tools.length > 0) {
+            if (!data.success) {
+                console.error('API returned error:', data.message || 'Unknown error');
+                return;
+            }
+            
+            if (data.tools && data.tools.length > 0) {
                 data.tools.forEach(tool => {
                     const toolId = tool.tool_id;
                     // Update status indicator
@@ -1113,9 +1118,11 @@
                     // Load maintenance info untuk setiap tool
                     loadMaintenanceInfo(toolId);
                 });
+            } else {
+                console.warn('No tools found in response or tools array is empty');
             }
         } catch (error) {
-            console.error('Error updating robot status:', error);
+            console.error('Error updating tool status:', error);
         }
     }
     
