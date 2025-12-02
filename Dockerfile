@@ -49,6 +49,11 @@ RUN if [ -f package.json ]; then npm install && npm run build || true; fi
 RUN mkdir -p storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache || true
 
-EXPOSE 9000
+# Copy entrypoint and make executable
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-CMD ["php-fpm"]
+EXPOSE 9000 8000
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
