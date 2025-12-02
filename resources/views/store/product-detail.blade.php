@@ -235,8 +235,18 @@
                   <span class="text-xl text-emerald-600 font-medium">dari 5</span>
                 </div>
                 <div class="flex items-center justify-center gap-1 mb-3">
+                  @php
+                    $fullStars = (int)floor($avgRating);
+                    $hasHalfStar = ($avgRating - $fullStars) >= 0.5;
+                  @endphp
                   @for($i = 1; $i <= 5; $i++)
-                    <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid text-warning' : 'fa-regular text-gray-300' }}" style="font-size: 1.5rem;"></i>
+                    @if($i <= $fullStars)
+                      <i class="fa-solid fa-star text-warning" style="font-size: 1.5rem;"></i>
+                    @elseif($i == ($fullStars + 1) && $hasHalfStar)
+                      <i class="fa-solid fa-star-half-stroke text-warning" style="font-size: 1.5rem;"></i>
+                    @else
+                      <i class="fa-regular fa-star text-gray-300" style="font-size: 1.5rem;"></i>
+                    @endif
                   @endfor
                 </div>
                 <p class="text-sm font-medium text-gray-700">{{ $totalReviews }} ulasan</p>

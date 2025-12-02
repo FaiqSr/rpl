@@ -511,8 +511,18 @@
                   @if($avgRating > 0)
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
                       <div style="display: flex; gap: 2px;">
+                        @php
+                          $fullStars = (int)floor($avgRating);
+                          $hasHalfStar = ($avgRating - $fullStars) >= 0.5;
+                        @endphp
                         @for($i = 1; $i <= 5; $i++)
-                          <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid' : 'fa-regular' }}" style="font-size: 0.7rem; color: {{ $i <= round($avgRating) ? '#FFC107' : '#E5E7EB' }};"></i>
+                          @if($i <= $fullStars)
+                            <i class="fa-solid fa-star" style="font-size: 0.7rem; color: #FFC107;"></i>
+                          @elseif($i == ($fullStars + 1) && $hasHalfStar)
+                            <i class="fa-solid fa-star-half-stroke" style="font-size: 0.7rem; color: #FFC107;"></i>
+                          @else
+                            <i class="fa-regular fa-star" style="font-size: 0.7rem; color: #E5E7EB;"></i>
+                          @endif
                         @endfor
                       </div>
                       <span style="font-size: 0.7rem; color: #6c757d; font-weight: 600;">{{ number_format($avgRating, 1) }}</span>

@@ -67,23 +67,47 @@
         width: 100%;
       }
       
+      .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+      }
+      
       .table {
         font-size: 0.875rem;
+        min-width: 600px;
       }
       
       .table th,
       .table td {
         padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+      }
+      
+      .table th:first-child,
+      .table td:first-child {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 1;
       }
       
       .product-info {
         flex-direction: column;
         gap: 0.5rem;
+        min-width: 150px;
       }
       
       .product-img {
         width: 48px !important;
         height: 48px !important;
+      }
+      
+      .btn-sm {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+        min-width: 44px;
+        min-height: 44px;
       }
     }
     
@@ -392,20 +416,22 @@
       </div>
       
       <!-- Product Table -->
-      <table class="product-table">
-        <thead>
-          <tr>
-            <th>Info Produk</th>
-            <th>Rating</th>
-            <th>Harga</th>
-            <th>Stok</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="productTableBody">
-          <!-- Product rows will be loaded dynamically -->
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>Info Produk</th>
+              <th>Rating</th>
+              <th>Harga</th>
+              <th>Stok</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="productTableBody">
+            <!-- Product rows will be loaded dynamically -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
   
@@ -903,11 +929,17 @@
         tbody.innerHTML = filteredProducts.map(product => {
             const rating = product.rating || 0;
             const totalReviews = product.total_reviews || 0;
-            const stars = Array(5).fill(0).map((_, i) => 
-                i < Math.round(rating)
-                    ? '<i class="fa-solid fa-star text-warning"></i>'
-                    : '<i class="fa-regular fa-star text-gray-300"></i>'
-            ).join('');
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = (rating - fullStars) >= 0.5;
+            const stars = Array(5).fill(0).map((_, i) => {
+                if (i < fullStars) {
+                    return '<i class="fa-solid fa-star text-warning"></i>';
+                } else if (i === fullStars && hasHalfStar) {
+                    return '<i class="fa-solid fa-star-half-stroke text-warning"></i>';
+                } else {
+                    return '<i class="fa-regular fa-star text-gray-300"></i>';
+                }
+            }).join('');
             
             const ratingDisplay = totalReviews > 0 
                 ? `<div class="rating-stars">${stars}</div><small class="text-muted">${rating.toFixed(1)} (${totalReviews})</small>`
