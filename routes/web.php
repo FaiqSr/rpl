@@ -22,7 +22,6 @@ Route::get('/storage/products/{filename}', function ($filename) {
             \Log::error("Storage file not found: {$filePath}");
             abort(404, 'File not found');
         }
-
         // Serve file using Storage response
         return Storage::disk('public')->response($filePath, null, [
             'Cache-Control' => 'public, max-age=31536000',
