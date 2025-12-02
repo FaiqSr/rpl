@@ -3,11 +3,26 @@
 @section('title', 'Daftar - ChickPatrol')
 
 @section('content')
-<div class="position-relative" style="min-height: 100vh; background: linear-gradient(to bottom right, #69B578 0%, #69B578 60%, #f0f0f0 60%, #ffffff 100%);">
+<div class="auth-background">
+    <!-- Subtle pattern overlay -->
+    <div class="auth-pattern"></div>
+    
+    <!-- Decorative elements -->
+    <div class="auth-decoration decoration-circle-1"></div>
+    <div class="auth-decoration decoration-circle-2"></div>
+    <div class="auth-decoration decoration-circle-3"></div>
+    
     <!-- Curved green background element -->
-    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0;">
-        <svg viewBox="0 0 1440 800" style="position: absolute; width: 100%; height: 100%;" preserveAspectRatio="none">
-            <path d="M 0 0 L 0 800 L 600 800 Q 700 400 600 0 Z" fill="#69B578" opacity="1"/>
+    <div class="svg-background-container">
+        <svg viewBox="0 0 1440 800" class="svg-background" preserveAspectRatio="none">
+            <defs>
+                <linearGradient id="greenGradientRegister" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#69B578;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#5a9a68;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#4d8a5a;stop-opacity:0.9" />
+                </linearGradient>
+            </defs>
+            <path d="M 0 0 L 0 800 L 600 800 Q 700 400 600 0 Z" fill="url(#greenGradientRegister)"/>
         </svg>
     </div>
     
@@ -169,9 +184,72 @@
         this.submit();
     });
     
-    // OAuth functions
-    function loginWithGoogle() {
-        showWarning('Fitur login dengan Google akan segera tersedia!');
+    // OAuth functions - Firebase Google Authentication
+    async function loginWithGoogle() {
+        try {
+            if (!window.firebaseAuth || !window.firebaseProvider) {
+                showError('Firebase belum diinisialisasi. Pastikan konfigurasi Firebase sudah benar.');
+                return;
+            }
+            
+            // Show loading
+            Swal.fire({
+                title: 'Memproses...',
+                text: 'Mohon tunggu',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Sign in with Google
+            const result = await window.signInWithPopup(window.firebaseAuth, window.firebaseProvider);
+            const user = result.user;
+            
+            // Get ID token
+            const idToken = await user.getIdToken();
+            
+            // Send to backend
+            const response = await fetch('{{ route("auth.google") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    idToken: idToken,
+                    uid: user.uid,
+                    email: user.email,
+                    name: user.displayName || user.email,
+                    photoUrl: user.photoURL || null
+                })
+            });
+            
+            const data = await response.json();
+            
+            Swal.close();
+            
+            if (data.success) {
+                showSuccess(data.message);
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 1000);
+            } else {
+                showError(data.message || 'Registrasi gagal');
+            }
+        } catch (error) {
+            Swal.close();
+            console.error('Google login error:', error);
+            
+            if (error.code === 'auth/popup-closed-by-user') {
+                // User closed popup, no need to show error
+                return;
+            }
+            
+            showError('Terjadi kesalahan saat registrasi dengan Google: ' + (error.message || 'Unknown error'));
+        }
     }
     
     // Toggle password visibility

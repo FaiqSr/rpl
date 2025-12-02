@@ -36,20 +36,21 @@
       margin: 0.5rem 0;
     }
     .qris-placeholder {
-      width: 200px;
-      height: 200px;
-      background: #f0f0f0;
-      border: 2px dashed #ccc;
+      width: 250px;
+      height: 250px;
+      background: white;
+      border: 2px solid #e9ecef;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 1rem auto;
       color: #999;
+      overflow: hidden;
     }
     .timer-box {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
+      background: #fff8e1;
+      border: 2px solid #69B578;
       border-radius: 8px;
       padding: 1rem;
       text-align: center;
@@ -58,7 +59,7 @@
     .timer-text {
       font-size: 1.25rem;
       font-weight: 600;
-      color: #856404;
+      color: #2F2F2F;
     }
     
     @media (max-width: 768px) {
@@ -76,8 +77,8 @@
         letter-spacing: 1px !important;
       }
       .qris-placeholder {
-        width: 150px !important;
-        height: 150px !important;
+        width: 200px !important;
+        height: 200px !important;
       }
       .timer-box {
         padding: 0.75rem !important;
@@ -102,8 +103,8 @@
       <div class="col-lg-8">
         <!-- Order Summary -->
         <div class="payment-card">
-          <h3 class="mb-4">
-            <i class="fa-solid fa-receipt me-2 text-primary"></i>
+          <h3 class="mb-4" style="color: #2F2F2F; font-weight: 600;">
+            <i class="fa-solid fa-receipt me-2" style="color: #69B578;"></i>
             Detail Pesanan
           </h3>
           <div class="row mb-3">
@@ -152,24 +153,22 @@
           <hr>
           <div class="d-flex justify-content-between">
             <span class="fw-bold">Total Pembayaran</span>
-            <span class="fw-bold fs-5 text-primary">Rp {{ number_format($order->total_price, 0, ',', '.') }}</span>
+            <span class="fw-bold fs-5" style="color: #69B578;">Rp {{ number_format($order->total_price, 0, ',', '.') }}</span>
           </div>
         </div>
 
         <!-- Payment Method -->
         <div class="payment-card">
-          <h4 class="mb-4">
-            <i class="fa-solid fa-credit-card me-2 text-success"></i>
+          <h4 class="mb-4" style="color: #2F2F2F; font-weight: 600;">
+            <i class="fa-solid fa-credit-card me-2" style="color: #69B578;"></i>
             Metode Pembayaran: {{ $order->payment_method }}
           </h4>
           
           @if($order->payment_method === 'QRIS')
             <div class="account-box">
-              <div class="mb-3">
-                <i class="fa-solid fa-qrcode fa-3x text-primary"></i>
-              </div>
-              <div class="qris-placeholder">
-                <div>
+              <div class="qris-placeholder" style="border: none; background: white; padding: 1rem;">
+                <img src="https://d2v6npc8wmnkqk.cloudfront.net/storage/26035/conversions/Tipe-QRIS-statis-small-large.jpg" alt="QR Code Pembayaran QRIS" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; flex-direction: column; align-items: center; justify-content: center;">
                   <i class="fa-solid fa-qrcode fa-4x text-muted mb-2"></i>
                   <div class="text-muted">QR Code</div>
                 </div>
@@ -182,7 +181,7 @@
           @elseif($order->payment_method === 'Transfer Bank')
             <div class="account-box">
               <div class="mb-3">
-                <i class="fa-solid fa-building-columns fa-3x text-primary"></i>
+                <i class="fa-solid fa-building-columns fa-3x" style="color: #69B578;"></i>
               </div>
               <div>
                 <small class="text-muted d-block">Bank</small>
@@ -205,26 +204,26 @@
             <small class="text-muted">Selesaikan pembayaran sebelum waktu habis</small>
           </div>
 
-          <div class="alert alert-info mt-3">
-            <i class="fa-solid fa-info-circle me-2"></i>
+          <div class="alert alert-info mt-3" style="background-color: #e7f3ff; border-color: #69B578; color: #2F2F2F;">
+            <i class="fa-solid fa-info-circle me-2" style="color: #69B578;"></i>
             <strong>Penting:</strong> Setelah melakukan pembayaran, klik tombol "Konfirmasi Pembayaran" di bawah untuk mempercepat proses verifikasi.
           </div>
         </div>
 
         <!-- Payment Status -->
         @if($order->payment_status === 'paid')
-          <div class="alert alert-success">
-            <i class="fa-solid fa-check-circle me-2"></i>
+          <div class="alert alert-success" style="background-color: #d4edda; border-color: #69B578; color: #155724;">
+            <i class="fa-solid fa-check-circle me-2" style="color: #69B578;"></i>
             <strong>Pembayaran Diterima!</strong> Pesanan Anda sedang diproses.
           </div>
         @elseif($order->payment_status === 'processing')
-          <div class="alert alert-info">
-            <i class="fa-solid fa-hourglass-half me-2"></i>
+          <div class="alert alert-info" style="background-color: #e7f3ff; border-color: #69B578; color: #2F2F2F;">
+            <i class="fa-solid fa-hourglass-half me-2" style="color: #69B578;"></i>
             <strong>Pembayaran Sedang Diproses</strong> Admin sedang memvalidasi pembayaran Anda. Mohon tunggu.
           </div>
         @else
           <div class="payment-card">
-            <button class="btn btn-success btn-lg w-100" onclick="confirmPayment('{{ $order->order_id }}')">
+            <button class="btn btn-success btn-lg w-100" onclick="confirmPayment('{{ $order->order_id }}')" style="background-color: #69B578; border-color: #69B578; font-weight: 600;">
               <i class="fa-solid fa-check me-2"></i>
               Saya Sudah Membayar
             </button>

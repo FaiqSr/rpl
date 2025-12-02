@@ -57,8 +57,12 @@
       <div class="alert alert-danger py-2 px-3">{{ $errors->first() }}</div>
     @endif
 
-    <form action="{{ route('profile.update') }}" method="POST" class="row g-3">
+    <form action="{{ route('profile.update') }}" method="POST" class="row g-3" id="profileForm">
       @csrf
+      @if(isset($returnTo) && $returnTo === 'checkout')
+        <input type="hidden" name="return_to" value="checkout" id="returnToInput">
+        <input type="hidden" name="checkout_cart_ids" value="" id="checkoutCartIdsInput">
+      @endif
       <div class="col-12">
         <label class="form-label">Nama Lengkap</label>
         <input type="text" name="name" class="form-control" value="{{ old('name', auth()->user()->name) }}" required>
@@ -76,7 +80,11 @@
         <textarea name="address" rows="3" class="form-control" placeholder="Nama Jalan, RT/RW, Kota">{{ old('address', auth()->user()->address) }}</textarea>
       </div>
       <div class="col-12 d-flex justify-content-end gap-2 mt-2">
-        <a href="{{ route('home') }}" class="btn btn-outline-secondary">Batal</a>
+        @if(isset($returnTo) && $returnTo === 'checkout')
+          <a href="#" onclick="goBackToCheckout(); return false;" class="btn btn-outline-secondary">Kembali ke Checkout</a>
+        @else
+          <a href="{{ route('home') }}" class="btn btn-outline-secondary">Batal</a>
+        @endif
         <button class="btn btn-primary">Simpan Perubahan</button>
       </div>
     </form>
@@ -87,5 +95,33 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{{ asset('js/navbar.js') }}"></script>
+  <script>
+    // Ambil checkout_cart_ids dari sessionStorage jika ada
+    document.addEventListener('DOMContentLoaded', function() {
+      const checkoutCartIdsInput = document.getElementById('checkoutCartIdsInput');
+      if (checkoutCartIdsInput) {
+        const storedCartIds = sessionStorage.getItem('checkout_cart_ids');
+        if (storedCartIds) {
+          checkoutCartIdsInput.value = storedCartIds;
+        }
+      }
+    });
+    
+    function goBackToCheckout() {
+      const storedCartIds = sessionStorage.getItem('checkout_cart_ids');
+      if (storedCartIds) {
+        try {
+          const cartIds = JSON.parse(storedCartIds);
+          const itemsParam = cartIds.map(id => 'items[]=' + encodeURIComponent(id)).join('&');
+          window.location.href = '{{ route("checkout") }}?' + itemsParam;
+        } catch (e) {
+          console.error('Error parsing cart IDs:', e);
+          window.location.href = '{{ route("cart") }}';
+        }
+      } else {
+        window.location.href = '{{ route("cart") }}';
+      }
+    }
+  </script>
 </body>
 </html>

@@ -24,6 +24,73 @@
     .qty-input { width: 80px; text-align: center; padding: 0.5rem; border: 1px solid #e9ecef; border-radius: 6px; }
     .hidden { display: none !important; }
     
+    /* Review Filter Styles */
+    .review-filter-btn {
+      padding: 0.625rem 1.25rem;
+      border: 1.5px solid #E5E7EB;
+      border-radius: 10px;
+      background: #FFFFFF;
+      color: #374151;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .review-filter-btn:hover {
+      border-color: #69B578;
+      background: #F0FDF4;
+      color: #69B578;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(105, 181, 120, 0.2);
+    }
+    
+    .review-filter-btn.active {
+      background: linear-gradient(135deg, #69B578 0%, #5a9a68 100%);
+      border-color: #69B578;
+      color: #FFFFFF;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(105, 181, 120, 0.35);
+    }
+    
+    .review-filter-btn.active:hover {
+      background: linear-gradient(135deg, #5a9a68 0%, #4d8a5a 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(105, 181, 120, 0.4);
+    }
+    
+    .review-filter-btn i {
+      font-size: 0.75rem;
+    }
+    
+    /* Rating Summary Card Enhancement */
+    .rating-summary-card {
+      background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+      border: 1px solid rgba(105, 181, 120, 0.2);
+      box-shadow: 0 2px 8px rgba(105, 181, 120, 0.1);
+    }
+    
+    /* Filter Section Labels */
+    .filter-label {
+      color: #374151;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.75rem;
+    }
+    
+    .review-item {
+      transition: all 0.3s ease;
+    }
+    
+    .review-item.hidden {
+      display: none !important;
+    }
+    
     @media (max-width: 768px) {
       main {
         padding: 1rem !important;
@@ -47,7 +114,9 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       <!-- Product Image -->
       <div>
-        @php($img = optional($product->images->first())->url ?? null)
+        @php
+          $img = optional($product->images->first())->url ?? null;
+        @endphp
         @if($img)
           <img src="{{ $img }}" alt="{{ $product->name }}" class="product-image" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
           <div class="product-image flex items-center justify-center text-gray-400" style="display: none;">
@@ -66,26 +135,38 @@
         <p class="text-gray-600 mb-2">{{ $product->unit ?? 'per unit' }}</p>
         
         <!-- Rating Display -->
-        @if($totalReviews > 0)
-        <div class="flex items-center gap-2 mb-4">
-          <div class="flex items-center">
-            @for($i = 1; $i <= 5; $i++)
-              <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid text-warning' : 'fa-regular text-gray-300' }}" style="font-size: 1rem;"></i>
-            @endfor
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            @if($totalReviews > 0)
+              @php
+                $fullStars = (int)floor($avgRating);
+                $hasHalfStar = ($avgRating - $fullStars) >= 0.5;
+              @endphp
+              <div class="flex items-center">
+                @for($i = 1; $i <= 5; $i++)
+                  @if($i <= $fullStars)
+                    <i class="fa-solid fa-star text-warning" style="font-size: 1rem;"></i>
+                  @elseif($i == ($fullStars + 1) && $hasHalfStar)
+                    <i class="fa-solid fa-star-half-stroke text-warning" style="font-size: 1rem;"></i>
+                  @else
+                    <i class="fa-regular fa-star text-gray-300" style="font-size: 1rem;"></i>
+                  @endif
+                @endfor
+              </div>
+              <span class="text-gray-600 font-semibold">{{ number_format($avgRating, 1) }}</span>
+              <span class="text-gray-500 text-sm">({{ $totalReviews }} ulasan)</span>
+            @else
+              <div class="flex items-center gap-2">
+                <i class="fa-regular fa-star text-gray-300" style="font-size: 1rem;"></i>
+                <span class="text-gray-500 text-sm">Belum ada rating</span>
+              </div>
+            @endif
           </div>
-          <span class="text-gray-600 font-semibold">{{ number_format($avgRating, 1) }}</span>
-          <span class="text-gray-500 text-sm">({{ $totalReviews }} ulasan)</span>
-        </div>
-        @else
-        <div class="flex items-center gap-2 mb-4">
-          <div class="flex items-center">
-            @for($i = 1; $i <= 5; $i++)
-              <i class="fa-star fa-regular text-gray-300" style="font-size: 1rem;"></i>
-            @endfor
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shopping-bag text-gray-500" style="font-size: 0.9rem;"></i>
+            <span class="text-gray-600 font-medium text-sm">Terjual {{ number_format($totalSold ?? 0, 0, ',', '.') }}</span>
           </div>
-          <span class="text-gray-500 text-sm">Belum ada rating</span>
         </div>
-        @endif
         
         <div class="text-3xl font-bold text-emerald-600 mb-6">
           Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}
@@ -116,7 +197,7 @@
             </div>
           </div>
 
-          <div class="border-t pt-4">
+          <div class="pt-4 mt-4">
             <div class="flex justify-between mb-4">
               <span class="font-semibold text-gray-900">Total</span>
               <span id="totalPrice" class="text-2xl font-bold text-emerald-600">Rp {{ number_format($product->price ?? 0, 0, ',', '.') }}</span>
@@ -136,15 +217,72 @@
     
     <!-- Reviews Section -->
     @if(isset($totalReviews) && $totalReviews > 0)
-    <div class="mt-12 border-t pt-8">
+    <div class="mt-12 pt-8">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">
         <i class="fa-solid fa-star text-warning me-2"></i>
         Ulasan Produk ({{ $totalReviews }})
       </h2>
       
-      <div class="space-y-4">
+      <!-- Rating Summary & Filters -->
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex flex-col lg:flex-row gap-8">
+          <!-- Rating Summary -->
+          <div class="flex-shrink-0 lg:w-64">
+            <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6">
+              <div class="text-center">
+                <div class="flex items-baseline justify-center gap-1 mb-3">
+                  <span class="text-5xl font-bold text-emerald-600">{{ number_format($avgRating, 1) }}</span>
+                  <span class="text-xl text-emerald-600 font-medium">dari 5</span>
+                </div>
+                <div class="flex items-center justify-center gap-1 mb-3">
+                  @for($i = 1; $i <= 5; $i++)
+                    <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid text-warning' : 'fa-regular text-gray-300' }}" style="font-size: 1.5rem;"></i>
+                  @endfor
+                </div>
+                <p class="text-sm font-medium text-gray-700">{{ $totalReviews }} ulasan</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Filter Buttons -->
+          <div class="flex-1">
+            <!-- Rating Filters -->
+            <div class="mb-4">
+              <label class="block text-sm font-semibold text-gray-700 mb-3">Filter Rating</label>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="filterReviews('all')" class="review-filter-btn active" data-filter="all">
+                  Semua
+                </button>
+                @for($i = 5; $i >= 1; $i--)
+                  <button onclick="filterReviews('{{ $i }}')" class="review-filter-btn" data-filter="{{ $i }}">
+                    {{ $i }} Bintang ({{ $ratingStats[$i] ?? 0 }})
+                  </button>
+                @endfor
+              </div>
+            </div>
+            
+            <!-- Content Filters -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-3">Filter Konten</label>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="filterReviews('with-comment')" class="review-filter-btn" data-filter="with-comment">
+                  <i class="fa-solid fa-comment me-2"></i>Dengan Komentar ({{ $reviewsWithComments }})
+                </button>
+                <button onclick="filterReviews('with-media')" class="review-filter-btn" data-filter="with-media">
+                  <i class="fa-solid fa-image me-2"></i>Dengan Media ({{ $reviewsWithMedia }})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="reviewsContainer" class="space-y-4">
         @foreach($reviews as $review)
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
+        <div class="review-item bg-white rounded-lg p-4 shadow-sm" 
+             data-rating="{{ $review->rating }}" 
+             data-has-comment="{{ !empty($review->review) ? '1' : '0' }}" 
+             data-has-media="{{ (!empty($review->image_urls) && count($review->image_urls) > 0) ? '1' : '0' }}">
           <div class="flex items-start justify-between mb-2">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
@@ -583,6 +721,79 @@
         }
       }
     }
+  </script>
+  <script>
+    // Review Filtering Functionality
+    let currentFilter = 'all';
+    
+    function filterReviews(filterType) {
+      currentFilter = filterType;
+      
+      // Update active button
+      document.querySelectorAll('.review-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        const btnFilter = btn.getAttribute('data-filter');
+        if (btnFilter == filterType) {
+          btn.classList.add('active');
+        }
+      });
+      
+      // Get all review items
+      const reviewItems = document.querySelectorAll('.review-item');
+      let visibleCount = 0;
+      
+      reviewItems.forEach(item => {
+        const rating = parseInt(item.getAttribute('data-rating'));
+        const hasComment = item.getAttribute('data-has-comment') === '1';
+        const hasMedia = item.getAttribute('data-has-media') === '1';
+        
+        let shouldShow = false;
+        
+        if (filterType === 'all') {
+          shouldShow = true;
+        } else if (filterType === 'with-comment') {
+          shouldShow = hasComment;
+        } else if (filterType === 'with-media') {
+          shouldShow = hasMedia;
+        } else if (['1', '2', '3', '4', '5'].includes(filterType)) {
+          shouldShow = rating === parseInt(filterType);
+        }
+        
+        if (shouldShow) {
+          item.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+      
+      // Show message if no reviews match
+      const container = document.getElementById('reviewsContainer');
+      let noResultsMsg = document.getElementById('noResultsMessage');
+      
+      if (visibleCount === 0) {
+        if (!noResultsMsg) {
+          noResultsMsg = document.createElement('div');
+          noResultsMsg.id = 'noResultsMessage';
+          noResultsMsg.className = 'text-center py-8 text-gray-500';
+          noResultsMsg.innerHTML = '<i class="fa-solid fa-inbox text-4xl mb-3 text-gray-300"></i><p>Tidak ada ulasan yang sesuai dengan filter yang dipilih</p>';
+          container.appendChild(noResultsMsg);
+        }
+        noResultsMsg.style.display = 'block';
+      } else {
+        if (noResultsMsg) {
+          noResultsMsg.style.display = 'none';
+        }
+      }
+    }
+    
+    // Initialize - set "Semua" as active on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const allBtn = document.querySelector('.review-filter-btn[data-filter="all"]');
+      if (allBtn) {
+        allBtn.classList.add('active');
+      }
+    });
   </script>
 </body>
 </html>

@@ -65,74 +65,136 @@
         }
         
         .auth-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 3rem 3.5rem;
+            background: linear-gradient(to bottom, #FFFFFF 0%, #FAFAFA 100%);
+            border-radius: 20px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(105, 181, 120, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            padding: 3.5rem 3.5rem;
             width: 100%;
-            max-width: 480px;
+            max-width: 500px;
             position: relative;
             z-index: 1;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
+        
         .brand-logo {
-            color: #69B578;
-            font-weight: 700;
-            font-size: 1.5rem;
+            background: linear-gradient(135deg, #69B578 0%, #5a9a68 50%, #4d8a5a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            font-size: 2rem;
             text-decoration: none;
             display: block;
             text-align: center;
             margin-bottom: 2.5rem;
+            transition: color 0.2s ease;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+        }
+        
+        .brand-logo:hover {
+            opacity: 0.9;
         }
         
         .auth-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #2F2F2F;
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-align: center;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
         }
         
         .auth-subtitle {
-            color: #6c757d;
-            font-size: 0.875rem;
+            color: #6B7280;
+            font-size: 0.95rem;
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            font-weight: 400;
         }
         
         .auth-subtitle a {
-            color: #69B578;
+            background: linear-gradient(135deg, #69B578 0%, #5a9a68 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .auth-subtitle a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #69B578, #5a9a68);
+            transition: width 0.3s ease;
+            border-radius: 1px;
+        }
+        
+        .auth-subtitle a:hover::after {
+            width: 100%;
         }
         
         .auth-subtitle a:hover {
-            text-decoration: underline;
+            filter: drop-shadow(0 2px 4px rgba(105, 181, 120, 0.2));
         }
         
         .form-label {
-            font-weight: 500;
-            color: #2F2F2F;
+            font-weight: 600;
+            color: #374151;
             margin-bottom: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
         }
         
         .form-control {
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 0.65rem 1rem;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: #FFFFFF;
+            color: #2F2F2F;
+        }
+        
+        .form-control:hover {
+            border-color: #D1D5DB;
         }
         
         .form-control:focus {
             border-color: #69B578;
-            box-shadow: 0 0 0 0.2rem rgba(105, 181, 120, 0.15);
+            box-shadow: 0 0 0 3px rgba(105, 181, 120, 0.1);
+            outline: none;
+            background-color: #FFFFFF;
+        }
+        
+        .form-control.is-invalid {
+            border-color: #EF4444;
+            background-color: #FEF2F2;
+        }
+        
+        .form-control.is-invalid:focus {
+            border-color: #EF4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
         }
         
         .form-control::placeholder {
-            color: #adb5bd;
-            font-size: 0.875rem;
+            color: #9CA3AF;
+            font-size: 0.9rem;
         }
         
         .password-input-wrapper {
@@ -145,14 +207,20 @@
             top: 50%;
             transform: translateY(-50%);
             cursor: pointer;
-            color: #6c757d;
+            color: #9CA3AF;
             font-size: 1rem;
-            transition: color 0.2s ease;
+            transition: all 0.2s ease;
             z-index: 10;
+            padding: 0.25rem;
         }
         
         .password-toggle-icon:hover {
             color: #69B578;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .password-toggle-icon:active {
+            transform: translateY(-50%) scale(0.95);
         }
         
         .password-input-wrapper .form-control {
@@ -160,65 +228,111 @@
         }
         
         .btn-primary {
-            background-color: #2F2F2F;
+            background-color: #69B578;
             border: none;
-            border-radius: 6px;
-            padding: 0.65rem 1.5rem;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
             font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
+            font-size: 0.95rem;
+            color: #FFFFFF;
+            transition: background-color 0.2s ease;
             width: 100%;
             margin-top: 0.5rem;
+            cursor: pointer;
         }
         
         .btn-primary:hover {
-            background-color: #1a1a1a;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background-color: #5a9a68;
+        }
+        
+        .btn-primary:active {
+            background-color: #4d8a5a;
+        }
+        
+        .btn-primary:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(105, 181, 120, 0.2);
+        }
+        
+        .btn-primary:disabled {
+            background-color: #D1D5DB;
+            color: #9CA3AF;
+            cursor: not-allowed;
         }
         
         .divider {
             display: flex;
             align-items: center;
             text-align: center;
-            margin: 1.25rem 0;
+            margin: 1.5rem 0;
         }
         
         .divider::before,
         .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1.5px solid #E5E7EB;
         }
         
         .divider span {
             padding: 0 1rem;
-            color: #6c757d;
+            color: #6B7280;
+            font-size: 0.85rem;
+            background: white;
+            font-weight: 500;
+        }
+        
+        .invalid-feedback {
+            display: block;
+            width: 100%;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #EF4444;
+            font-weight: 500;
+        }
+        
+        .form-text {
             font-size: 0.8rem;
+            color: #6B7280;
+            margin-top: 0.5rem;
+            line-height: 1.4;
         }
         
         .btn-oauth {
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 0.65rem 1rem;
-            background: white;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            background: #FFFFFF;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.75rem;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             width: 100%;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             color: #2F2F2F;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         
         .btn-oauth:hover {
-            background-color: #f8f9fa;
-            border-color: #adb5bd;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #F9FAFB;
+            border-color: #69B578;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(105, 181, 120, 0.15);
+            color: #69B578;
+        }
+        
+        .btn-oauth:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .btn-oauth:focus {
+            outline: none;
+            border-color: #69B578;
+            box-shadow: 0 0 0 3px rgba(105, 181, 120, 0.1);
         }
         
         .btn-oauth img,
@@ -236,18 +350,138 @@
         }
         
         .text-small {
-            font-size: 0.75rem;
-            color: #6c757d;
+            font-size: 0.8rem;
+            color: #6B7280;
             text-align: center;
+            line-height: 1.5;
         }
         
         .text-small a {
             color: #69B578;
             text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
         }
         
         .text-small a:hover {
+            color: #5a9a68;
             text-decoration: underline;
+        }
+        
+        /* Background Effects - Subtle & Professional */
+        .auth-background {
+            position: relative;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #69B578 0%, #5a9a68 50%, #f8faf9 50%, #ffffff 100%);
+            overflow: hidden;
+        }
+        
+        /* SVG Background Container - Consistent styling */
+        .svg-background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        
+        .svg-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.95;
+        }
+        
+        .auth-background::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 20s ease-in-out infinite;
+            z-index: 0;
+        }
+        
+        .auth-background::after {
+            content: '';
+            position: absolute;
+            bottom: -15%;
+            right: -5%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 25s ease-in-out infinite reverse;
+            z-index: 0;
+        }
+        
+        /* Subtle pattern overlay */
+        .auth-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+            background-size: 40px 40px;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        /* Decorative circles - subtle */
+        .auth-decoration {
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .decoration-circle-1 {
+            top: 10%;
+            left: 5%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 15s ease-in-out infinite;
+        }
+        
+        .decoration-circle-2 {
+            bottom: 20%;
+            right: 8%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 18s ease-in-out infinite reverse;
+        }
+        
+        .decoration-circle-3 {
+            top: 50%;
+            right: 15%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 12s ease-in-out infinite;
+        }
+        
+        /* Smooth floating animation */
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(30px, -30px) scale(1.05);
+            }
+            66% {
+                transform: translate(-20px, 20px) scale(0.95);
+            }
         }
         
         /* Curved Green Background for Register Page */
@@ -310,6 +544,9 @@
     
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+    
+    <!-- Vite - includes Firebase -->
+    @vite(['resources/js/app.js'])
     
     <!-- Custom Scripts -->
     <script>

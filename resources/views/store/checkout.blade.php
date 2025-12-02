@@ -867,7 +867,12 @@
     }
     
     function changeAddress() {
-      window.location.href = '{{ route("profile") }}';
+      // Simpan selectedCartIds ke session storage untuk kembali ke checkout
+      if (selectedCartIds && selectedCartIds.length > 0) {
+        sessionStorage.setItem('checkout_cart_ids', JSON.stringify(selectedCartIds));
+      }
+      // Redirect ke profile dengan parameter return_to
+      window.location.href = '{{ route("profile") }}?return_to=checkout';
     }
     
   </script>

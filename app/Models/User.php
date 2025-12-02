@@ -34,6 +34,8 @@ class User extends Authenticatable
         'role',
         'phone',
         'address',
+        'firebase_uid',
+        'provider',
     ];
 
     /**

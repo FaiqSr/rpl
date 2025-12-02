@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <!-- SweetAlert2 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" />
-  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/navbar.css') }}?v={{ time() }}">
   <style>
     :root {
       --primary-green: #69B578;
@@ -35,14 +35,25 @@
       will-change: background-color, color, border-color;
     }
     .chip.active { 
-      border-color:#F4C430; 
-      background: #F4C430; 
-      color:#2F2F2F; 
+      border-color: var(--primary-green); 
+      background: var(--primary-green); 
+      color: #FFFFFF; 
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(244, 196, 48, 0.3);
+      box-shadow: 0 2px 8px rgba(105, 181, 120, 0.3);
     }
-    .card-border { border:1px solid #e6ebe7; transition: all 0.2s; }
-    .card-border:hover { border-color: #F4C430; box-shadow: 0 2px 8px rgba(244, 196, 48, 0.15); }
+    .card-border { 
+      border: 1px solid #e6ebe7; 
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+    .card-border:hover { 
+      border-color: #69B578; 
+      box-shadow: 0 4px 12px rgba(105, 181, 120, 0.15); 
+      transform: translateY(-2px);
+    }
+    .card-border:active {
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 2px 6px rgba(105, 181, 120, 0.1);
+    }
     .footer-bg { background:#F5E6D3; }
     .product-card { 
       text-decoration: none !important; 
@@ -52,19 +63,32 @@
       flex-direction: column !important;
       height: 100% !important;
       min-height: 280px !important;
+      -webkit-tap-highlight-color: transparent !important;
+      tap-highlight-color: transparent !important;
+      -webkit-touch-callout: none;
+      user-select: none;
     }
     .product-card * { 
       text-decoration: none !important; 
       border-bottom: none !important;
+      user-select: text;
     }
     .product-card:hover { 
       text-decoration: none !important; 
       border-bottom: none !important;
+      outline: none !important;
     }
     .product-card:focus { 
       text-decoration: none !important; 
       border-bottom: none !important;
       outline: none !important;
+      box-shadow: 0 0 0 2px rgba(105, 181, 120, 0.2) !important;
+    }
+    .product-card:active {
+      outline: none !important;
+      -webkit-tap-highlight-color: transparent !important;
+      transform: scale(0.98);
+      transition: transform 0.1s ease;
     }
     .product-card a { 
       text-decoration: none !important; 
@@ -113,52 +137,62 @@
       margin: 0 !important;
       padding: 0 !important;
     }
-    /* Pagination Styles */
+    /* Pagination Styles - Professional & Centered */
     .pagination-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 40px;
-      height: 40px;
-      padding: 0 12px;
-      font-size: 0.875rem;
+      min-width: 44px;
+      height: 44px;
+      padding: 0 14px;
+      font-size: 0.9rem;
       font-weight: 500;
       color: #4B5563;
-      background: white;
-      border: 1px solid #E5E7EB;
-      border-radius: 8px;
+      background: #FFFFFF;
+      border: 1.5px solid #E5E7EB;
+      border-radius: 10px;
       text-decoration: none;
-      transition: all 0.2s ease;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     
     .pagination-btn:hover:not(.pagination-btn-disabled):not(.pagination-btn-active) {
       background: #F9FAFB;
-      border-color: #D1D5DB;
-      color: #111827;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      border-color: #69B578;
+      color: #69B578;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(105, 181, 120, 0.15);
     }
     
     .pagination-btn-active {
-      background: #F4C430;
-      border-color: #F4C430;
-      color: #2F2F2F;
+      background: linear-gradient(135deg, #69B578 0%, #5a9a68 100%);
+      border-color: #69B578;
+      color: #FFFFFF;
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(244, 196, 48, 0.3);
+      box-shadow: 0 4px 16px rgba(105, 181, 120, 0.3);
       cursor: default;
+      transform: scale(1.05);
     }
     
     .pagination-btn-disabled {
       background: #F9FAFB;
       border-color: #E5E7EB;
-      color: #9CA3AF;
+      color: #D1D5DB;
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.5;
+      box-shadow: none;
     }
     
     .pagination-btn-nav {
-      font-size: 0.75rem;
+      font-size: 0.8rem;
+      min-width: 44px;
+    }
+    
+    .pagination-btn-nav:hover:not(.pagination-btn-disabled) {
+      background: #69B578;
+      border-color: #69B578;
+      color: #FFFFFF;
     }
     
     .pagination-btn-page {
@@ -169,10 +203,29 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 40px;
-      height: 40px;
+      min-width: 44px;
+      height: 44px;
       padding: 0 8px;
-      color: #6B7280;
+      color: #9CA3AF;
+      font-weight: 600;
+      letter-spacing: 2px;
+      user-select: none;
+    }
+    
+    /* Responsive pagination */
+    @media (max-width: 640px) {
+      .pagination-btn {
+        min-width: 40px;
+        height: 40px;
+        padding: 0 10px;
+        font-size: 0.85rem;
+      }
+      
+      .pagination-dots {
+        min-width: 40px;
+        height: 40px;
+      }
+    }
       font-weight: 500;
     }
     
@@ -614,19 +667,41 @@
                 // Use accessor from Product model which already filters reviews with valid order_id
                 $avgRating = $product->average_rating;
                 $totalReviews = $product->total_reviews;
+                $totalSold = $product->total_sold ?? 0;
               @endphp
-              @if($totalReviews > 0)
-                  <div class="flex items-center gap-1" style="margin: 0 !important; margin-top: 20px !important; padding: 0;">
-                <div class="flex items-center" style="line-height: 1;">
-                  @for($i = 1; $i <= 5; $i++)
-                        <i class="fa-star {{ $i <= round($avgRating) ? 'fa-solid text-warning' : 'fa-regular text-gray-300' }}" style="font-size: 11px;"></i>
-                  @endfor
+              <div style="margin: 0 !important; margin-top: 12px !important; padding: 0;">
+                <div class="flex items-center justify-between" style="margin: 0 !important; padding: 0;">
+                  @if($totalReviews > 0)
+                    <div class="flex items-center gap-1" style="margin: 0 !important; padding: 0;">
+                      <div class="flex items-center" style="line-height: 1;">
+                        @php
+                          $fullStars = floor($avgRating);
+                          $hasHalfStar = ($avgRating - $fullStars) >= 0.5;
+                        @endphp
+                        @for($i = 1; $i <= 5; $i++)
+                          @if($i <= $fullStars)
+                            <i class="fa-solid fa-star text-warning" style="font-size: 11px;"></i>
+                          @elseif($i == $fullStars + 1 && $hasHalfStar)
+                            <i class="fa-solid fa-star-half-stroke text-warning" style="font-size: 11px;"></i>
+                          @else
+                            <i class="fa-regular fa-star text-gray-300" style="font-size: 11px;"></i>
+                          @endif
+                        @endfor
+                      </div>
+                      <span class="text-xs text-gray-600" style="line-height: 1;">{{ number_format($avgRating, 1) }} ({{ $totalReviews }})</span>
                     </div>
-                    <span class="text-xs text-gray-600" style="line-height: 1;">({{ $totalReviews }})</span>
-                  </div>
                   @else
-                  <div style="margin: 0; padding: 0; height: 1rem; margin-top: 32px;"></div>
+                    <div class="flex items-center gap-1" style="margin: 0 !important; padding: 0;">
+                      <i class="fa-regular fa-star text-gray-300" style="font-size: 11px;"></i>
+                      <span class="text-xs text-gray-400" style="line-height: 1;">Belum ada rating</span>
+                    </div>
                   @endif
+                  <div class="flex items-center gap-1" style="margin: 0 !important; padding: 0;">
+                    <i class="fa-solid fa-shopping-bag text-gray-500" style="font-size: 10px;"></i>
+                    <span class="text-xs text-gray-600 font-medium" style="line-height: 1;">Terjual {{ number_format($totalSold, 0, ',', '.') }}</span>
+                  </div>
+                </div>
+              </div>
                 </div>
               </div>
             </a>
@@ -650,20 +725,20 @@
       <!-- Pagination -->
       @isset($products)
       @if($products->hasPages())
-      <div class="mt-8">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
-          <!-- Results Info -->
-          <div class="text-sm text-gray-600">
+      <div class="mt-12 mb-8">
+        <div class="flex flex-col items-center justify-center gap-6">
+          <!-- Results Info - Centered Above Pagination -->
+          <div class="text-sm text-gray-600 text-center">
             Menampilkan <span class="font-semibold text-gray-900">{{ $products->firstItem() }}</span> sampai 
             <span class="font-semibold text-gray-900">{{ $products->lastItem() }}</span> dari 
             <span class="font-semibold text-gray-900">{{ $products->total() }}</span> produk
           </div>
           
-          <!-- Pagination Links -->
-          <nav class="flex items-center gap-2" aria-label="Pagination" id="paginationNav">
+          <!-- Pagination Links - Centered -->
+          <nav class="flex items-center justify-center gap-1.5" aria-label="Pagination" id="paginationNav">
             {{-- Previous Page Link --}}
             @if ($products->onFirstPage())
-              <span class="pagination-btn pagination-btn-disabled">
+              <span class="pagination-btn pagination-btn-disabled" aria-disabled="true">
                 <i class="fa-solid fa-chevron-left"></i>
               </span>
             @else
@@ -714,9 +789,9 @@
 
             @foreach ($showPages as $page)
               @if ($page === '...')
-                <span class="pagination-dots">...</span>
+                <span class="pagination-dots" aria-hidden="true">...</span>
               @elseif ($page == $currentPage)
-                <span class="pagination-btn pagination-btn-active" aria-current="page">{{ $page }}</span>
+                <span class="pagination-btn pagination-btn-active" aria-current="page" aria-label="Halaman {{ $page }}">{{ $page }}</span>
               @else
                 <a href="{{ $products->url($page) }}" class="pagination-btn pagination-btn-page pagination-link" aria-label="Halaman {{ $page }}">{{ $page }}</a>
               @endif
@@ -728,7 +803,7 @@
                 <i class="fa-solid fa-chevron-right"></i>
               </a>
             @else
-              <span class="pagination-btn pagination-btn-disabled">
+              <span class="pagination-btn pagination-btn-disabled" aria-disabled="true">
                 <i class="fa-solid fa-chevron-right"></i>
               </span>
             @endif

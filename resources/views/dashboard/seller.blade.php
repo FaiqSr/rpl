@@ -382,6 +382,7 @@
         </h3>
         <div class="chart-range-selector" style="display: flex; gap: 0.5rem; align-items: center;">
           <select id="chartRangeSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+            <option value="3days" {{ ($dateRange ?? '7days') === '3days' ? 'selected' : '' }}>3 Hari</option>
             <option value="7days" {{ ($dateRange ?? '7days') === '7days' ? 'selected' : '' }}>7 Hari</option>
             <option value="30days" {{ ($dateRange ?? '7days') === '30days' ? 'selected' : '' }}>30 Hari</option>
             <option value="3months" {{ ($dateRange ?? '7days') === '3months' ? 'selected' : '' }}>3 Bulan</option>
@@ -403,11 +404,55 @@
       </div>
     </div>
     
+    <!-- Chart Pendapatan -->
+    <div class="content-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="content-card-title" style="margin: 0;">
+          <i class="fa-solid fa-chart-line me-2"></i>Grafik Pendapatan
+        </h3>
+        <div class="chart-range-selector" style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="revenueChartRangeSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+            <option value="3days" {{ ($revenueDateRange ?? ($dateRange ?? '7days')) === '3days' ? 'selected' : '' }}>3 Hari</option>
+            <option value="7days" {{ ($revenueDateRange ?? ($dateRange ?? '7days')) === '7days' ? 'selected' : '' }}>7 Hari</option>
+            <option value="30days" {{ ($revenueDateRange ?? ($dateRange ?? '7days')) === '30days' ? 'selected' : '' }}>30 Hari</option>
+            <option value="3months" {{ ($revenueDateRange ?? ($dateRange ?? '7days')) === '3months' ? 'selected' : '' }}>3 Bulan</option>
+            <option value="1year" {{ ($revenueDateRange ?? ($dateRange ?? '7days')) === '1year' ? 'selected' : '' }}>1 Tahun</option>
+          </select>
+          <div class="form-check form-switch" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <input class="form-check-input" type="checkbox" id="revenueCompareToggle" style="cursor: pointer;">
+            <label class="form-check-label" for="revenueCompareToggle" style="font-size: 0.75rem; color: #6c757d; cursor: pointer; margin: 0;">
+              Bandingkan
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+    
     <!-- Chart Penjualan Per Produk -->
     <div class="content-card">
-      <h3 class="content-card-title">
-        <i class="fa-solid fa-chart-pie me-2"></i>Penjualan Per Produk (Bulan Ini)
-      </h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 class="content-card-title" style="margin: 0;">
+          <i class="fa-solid fa-chart-bar me-2"></i>Penjualan Per Produk
+        </h3>
+        <div class="chart-range-selector" style="display: flex; gap: 0.5rem; align-items: center;">
+          <select id="productChartRangeSelect" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+            <option value="3days" {{ ($productDateRange ?? ($dateRange ?? '7days')) === '3days' ? 'selected' : '' }}>3 Hari</option>
+            <option value="7days" {{ ($productDateRange ?? ($dateRange ?? '7days')) === '7days' ? 'selected' : '' }}>7 Hari</option>
+            <option value="30days" {{ ($productDateRange ?? ($dateRange ?? '7days')) === '30days' ? 'selected' : '' }}>30 Hari</option>
+            <option value="3months" {{ ($productDateRange ?? ($dateRange ?? '7days')) === '3months' ? 'selected' : '' }}>3 Bulan</option>
+            <option value="1year" {{ ($productDateRange ?? ($dateRange ?? '7days')) === '1year' ? 'selected' : '' }}>1 Tahun</option>
+          </select>
+          <div class="form-check form-switch" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <input class="form-check-input" type="checkbox" id="productCompareToggle" style="cursor: pointer;">
+            <label class="form-check-label" for="productCompareToggle" style="font-size: 0.75rem; color: #6c757d; cursor: pointer; margin: 0;">
+              Bandingkan
+            </label>
+          </div>
+        </div>
+      </div>
       <div class="chart-container">
         <canvas id="productSalesChart"></canvas>
       </div>
@@ -523,7 +568,17 @@
     // Chart Range Selector
     document.getElementById('chartRangeSelect')?.addEventListener('change', function() {
       const range = this.value;
-      window.location.href = '/dashboard?chart_range=' + range;
+      const productRange = document.getElementById('productChartRangeSelect')?.value || range;
+      const revenueRange = document.getElementById('revenueChartRangeSelect')?.value || range;
+      window.location.href = '/dashboard?chart_range=' + range + '&product_chart_range=' + productRange + '&revenue_chart_range=' + revenueRange;
+    });
+    
+    // Product Chart Range Selector
+    document.getElementById('productChartRangeSelect')?.addEventListener('change', function() {
+      const range = this.value;
+      const salesRange = document.getElementById('chartRangeSelect')?.value || '7days';
+      const revenueRange = document.getElementById('revenueChartRangeSelect')?.value || '7days';
+      window.location.href = '/dashboard?chart_range=' + salesRange + '&product_chart_range=' + range + '&revenue_chart_range=' + revenueRange;
     });
     
     // Sales Chart
@@ -604,74 +659,241 @@
       updateChart(this.checked);
     });
     
-    // Export chart function
+    // Revenue Chart
+    const revenueChartData = @json($revenueChartData ?? []);
+    const revenueChartDataCompare = @json($revenueChartDataCompare ?? []);
+    const revenueCtx = document.getElementById('revenueChart');
+    let revenueChart = null;
+    
+    function updateRevenueChart(showCompare = false) {
+      if (!revenueCtx || revenueChartData.length === 0) return;
+      
+      const datasets = [{
+        label: 'Pendapatan (Rp)',
+        data: revenueChartData.map(item => item.revenue),
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4
+      }];
+      
+      if (showCompare && revenueChartDataCompare.length > 0) {
+        datasets.push({
+          label: 'Periode Sebelumnya',
+          data: revenueChartDataCompare.map(item => item.revenue),
+          borderColor: '#9CA3AF',
+          backgroundColor: 'rgba(156, 163, 175, 0.1)',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.4
+        });
+      }
+      
+      if (revenueChart) {
+        revenueChart.data.datasets = datasets;
+        revenueChart.update();
+      } else {
+        revenueChart = new Chart(revenueCtx, {
+          type: 'line',
+          data: {
+            labels: revenueChartData.map(item => item.date),
+            datasets: datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                      label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                      label += 'Rp ' + new Intl.NumberFormat('id-ID').format(context.parsed.y);
+                    }
+                    return label;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // Initialize revenue chart
+    if (revenueCtx && revenueChartData.length > 0) {
+      updateRevenueChart(false);
+    }
+    
+    // Revenue comparison toggle
+    document.getElementById('revenueCompareToggle')?.addEventListener('change', function() {
+      updateRevenueChart(this.checked);
+    });
+    
+    // Revenue Chart Range Selector
+    document.getElementById('revenueChartRangeSelect')?.addEventListener('change', function() {
+      const range = this.value;
+      const salesRange = document.getElementById('chartRangeSelect')?.value || '7days';
+      const productRange = document.getElementById('productChartRangeSelect')?.value || '7days';
+      window.location.href = '/dashboard?chart_range=' + salesRange + '&product_chart_range=' + productRange + '&revenue_chart_range=' + range;
+    });
+    
+    // Export chart function - download all charts
     function exportChart() {
       if (!salesChart) {
         Swal.fire({
           icon: 'warning',
           title: 'Peringatan',
-          text: 'Grafik belum tersedia',
+          text: 'Grafik penjualan belum tersedia',
           confirmButtonColor: '#22C55E'
         });
         return;
       }
       
-      const url = salesChart.toBase64Image('image/png', 1);
-      const link = document.createElement('a');
-      link.download = 'grafik-penjualan-' + new Date().toISOString().split('T')[0] + '.png';
-      link.href = url;
-      link.click();
+      const dateStr = new Date().toISOString().split('T')[0];
+      let downloadCount = 0;
+      
+      // Download grafik penjualan
+      const salesUrl = salesChart.toBase64Image('image/png', 1);
+      const salesLink = document.createElement('a');
+      salesLink.download = 'grafik-penjualan-' + dateStr + '.png';
+      salesLink.href = salesUrl;
+      salesLink.click();
+      downloadCount++;
+      
+      // Download grafik pendapatan (jika tersedia)
+      if (revenueChart) {
+        setTimeout(() => {
+          const revenueUrl = revenueChart.toBase64Image('image/png', 1);
+          const revenueLink = document.createElement('a');
+          revenueLink.download = 'grafik-pendapatan-' + dateStr + '.png';
+          revenueLink.href = revenueUrl;
+          revenueLink.click();
+        }, 300 * downloadCount);
+        downloadCount++;
+      }
+      
+      // Download diagram batang produk (jika tersedia)
+      if (productSalesChart) {
+        setTimeout(() => {
+          const productUrl = productSalesChart.toBase64Image('image/png', 1);
+          const productLink = document.createElement('a');
+          productLink.download = 'diagram-batang-produk-' + dateStr + '.png';
+          productLink.href = productUrl;
+          productLink.click();
+        }, 300 * downloadCount); // Delay kecil untuk memastikan download sebelumnya selesai
+      }
     }
     
-    // Product Sales Chart (This Month)
+    // Product Sales Chart
     const productSalesData = @json($productSalesData ?? []);
+    const productSalesDataCompare = @json($productSalesDataCompare ?? []);
     const productSalesCtx = document.getElementById('productSalesChart');
-    if (productSalesCtx && productSalesData.length > 0) {
-      new Chart(productSalesCtx, {
-        type: 'bar',
-        data: {
-          labels: productSalesData.map(item => item.name),
-          datasets: [{
-            label: 'Jumlah Terjual',
-            data: productSalesData.map(item => item.total_sold),
-            backgroundColor: [
-              'rgba(34, 197, 94, 0.8)',
-              'rgba(59, 130, 246, 0.8)',
-              'rgba(168, 85, 247, 0.8)',
-              'rgba(236, 72, 153, 0.8)',
-              'rgba(251, 146, 60, 0.8)'
-            ],
-            borderColor: [
-              '#22C55E',
-              '#3B82F6',
-              '#A855F7',
-              '#EC4899',
-              '#FB923C'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
+    let productSalesChart = null;
+    
+    function updateProductChart(showCompare = false) {
+      if (!productSalesCtx || productSalesData.length === 0) return;
+      
+      const labels = productSalesData.map(item => item.name);
+      const datasets = [{
+        label: 'Jumlah Terjual',
+        data: productSalesData.map(item => item.total_sold),
+        backgroundColor: [
+          'rgba(34, 197, 94, 0.8)',
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(168, 85, 247, 0.8)',
+          'rgba(236, 72, 153, 0.8)',
+          'rgba(251, 146, 60, 0.8)'
+        ],
+        borderColor: [
+          '#22C55E',
+          '#3B82F6',
+          '#A855F7',
+          '#EC4899',
+          '#FB923C'
+        ],
+        borderWidth: 1
+      }];
+      
+      if (showCompare && productSalesDataCompare.length > 0) {
+        datasets.push({
+          label: 'Periode Sebelumnya',
+          data: productSalesDataCompare.map(item => item.total_sold),
+          backgroundColor: 'rgba(156, 163, 175, 0.6)',
+          borderColor: '#9CA3AF',
+          borderWidth: 1
+        });
+      }
+      
+      if (productSalesChart) {
+        productSalesChart.data.labels = labels;
+        productSalesChart.data.datasets = datasets;
+        productSalesChart.update();
+      } else {
+        productSalesChart = new Chart(productSalesCtx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: datasets
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 1
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: showCompare,
+                position: 'top'
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
               }
             }
           }
-        }
-      });
-    } else if (productSalesCtx) {
-      productSalesCtx.parentElement.innerHTML = '<div class="empty-state"><i class="fa-solid fa-chart-bar"></i><p class="mb-0">Belum ada data penjualan produk bulan ini</p></div>';
+        });
+      }
     }
+    
+    // Initialize product chart
+    if (productSalesCtx && productSalesData.length > 0) {
+      updateProductChart(false);
+    } else if (productSalesCtx) {
+      productSalesCtx.parentElement.innerHTML = '<div class="empty-state"><i class="fa-solid fa-chart-bar"></i><p class="mb-0">Belum ada data penjualan produk</p></div>';
+    }
+    
+    // Product comparison toggle
+    document.getElementById('productCompareToggle')?.addEventListener('change', function() {
+      updateProductChart(this.checked);
+    });
     
     // Show success message if redirected with success
     @if(session('success'))

@@ -250,7 +250,16 @@ Route::get('/', function () {
         }
     }
     
-    $products = $query->orderByDesc('created_at')->paginate(24);
+    $products = $query->select('products.*')
+        ->selectRaw('COALESCE((
+            SELECT SUM(order_details.qty)
+            FROM order_details
+            INNER JOIN orders ON order_details.order_id = orders.order_id
+            WHERE order_details.product_id = products.product_id
+            AND orders.payment_status = "paid"
+        ), 0) as total_sold')
+        ->orderByDesc('created_at')
+        ->paginate(24);
     
     // Get banners and group by banner_type
     $allBanners = \App\Models\HomepageBanner::where('is_active', true)
@@ -324,6 +333,77 @@ Route::post('/register', function (\Illuminate\Http\Request $request) {
 Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
+
+// Firebase Google Authentication Routes
+Route::post('/auth/google', function (\Illuminate\Http\Request $request) {
+    try {
+        $validated = $request->validate([
+            'idToken' => 'required|string',
+            'email' => 'required|email',
+            'name' => 'required|string',
+            'photoUrl' => 'nullable|string',
+        ]);
+        
+        // Verify Firebase ID Token (you can use Firebase Admin SDK for server-side verification)
+        // For now, we'll trust the client-side token and create/login user
+        
+        // Check if user exists by email or firebase_uid
+        $user = \App\Models\User::where('email', $validated['email'])
+            ->orWhere('firebase_uid', $request->input('uid'))
+            ->first();
+        
+        if ($user) {
+            // Update firebase_uid if not set
+            if (!$user->firebase_uid) {
+                $user->update([
+                    'firebase_uid' => $request->input('uid'),
+                    'provider' => 'google'
+                ]);
+            }
+            
+            // Login user
+            \Illuminate\Support\Facades\Auth::login($user);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Login berhasil',
+                'redirect' => $user->role === 'admin' || $user->role === 'seller' 
+                    ? route('dashboard') 
+                    : route('home')
+            ]);
+        } else {
+            // Create new user
+            $nameParts = explode(' ', $validated['name'], 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName = $nameParts[1] ?? '';
+            
+            $user = \App\Models\User::create([
+                'user_id' => (string) \Illuminate\Support\Str::uuid(),
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => bcrypt(\Illuminate\Support\Str::random(32)), // Random password since using Firebase
+                'role' => 'visitor',
+                'firebase_uid' => $request->input('uid'),
+                'provider' => 'google'
+            ]);
+            
+            // Login user
+            \Illuminate\Support\Facades\Auth::login($user);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Registrasi berhasil',
+                'redirect' => route('home')
+            ]);
+        }
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Firebase auth error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+})->name('auth.google');
 
 Route::post('/login', function (\Illuminate\Http\Request $request) {
     try {
@@ -457,7 +537,17 @@ Route::post('/reset-password', function (\Illuminate\Http\Request $request) {
 // Product Detail
 Route::get('/product/{id}', function ($id) {
     // Try to find by product_id first (database UUID), then by numeric id (localStorage)
-    $product = \App\Models\Product::with(['images', 'reviews.user', 'reviews.replies.user'])->where('product_id', $id)->first();
+    $product = \App\Models\Product::with(['images', 'reviews.user', 'reviews.replies.user'])
+        ->select('products.*')
+        ->selectRaw('COALESCE((
+            SELECT SUM(order_details.qty)
+            FROM order_details
+            INNER JOIN orders ON order_details.order_id = orders.order_id
+            WHERE order_details.product_id = products.product_id
+            AND orders.payment_status = "paid"
+        ), 0) as total_sold')
+        ->where('product_id', $id)
+        ->first();
     
     // If not found and id is numeric, this might be a localStorage product
     if (!$product && is_numeric($id)) {
@@ -470,6 +560,7 @@ Route::get('/product/{id}', function ($id) {
     
     $avgRating = $product->average_rating;
     $totalReviews = $product->total_reviews;
+    $totalSold = $product->total_sold ?? 0;
     // Only get top-level reviews (no parent_id)
     $reviews = $product->reviews->whereNull('parent_id')->map(function($review) {
         // Process review image URLs (support multiple images)
@@ -489,7 +580,26 @@ Route::get('/product/{id}', function ($id) {
         return $review;
     });
     
-    return view('store.product-detail', compact('product', 'avgRating', 'totalReviews', 'reviews'));
+    // Calculate rating statistics
+    $ratingStats = [
+        5 => $reviews->where('rating', 5)->count(),
+        4 => $reviews->where('rating', 4)->count(),
+        3 => $reviews->where('rating', 3)->count(),
+        2 => $reviews->where('rating', 2)->count(),
+        1 => $reviews->where('rating', 1)->count(),
+    ];
+    
+    // Count reviews with comments
+    $reviewsWithComments = $reviews->filter(function($review) {
+        return !empty($review->review);
+    })->count();
+    
+    // Count reviews with media
+    $reviewsWithMedia = $reviews->filter(function($review) {
+        return !empty($review->image_urls) && count($review->image_urls) > 0;
+    })->count();
+    
+    return view('store.product-detail', compact('product', 'avgRating', 'totalReviews', 'reviews', 'totalSold', 'ratingStats', 'reviewsWithComments', 'reviewsWithMedia'));
 })->name('product.detail');
 
 // Order Payment Page
@@ -749,18 +859,39 @@ Route::middleware(['auth.session','admin'])->group(function() {
         
         // Data untuk chart penjualan produk (default 7 hari, bisa diubah via request)
         $dateRange = $request->get('chart_range', '7days');
+        $productDateRange = $request->get('product_chart_range', $dateRange); // Default sama dengan chart penjualan
+        $revenueDateRange = $request->get('revenue_chart_range', $dateRange); // Default sama dengan chart penjualan
         $days = 7;
-        if ($dateRange === '30days') $days = 30;
+        if ($dateRange === '3days') $days = 3;
+        elseif ($dateRange === '30days') $days = 30;
         elseif ($dateRange === '3months') $days = 90;
         elseif ($dateRange === '1year') $days = 365;
         
+        // Days untuk chart produk
+        $productDays = 7;
+        if ($productDateRange === '3days') $productDays = 3;
+        elseif ($productDateRange === '30days') $productDays = 30;
+        elseif ($productDateRange === '3months') $productDays = 90;
+        elseif ($productDateRange === '1year') $productDays = 365;
+        
+        // Days untuk chart pendapatan
+        $revenueDays = 7;
+        if ($revenueDateRange === '3days') $revenueDays = 3;
+        elseif ($revenueDateRange === '30days') $revenueDays = 30;
+        elseif ($revenueDateRange === '3months') $revenueDays = 90;
+        elseif ($revenueDateRange === '1year') $revenueDays = 365;
+        
         $salesChartData = [];
         $salesChartDataCompare = [];
+        $revenueChartData = [];
+        $revenueChartDataCompare = [];
         
+        // Data grafik penjualan
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = now()->subDays($i)->startOfDay();
             $dateEnd = now()->subDays($i)->endOfDay();
             
+            // Data penjualan (jumlah order)
             $salesCount = \App\Models\Order::whereBetween('created_at', [$date, $dateEnd])->count();
             $salesChartData[] = [
                 'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
@@ -770,6 +901,7 @@ Route::middleware(['auth.session','admin'])->group(function() {
             // Data untuk comparison (periode sebelumnya)
             $compareDate = $date->copy()->subDays($days);
             $compareDateEnd = $dateEnd->copy()->subDays($days);
+            
             $compareSalesCount = \App\Models\Order::whereBetween('created_at', [$compareDate, $compareDateEnd])->count();
             $salesChartDataCompare[] = [
                 'date' => $date->format($days <= 30 ? 'd M' : ($days <= 90 ? 'd/m' : 'M Y')),
@@ -777,16 +909,105 @@ Route::middleware(['auth.session','admin'])->group(function() {
             ];
         }
         
-        // Data penjualan produk per produk (top 5)
+        // Data grafik pendapatan (periode terpisah)
+        for ($i = $revenueDays - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->startOfDay();
+            $dateEnd = now()->subDays($i)->endOfDay();
+            
+            // Data pendapatan (total revenue dari order yang sudah dibayar)
+            $revenue = \App\Models\Order::whereBetween('created_at', [$date, $dateEnd])
+                ->where('payment_status', 'paid')
+                ->sum('total_price');
+            $revenueChartData[] = [
+                'date' => $date->format($revenueDays <= 30 ? 'd M' : ($revenueDays <= 90 ? 'd/m' : 'M Y')),
+                'revenue' => $revenue ?? 0
+            ];
+            
+            // Data untuk comparison (periode sebelumnya)
+            $compareDate = $date->copy()->subDays($revenueDays);
+            $compareDateEnd = $dateEnd->copy()->subDays($revenueDays);
+            
+            $compareRevenue = \App\Models\Order::whereBetween('created_at', [$compareDate, $compareDateEnd])
+                ->where('payment_status', 'paid')
+                ->sum('total_price');
+            $revenueChartDataCompare[] = [
+                'date' => $date->format($revenueDays <= 30 ? 'd M' : ($revenueDays <= 90 ? 'd/m' : 'M Y')),
+                'revenue' => $compareRevenue ?? 0
+            ];
+        }
+        
+        // Data penjualan produk per produk (top 5) - menggunakan periode yang dipilih
+        $productStartDate = now()->subDays($productDays)->startOfDay();
+        $productEndDate = now()->endOfDay();
+        
         $productSalesData = \App\Models\OrderDetail::select('products.name', \DB::raw('SUM(order_details.qty) as total_sold'))
             ->join('products', 'order_details.product_id', '=', 'products.product_id')
             ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
-            ->where('orders.created_at', '>=', $thisMonth)
+            ->whereBetween('orders.created_at', [$productStartDate, $productEndDate])
             ->where('orders.payment_status', 'paid')
             ->groupBy('products.product_id', 'products.name')
             ->orderBy('total_sold', 'desc')
             ->limit(5)
             ->get();
+        
+        // Data penjualan produk untuk periode sebelumnya (perbandingan)
+        $productCompareStartDate = $productStartDate->copy()->subDays($productDays);
+        $productCompareEndDate = $productStartDate->copy()->subDay()->endOfDay();
+        
+        $productSalesDataCompare = \App\Models\OrderDetail::select('products.name', \DB::raw('SUM(order_details.qty) as total_sold'))
+            ->join('products', 'order_details.product_id', '=', 'products.product_id')
+            ->join('orders', 'order_details.order_id', '=', 'orders.order_id')
+            ->whereBetween('orders.created_at', [$productCompareStartDate, $productCompareEndDate])
+            ->where('orders.payment_status', 'paid')
+            ->groupBy('products.product_id', 'products.name')
+            ->orderBy('total_sold', 'desc')
+            ->limit(5)
+            ->get();
+        
+        // Gabungkan data untuk memastikan semua produk muncul di kedua periode
+        $allProductNames = $productSalesData->pluck('name')->merge($productSalesDataCompare->pluck('name'))->unique();
+        $productSalesDataMerged = [];
+        $productSalesDataCompareMerged = [];
+        
+        foreach ($allProductNames as $productName) {
+            $currentData = $productSalesData->firstWhere('name', $productName);
+            $compareData = $productSalesDataCompare->firstWhere('name', $productName);
+            
+            $productSalesDataMerged[] = [
+                'name' => $productName,
+                'total_sold' => $currentData ? $currentData->total_sold : 0
+            ];
+            
+            $productSalesDataCompareMerged[] = [
+                'name' => $productName,
+                'total_sold' => $compareData ? $compareData->total_sold : 0
+            ];
+        }
+        
+        // Sort by current period sales (descending) and limit to top 5
+        usort($productSalesDataMerged, function($a, $b) {
+            return $b['total_sold'] - $a['total_sold'];
+        });
+        $productSalesDataMerged = array_slice($productSalesDataMerged, 0, 5);
+        
+        // Get corresponding compare data for top 5 products
+        $top5Names = collect($productSalesDataMerged)->pluck('name');
+        $productSalesDataCompareMerged = collect($productSalesDataCompareMerged)
+            ->whereIn('name', $top5Names)
+            ->values()
+            ->toArray();
+        
+        // Reorder compare data to match current data order
+        $productSalesDataCompareMerged = collect($productSalesDataCompareMerged)
+            ->sortBy(function($item) use ($top5Names) {
+                return $top5Names->search($item['name']);
+            })
+            ->values()
+            ->toArray();
+        
+        // Convert to collection for view
+        $productSalesData = collect($productSalesDataMerged);
+        $productSalesDataCompare = collect($productSalesDataCompareMerged);
         
         return view('dashboard.seller', compact(
             'salesToday',
@@ -804,8 +1025,13 @@ Route::middleware(['auth.session','admin'])->group(function() {
             'popularProducts',
             'salesChartData',
             'salesChartDataCompare',
+            'revenueChartData',
+            'revenueChartDataCompare',
             'productSalesData',
-            'dateRange'
+            'productSalesDataCompare',
+            'dateRange',
+            'productDateRange',
+            'revenueDateRange'
         ));
     })->name('dashboard');
     
@@ -2379,7 +2605,11 @@ Route::get('/marketplace', function () {
 })->name('marketplace');
 
 Route::middleware('auth.session')->group(function(){
-    Route::get('/profile', function () { return view('profile'); })->name('profile');
+    Route::get('/profile', function () { 
+        $returnTo = request()->query('return_to');
+        $checkoutCartIds = request()->query('items', []);
+        return view('profile', compact('returnTo', 'checkoutCartIds')); 
+    })->name('profile');
     Route::post('/profile/update', function (\Illuminate\Http\Request $request) {
         $user = Auth::user();
         $data = $request->validate([
@@ -2388,6 +2618,29 @@ Route::middleware('auth.session')->group(function(){
             'address' => 'nullable|string|max:500'
         ]);
         $user->update($data);
+        
+        // Check jika user datang dari checkout
+        $returnTo = $request->input('return_to');
+        $checkoutCartIds = $request->input('checkout_cart_ids');
+        
+        if ($returnTo === 'checkout' && !empty($checkoutCartIds)) {
+            // Parse checkout_cart_ids dari JSON string
+            $itemsParam = [];
+            if (is_string($checkoutCartIds)) {
+                $decoded = json_decode($checkoutCartIds, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $itemsParam = $decoded;
+                }
+            } elseif (is_array($checkoutCartIds)) {
+                $itemsParam = $checkoutCartIds;
+            }
+            
+            if (!empty($itemsParam) && is_array($itemsParam)) {
+                // Redirect kembali ke checkout dengan items
+                return redirect()->route('checkout', ['items' => $itemsParam])->with('success','Profil berhasil diperbarui');
+            }
+        }
+        
         return redirect()->route('profile')->with('success','Profil berhasil diperbarui');
     })->name('profile.update');
     
