@@ -1,0 +1,31 @@
+{
+  "ammonia": {
+    "mean": 15.0,
+    "std": 5.0,
+    "min": 0,
+    "max": 35,
+    "description": "Statistik amonia dari dataset training"
+  },
+  "temperature": {
+    "mean": 28.0,
+    "std": 3.0,
+    "min": 20,
+    "max": 35,
+    "description": "Statistik suhu dari dataset training"
+  },
+  "humidity": {
+    "mean": 60.0,
+    "std": 8.0,
+    "min": 50,
+    "max": 80,
+    "description": "Statistik kelembaban dari dataset training"
+  },
+  "light": {
+    "mean": 300.0,
+    "std": 100.0,
+    "min": 100,
+    "max": 600,
+    "description": "Statistik cahaya dari dataset training (data ratusan)"
+  }
+}
+

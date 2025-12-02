@@ -1,0 +1,174 @@
+{
+    "project": "Monitoring Kandang Ayam",
+    "date_created": "2025-11-20",
+    "classification_version": "broiler_theory_proportional_v2",
+    "preprocessing": {
+        "cahaya_transform": "none",
+        "cahaya_transform_reason": "Log transform dihapus; gunakan skala asli (lux)",
+        "other_features": "standard/minmax scaling"
+    },
+    "dataset": {
+        "filename": "Egg_Production.csv",
+        "total_samples": 732,
+        "features": [
+            "amonia_ppm",
+            "suhu_c",
+            "kelembaban_rh",
+            "cahaya_lux"
+        ]
+    },
+    "models": {
+        "lstm": {
+            "purpose": "Prediksi tren sensor",
+            "architecture": "LSTM 128->64->32 + Dense(32,16,4)",
+            "input_shape": [
+                30,
+                4
+            ],
+            "output_shape": [
+                4
+            ],
+            "test_mse": 0.017088761553168297,
+            "test_mae": 0.07825455069541931,
+            "notes": "Model dilatih pada skala cahaya asli (lux) tanpa log transform",
+            "model_file": "model_lstm_kandang.h5",
+            "scaler_file": "scaler_lstm.pkl"
+        },
+        "random_forest": {
+            "purpose": "Klasifikasi status kandang",
+            "version": "broiler_theory_proportional_v2",
+            "n_estimators": 200,
+            "max_depth": 10,
+            "class_weight": "balanced",
+            "classes_trained": [
+                0,
+                1,
+                2
+            ],
+            "classes_names": [
+                "BAIK",
+                "PERHATIAN",
+                "BURUK"
+            ],
+            "accuracy": 0.9931972789115646,
+            "test_samples": 147,
+            "feature_importance": {
+                "amonia": 0.22013864496895302,
+                "suhu": 0.20389558727450097,
+                "kelembaban": 0.2959615916176242,
+                "cahaya": 0.28000417613892187
+            },
+            "thresholds": {
+                "amonia_ppm": {
+                    "ideal_max": 20,
+                    "warn_max": 35,
+                    "danger_max": 35
+                },
+                "suhu_c": {
+                    "ideal_min": 23,
+                    "ideal_max": 34,
+                    "danger_low": 23,
+                    "danger_high": 34
+                },
+                "kelembaban_rh": {
+                    "ideal_min": 50,
+                    "ideal_max": 70,
+                    "warn_high": 80,
+                    "danger_high": 80
+                },
+                "cahaya_lux": {
+                    "ideal_low": 20,
+                    "ideal_high": 40,
+                    "warn_low": 10,
+                    "warn_high": 60
+                }
+            },
+            "model_file": "model_random_forest.pkl",
+            "scaler_file": "scaler_rf.pkl"
+        },
+        "isolation_forest": {
+            "purpose": "Deteksi anomali sensor",
+            "n_estimators": 200,
+            "contamination": 0.1,
+            "anomalies_detected": 74,
+            "anomaly_percentage": 10.10928961748634,
+            "model_file": "model_isolation_forest.pkl",
+            "scaler_file": "scaler_if.pkl"
+        }
+    },
+    "best_models": {
+        "lstm": {
+            "recommended": "ensemble",
+            "ensemble_available": true,
+            "ensemble_improvement": {
+                "mse": "15.65%",
+                "mae": "29.22%"
+            },
+            "single_model_file": "model_lstm_kandang.h5",
+            "ensemble_dir": "models_ensemble",
+            "ensemble_files": [
+                "model_lstm_ensemble_1.h5",
+                "model_lstm_ensemble_2.h5",
+                "model_lstm_ensemble_3.h5"
+            ],
+            "ensemble_config": "models_ensemble/ensemble_config.json",
+            "ensemble_method": "average",
+            "ensemble_performance": {
+                "test_mse": 0.0144,
+                "test_mae": 0.0554
+            },
+            "notes": "Ensemble model memberikan improvement signifikan dibanding single model"
+        },
+        "random_forest": {
+            "recommended": "smote",
+            "original_file": "model_random_forest.pkl",
+            "original_accuracy": 0.9864,
+            "smote_file": "model_random_forest_smote.pkl",
+            "smote_available": true,
+            "smote_accuracy": 0.9796,
+            "optimal_threshold": 0.55,
+            "threshold_file": "threshold_config.json",
+            "threshold_class_index": 2,
+            "threshold_description": "Threshold optimal untuk meningkatkan recall kelas BURUK",
+            "notes": "Model SMOTE lebih baik untuk handle imbalanced data, gunakan dengan threshold optimal"
+        },
+        "isolation_forest": {
+            "recommended": "original",
+            "model_file": "model_isolation_forest.pkl",
+            "agreement_with_manual": 0.934,
+            "anomalies_detected": 74,
+            "anomaly_percentage": 10.1,
+            "notes": "Model original sudah baik, gunakan dengan validasi manual untuk anomali high confidence"
+        }
+    },
+    "integration_guide": {
+        "recommended_files": {
+            "lstm": [
+                "models_ensemble/model_lstm_ensemble_1.h5",
+                "models_ensemble/model_lstm_ensemble_2.h5",
+                "models_ensemble/model_lstm_ensemble_3.h5",
+                "models_ensemble/ensemble_config.json",
+                "scaler_lstm.pkl"
+            ],
+            "random_forest": [
+                "model_random_forest_smote.pkl",
+                "scaler_rf.pkl",
+                "threshold_config.json"
+            ],
+            "isolation_forest": [
+                "model_isolation_forest.pkl",
+                "scaler_if.pkl"
+            ]
+        },
+        "fallback_files": {
+            "lstm": "model_lstm_kandang.h5",
+            "random_forest": "model_random_forest.pkl"
+        },
+        "usage": "Gunakan example_integration.py untuk implementasi yang sudah support fallback otomatis"
+    },
+    "usage_notes": {
+        "cahaya_input": "Input cahaya gunakan satuan lux asli",
+        "cahaya_output": "Prediksi sudah dalam lux (tanpa konversi)",
+        "transform_removed": "Seluruh log transform cahaya telah dihapus"
+    }
+}

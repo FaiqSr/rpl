@@ -1,0 +1,7 @@
+{
+  "best_threshold": 0.5500000000000002,
+  "model_type": "random_forest_smote",
+  "class_index": 2,
+  "description": "Threshold optimal untuk meningkatkan recall kelas BURUK",
+  "usage": "Gunakan threshold ini untuk prediksi kelas BURUK dengan probabilitas"
+}
