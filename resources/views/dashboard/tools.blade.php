@@ -618,6 +618,21 @@
       transition: width 0.3s ease;
       border-radius: 4px;
     }
+    
+    /* Animation styles */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .animate__animated {
+      animation-duration: 0.3s;
+      animation-fill-mode: both;
+    }
+    
+    .animate__fadeIn {
+      animation-name: fadeIn;
+    }
   </style>
 </head>
 <body>
@@ -1240,37 +1255,13 @@
                         <div class="action-buttons">
                             <!-- Quick Actions Dropdown -->
                             <div class="dropdown d-inline-block">
-                                <button class="btn btn-sm btn-success dropdown-toggle" type="button" 
-                                        id="actionsDropdown-${robotId}" 
-                                        data-bs-toggle="dropdown" aria-expanded="false"
-                                        style="min-width: 90px;">
-                                    <i class="fa-solid fa-play"></i> Aksi
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="actionsDropdown-${robotId}">
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="startPatrol('${robotId}'); return false;">
-                                            <i class="fa-solid fa-play text-success me-2"></i> Mulai Patrol
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="stopPatrol('${robotId}'); return false;">
-                                            <i class="fa-solid fa-stop text-warning me-2"></i> Berhenti
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="returnToBase('${robotId}'); return false;">
-                                            <i class="fa-solid fa-home text-primary me-2"></i> Kembali ke Base
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" onclick="emergencyStop('${robotId}'); return false;">
-                                            <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Emergency Stop
-                                        </a>
-                                    </li>
-                                </ul>
+                              <button class="btn btn-sm btn-success dropdown-toggle" type="button"
+                                  id="actionsDropdown-${robotId}"
+                                  onclick="showDropdownMenu(event, '${robotId}')"
+                                  style="min-width: 90px;">
+                                <i class="fa-solid fa-play"></i> Aksi
+                              </button>
                             </div>
-                            
                             <!-- Edit & Delete Buttons -->
                             <button class="btn btn-sm btn-outline-primary ms-1" onclick="editTool(${tool.id})" title="Edit" style="width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-edit"></i>
@@ -1796,6 +1787,53 @@
     @if(session('error'))
         showError('{{ session('error') }}');
     @endif
+    
+    // ========== DROPDOWN PORTAL LOGIC ==========
+    function showDropdownMenu(e, robotId) {
+      e.preventDefault();
+      // Remove all dropdown portals
+      document.querySelectorAll('.dropdown-portal').forEach(el => el.remove());
+      // Isi menu
+      var menuHtml = `
+        <ul class="dropdown-menu show animate__animated animate__fadeIn" style="display:block;min-width:180px;max-width:90vw;padding:12px 0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.12);background:#fff;font-size:1rem;animation:fadeIn .2s;">
+          <li><a class="dropdown-item" href="#" onclick="startPatrol('`+robotId+`'); closeDropdownMenu('`+robotId+`'); return false;"><i class="fa-solid fa-play text-success me-2"></i> Mulai Patrol</a></li>
+          <li><a class="dropdown-item" href="#" onclick="stopPatrol('`+robotId+`'); closeDropdownMenu('`+robotId+`'); return false;"><i class="fa-solid fa-stop text-warning me-2"></i> Berhenti</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#" onclick="returnToBase('`+robotId+`'); closeDropdownMenu('`+robotId+`'); return false;"><i class="fa-solid fa-home text-primary me-2"></i> Kembali ke Base</a></li>
+          <li><a class="dropdown-item" href="#" onclick="emergencyStop('`+robotId+`'); closeDropdownMenu('`+robotId+`'); return false;"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i> Emergency Stop</a></li>
+        </ul>
+      `;
+      var portal = document.createElement('div');
+      portal.className = 'dropdown-portal';
+      portal.id = 'dropdown-portal-' + robotId;
+      portal.style.position = 'fixed';
+      portal.style.zIndex = '99999';
+      portal.style.display = 'block';
+      portal.innerHTML = menuHtml;
+      // Buat root portal jika belum ada
+      if (!document.getElementById('dropdown-portal-root')) {
+        var root = document.createElement('div');
+        root.id = 'dropdown-portal-root';
+        document.body.appendChild(root);
+      }
+      document.getElementById('dropdown-portal-root').appendChild(portal);
+      // Posisi fixed di bawah tombol
+      var rect = e.target.getBoundingClientRect();
+      portal.style.left = rect.left + 'px';
+      portal.style.top = (rect.bottom + 8) + 'px';
+      // Tutup jika klik di luar, scroll, atau resize
+      setTimeout(function() {
+        document.addEventListener('click', function handler(ev) {
+          if (!portal.contains(ev.target)) { closeDropdownMenu(robotId); document.removeEventListener('click', handler); }
+        });
+        window.addEventListener('scroll', function handler2() { closeDropdownMenu(robotId); window.removeEventListener('scroll', handler2); });
+        window.addEventListener('resize', function handler3() { closeDropdownMenu(robotId); window.removeEventListener('resize', handler3); });
+      }, 50);
+    }
+    function closeDropdownMenu(robotId) {
+      var portal = document.getElementById('dropdown-portal-' + robotId);
+      if (portal) portal.remove();
+    }
   </script>
 </body>
 </html>
