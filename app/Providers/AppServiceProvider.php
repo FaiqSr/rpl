@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,12 +21,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+
+        if(config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
         // Schedule untuk generate data sensor setiap jam
         Schedule::command('sensor:generate')
             ->hourly()
             ->withoutOverlapping()
             ->runInBackground();
-        
+
         // Schedule untuk mengirim notifikasi Telegram
         // TESTING MODE: Setiap 10 detik untuk testing (normal: everyMinute)
         // - Kondisi BAIK: 30 detik sekali (TESTING MODE - normal: 1 jam)
