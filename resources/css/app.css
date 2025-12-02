@@ -10,3 +10,99 @@
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Noto Color Emoji";
 }
+
+/* Global responsive helpers */
+img, video, canvas, svg {
+    max-width: 100%;
+    height: auto;
+}
+
+iframe {
+    max-width: 100%;
+}
+
+/* Tables: make common tables scroll on small screens */
+.table,
+.product-table,
+.customer-table {
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Wrapper yang ditambahkan via JS agar tabel nyaman di HP */
+.table-responsive-auto {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+.table-responsive-auto > table {
+    width: 100%;
+    min-width: 640px; /* cegah kolom terlalu sempit */
+}
+
+/* Utility: soft container padding on mobile */
+@media (max-width: 640px) {
+    .container,
+    main,
+    .content-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* =====================
+     Dashboard Responsiveness
+     ===================== */
+/* Pastikan canvas/elemen visual tidak overflow */
+canvas,
+.chart,
+.chart-container {
+    max-width: 100%;
+}
+
+/* Konten utama geser ke bawah dan hilangkan margin kiri di mobile */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+        margin-top: 60px !important;
+    }
+    .page-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: .75rem !important;
+    }
+    .filter-bar,
+    .filter-right {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: .75rem !important;
+    }
+    .filter-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .search-box,
+    .search-box input,
+    .sort-dropdown select,
+    .form-control,
+    .form-select {
+        width: 100% !important;
+    }
+    .btn-group,
+    .btn-toolbar {
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+    .table {
+        font-size: .875rem;
+        min-width: 600px;
+    }
+    .table th,
+    .table td {
+        padding: .6rem .5rem;
+        white-space: nowrap;
+    }
+}

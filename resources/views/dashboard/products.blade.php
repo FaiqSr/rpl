@@ -250,13 +250,25 @@
       font-size: 0.75rem;
     }
     
+    /* Override global table styles untuk desktop */
     .product-table {
       width: 100%;
+      border-collapse: collapse;
+      display: table !important;
     }
     
     .product-table thead {
       background: white;
       border-bottom: 1px solid #e9ecef;
+      display: table-header-group !important;
+    }
+    
+    .product-table tbody {
+      display: table-row-group !important;
+    }
+    
+    .product-table tr {
+      display: table-row !important;
     }
     
     .product-table th {
@@ -264,29 +276,62 @@
       font-size: 0.8rem;
       font-weight: 500;
       color: #6c757d;
-      text-align: left;
+      text-align: center;
+      display: table-cell !important;
+      vertical-align: middle;
     }
     
     .product-table td {
+      display: table-cell !important;
       padding: 1.25rem 1.5rem;
       border-bottom: 1px solid #f8f9fa;
       font-size: 0.95rem;
       color: #2F2F2F;
       vertical-align: middle;
+      text-align: center;
+    }
+    
+    .product-table td:first-child {
+      text-align: left;
+    }
+    
+    /* Rating column - left aligned */
+    .product-table td:nth-child(2) {
+      text-align: left;
+    }
+    
+    /* Harga column - left aligned */
+    .product-table td:nth-child(3) {
+      text-align: left;
+    }
+    
+    .product-table td::before {
+      display: none !important;
     }
     
     .product-info {
       display: flex;
       align-items: center;
       gap: 1rem;
+      justify-content: flex-start;
+      text-align: left;
+    }
+    
+    .product-info > div {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
     }
     
     .product-img {
       width: 64px;
       height: 64px;
+      min-width: 64px;
       border-radius: 8px;
       object-fit: cover;
       background: #f8f9fa;
+      border: 1px solid #e5e7eb;
+      flex-shrink: 0;
     }
     
     .product-name {
@@ -304,6 +349,15 @@
     
     .rating-stars {
       color: #ffc107;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.15rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .rating-stars i {
       font-size: 0.875rem;
     }
     
@@ -323,14 +377,20 @@
     .stock-alert-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.4rem;
       margin-left: 0.5rem;
-      padding: 0.25rem 0.5rem;
+      padding: 0.3rem 0.6rem;
       background: #FFF3E0;
       color: #FF9800;
       border-radius: 4px;
       font-size: 0.7rem;
       font-weight: 600;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    
+    .stock-alert-badge i {
+      font-size: 0.65rem;
     }
     
     .status-badge.inactive {
@@ -803,6 +863,13 @@
             if (result.success) {
                 showSuccess(editingProductId ? 'Produk berhasil diperbarui!' : 'Produk berhasil ditambahkan!');
                 bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+                
+                // Save current category filter before reload
+                const currentCategory = document.getElementById('categoryFilter').value;
+                if (currentCategory) {
+                    sessionStorage.setItem('selectedCategory', currentCategory);
+                }
+                
                 // Reload page to refresh data from database
                 window.location.reload();
             } else {
@@ -842,6 +909,13 @@
                 
                 if (data.success) {
                     showSuccess('Produk berhasil dihapus!');
+                    
+                    // Save current category filter before reload
+                    const currentCategory = document.getElementById('categoryFilter').value;
+                    if (currentCategory) {
+                        sessionStorage.setItem('selectedCategory', currentCategory);
+                    }
+                    
                     // Reload page to refresh data from database
                     window.location.reload();
                 } else {
@@ -957,20 +1031,24 @@
                         </div>
                     </td>
                     <td>
-                        ${ratingDisplay}
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.25rem;">
+                            ${ratingDisplay}
+                        </div>
                     </td>
                     <td style="font-weight: 600; color: #22C55E; font-size: 1rem;">Rp ${product.price.toLocaleString('id-ID')}</td>
-                    <td style="font-weight: 500;">
+                    <td style="font-weight: 500; text-align: center;">
                         ${product.stock || 0}
                         ${(product.stock || 0) < 10 ? '<span class="stock-alert-badge" title="Stok Rendah"><i class="fa-solid fa-exclamation-triangle"></i> Rendah</span>' : ''}
                     </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${product.id}')" title="Edit">
-                            <i class="fa-solid fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product.id}')" title="Hapus">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                    <td style="text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${product.id}')" title="Edit">
+                                <i class="fa-solid fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${product.id}')" title="Hapus">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -1012,6 +1090,8 @@
     
     // Category filter functionality
     document.getElementById('categoryFilter').addEventListener('change', function() {
+        // Save selected category to sessionStorage
+        sessionStorage.setItem('selectedCategory', this.value);
         renderProducts();
     });
     
@@ -1027,6 +1107,23 @@
     
     // Initialize category filter on page load
     populateCategoryFilter();
+    
+    // Restore selected category from sessionStorage after a short delay
+    // to ensure all elements are ready
+    setTimeout(() => {
+        const savedCategory = sessionStorage.getItem('selectedCategory');
+        if (savedCategory) {
+            const categoryFilter = document.getElementById('categoryFilter');
+            if (categoryFilter) {
+                categoryFilter.value = savedCategory;
+                // Trigger render to apply the filter
+                renderProducts();
+            }
+        } else {
+            // If no saved category, render all products
+            renderProducts();
+        }
+    }, 100);
     
     // Image preview
     document.getElementById('productImage').addEventListener('change', function(e) {

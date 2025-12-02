@@ -713,11 +713,11 @@ class ChatController extends Controller
             Log::info('Chat history deleted for specific buyer', [
                 'buyer_id' => $buyerId,
                 'buyer_name' => $buyer->name ?? $buyer->email ?? 'Unknown',
-                'seller_id' => $seller->user_id,
                 'deleted_chats' => $deletedChatsCount,
                 'deleted_messages' => $deletedMessagesCount,
                 'deleted_by' => $user->user_id,
                 'deleted_by_role' => $user->role,
+                'deleted_by_name' => $user->name ?? $user->email ?? 'Unknown',
                 'note' => 'Only chat from this specific buyer was deleted'
             ]);
 

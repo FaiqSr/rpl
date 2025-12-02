@@ -11,7 +11,7 @@ class Tools extends Model
     protected $primaryKey = 'id';
     
     protected $fillable = [
-        'tool_id', 'name', 'model', 'location',
+        'tool_id', 'name', 'model', 'location', 'image_url',
         'operational_status', 'battery_level', 'last_activity_at',
         'current_position', 'total_distance_today', 'operating_hours_today',
         'uptime_percentage', 'health_status', 'patrol_count_today'

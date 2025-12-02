@@ -161,10 +161,12 @@
       font-size: 0.75rem;
     }
     
+    /* Override global table styles untuk desktop */
     .product-table {
       width: 100%;
       position: relative;
       overflow: visible;
+      display: table !important;
     }
     
     .product-table thead {
@@ -172,11 +174,17 @@
       border-bottom: 1px solid #e9ecef;
       position: relative;
       z-index: 1;
+      display: table-header-group !important;
     }
     
     .product-table tbody {
       position: relative;
       overflow: visible;
+      display: table-row-group !important;
+    }
+    
+    .product-table tr {
+      display: table-row !important;
     }
     
     .product-table th {
@@ -184,8 +192,9 @@
       font-size: 0.8rem;
       font-weight: 500;
       color: #6c757d;
-      text-align: left;
-      vertical-align: top;
+      text-align: center;
+      vertical-align: middle;
+      display: table-cell !important;
     }
     
     .product-table td {
@@ -194,14 +203,23 @@
       font-size: 0.875rem;
       color: #2F2F2F;
       vertical-align: top;
+      text-align: left;
+      display: table-cell !important;
+    }
+    
+    .product-table td::before {
+      display: none !important;
     }
     
     .product-info {
       display: flex;
+      flex-direction: row;
       align-items: flex-start;
+      justify-content: flex-start;
       gap: 0.75rem;
       padding: 0;
       margin: 0;
+      text-align: left;
     }
     
     .product-img {
@@ -213,6 +231,7 @@
       flex-shrink: 0;
       margin: 0;
       padding: 0;
+      display: block;
     }
     
     .product-info > div {
@@ -220,6 +239,7 @@
       min-width: 0;
       padding: 0;
       margin: 0;
+      text-align: left;
     }
     
     .product-name {
@@ -229,6 +249,7 @@
       margin: 0 0 0.25rem 0;
       padding: 0;
       line-height: 1.4;
+      text-align: left;
     }
     
     .product-subtitle {
@@ -237,6 +258,7 @@
       margin: 0 0 0.5rem 0;
       padding: 0;
       line-height: 1.4;
+      text-align: left;
     }
     
     .rating-stars {
@@ -278,7 +300,7 @@
     .product-table tbody td {
       padding-top: 1rem;
       padding-bottom: 1rem;
-      vertical-align: top;
+      vertical-align: middle;
     }
     
     /* Info Alat column - align content with header */
@@ -294,22 +316,49 @@
     /* Status column styling */
     .product-table td:nth-child(3) {
       min-width: 220px;
+      text-align: center;
     }
     
     .product-table td:nth-child(3) > div {
       padding: 0;
-      margin: 0;
+      margin: 0 auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .product-table td:nth-child(3) .status-badge {
+      margin: 0 auto;
+      display: inline-block;
+    }
+    
+    .product-table td:nth-child(3) .maintenance-info {
+      text-align: center;
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .product-table td:nth-child(3) .mt-1 {
+      text-align: center;
     }
     
     /* Action column styling */
     .product-table td:last-child {
       min-width: 200px;
       white-space: nowrap;
+      text-align: center;
     }
     
     .product-table td:last-child .action-buttons {
       padding: 0;
-      margin: 0;
+      margin: 0 auto;
+      justify-content: center;
+      align-items: center;
     }
     
     /* Button styling improvements */
@@ -516,6 +565,7 @@
     .robot-status-info {
       margin-top: 0.5rem;
       padding-top: 0;
+      text-align: left;
     }
     
     .robot-status-info small {
@@ -523,10 +573,13 @@
       margin-top: 0.25rem;
       line-height: 1.5;
       font-size: 0.75rem;
+      text-align: left;
     }
     
     .robot-status-info .d-flex {
       margin-bottom: 0.25rem;
+      justify-content: flex-start;
+      align-items: center;
     }
     
     .robot-stats-mini {
@@ -534,10 +587,12 @@
       min-width: 120px;
       padding: 0;
       margin: 0;
+      text-align: left;
     }
     
     .robot-stats-mini .mb-2 {
       margin-bottom: 0.75rem !important;
+      text-align: left;
     }
     
     .robot-stats-mini .mb-2:last-child {
@@ -546,6 +601,11 @@
     
     .robot-stats-mini small {
       font-size: 0.75rem;
+    }
+    
+    .robot-stats-mini .d-flex {
+      justify-content: flex-start;
+      align-items: center;
     }
     
     .progress {
@@ -652,6 +712,34 @@
             </div>
             
             <div class="mb-3">
+              <label for="toolImage" class="form-label">Foto Alat <span class="text-muted">(Opsional)</span></label>
+              <div class="mb-2">
+                <div class="btn-group w-100" role="group">
+                  <input type="radio" class="btn-check" name="toolImageSource" id="toolImageSourceUrl" value="url" checked>
+                  <label class="btn btn-outline-secondary" for="toolImageSourceUrl">URL</label>
+                  
+                  <input type="radio" class="btn-check" name="toolImageSource" id="toolImageSourceUpload" value="upload">
+                  <label class="btn btn-outline-secondary" for="toolImageSourceUpload">Upload File</label>
+                </div>
+              </div>
+              
+              <!-- URL Input -->
+              <div id="toolImageUrlSection">
+                <input type="text" class="form-control" id="toolImageUrl" name="image_url" placeholder="https://example.com/image.jpg atau data:image/...">
+                <small class="text-muted">Masukkan URL gambar atau data URI (base64)</small>
+              </div>
+              
+              <!-- File Upload Input -->
+              <div id="toolImageUploadSection" style="display: none;">
+                <input type="file" class="form-control" id="toolImageFile" name="image_file" accept="image/*">
+                <small class="text-muted">Pilih file gambar (JPG, PNG, GIF, maks 2MB)</small>
+                <div id="toolImagePreview" class="mt-2" style="display: none;">
+                  <img id="toolPreviewImg" src="" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                </div>
+              </div>
+            </div>
+            
+            <div class="mb-3">
               <label for="toolStatus" class="form-label">Status Awal</label>
               <select class="form-select" id="toolStatus" required>
                 <option value="active">Aktif</option>
@@ -709,6 +797,61 @@
     // Initialize saat page load
     document.addEventListener('DOMContentLoaded', function() {
         loadTools();
+        
+        // Tool image source toggle
+        const urlRadio = document.getElementById('toolImageSourceUrl');
+        const uploadRadio = document.getElementById('toolImageSourceUpload');
+        const urlSection = document.getElementById('toolImageUrlSection');
+        const uploadSection = document.getElementById('toolImageUploadSection');
+        
+        if (urlRadio && uploadRadio && urlSection && uploadSection) {
+            // Initial state
+            urlSection.style.display = 'block';
+            uploadSection.style.display = 'none';
+            
+            // URL radio change
+            urlRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    urlSection.style.display = 'block';
+                    uploadSection.style.display = 'none';
+                    document.getElementById('toolImageFile').value = '';
+                    document.getElementById('toolImagePreview').style.display = 'none';
+                }
+            });
+            
+            // Upload radio change
+            uploadRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    urlSection.style.display = 'none';
+                    uploadSection.style.display = 'block';
+                    document.getElementById('toolImageUrl').value = '';
+                }
+            });
+        }
+        
+        // Tool image preview
+        const toolImageFile = document.getElementById('toolImageFile');
+        if (toolImageFile) {
+            toolImageFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        Swal.fire('Error', 'Ukuran file maksimal 2MB', 'error');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('toolPreviewImg').src = e.target.result;
+                        document.getElementById('toolImagePreview').style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    document.getElementById('toolImagePreview').style.display = 'none';
+                }
+            });
+        }
     });
     
     // SweetAlert Helper Functions
@@ -732,6 +875,35 @@
         });
     };
     
+    // Setup image source toggle (called when modal is shown)
+    function setupImageSourceToggle() {
+        const urlRadio = document.getElementById('toolImageSourceUrl');
+        const uploadRadio = document.getElementById('toolImageSourceUpload');
+        const urlSection = document.getElementById('toolImageUrlSection');
+        const uploadSection = document.getElementById('toolImageUploadSection');
+        
+        if (!urlRadio || !uploadRadio || !urlSection || !uploadSection) return;
+        
+        // Setup URL radio
+        urlRadio.onchange = function() {
+            if (this.checked) {
+                urlSection.style.display = 'block';
+                uploadSection.style.display = 'none';
+                document.getElementById('toolImageFile').value = '';
+                document.getElementById('toolImagePreview').style.display = 'none';
+            }
+        };
+        
+        // Setup Upload radio
+        uploadRadio.onchange = function() {
+            if (this.checked) {
+                urlSection.style.display = 'none';
+                uploadSection.style.display = 'block';
+                document.getElementById('toolImageUrl').value = '';
+            }
+        };
+    }
+    
     // Add Tool Function
     function addTool() {
         editingToolId = null;
@@ -740,7 +912,21 @@
         document.getElementById('toolId').value = '';
         document.getElementById('toolStatus').value = 'active'; // Default status
         
+        // Reset image inputs
+        document.getElementById('toolImageSourceUrl').checked = true;
+        document.getElementById('toolImageUrlSection').style.display = 'block';
+        document.getElementById('toolImageUploadSection').style.display = 'none';
+        document.getElementById('toolImageUrl').value = '';
+        document.getElementById('toolImageFile').value = '';
+        document.getElementById('toolImagePreview').style.display = 'none';
+        
         const modal = new bootstrap.Modal(document.getElementById('toolModal'));
+        
+        // Setup toggle when modal is shown
+        document.getElementById('toolModal').addEventListener('shown.bs.modal', function() {
+            setupImageSourceToggle();
+        }, { once: true });
+        
         modal.show();
     }
     
@@ -761,7 +947,21 @@
         document.getElementById('toolDescription').value = tool.description || '';
         document.getElementById('toolStatus').value = tool.status || 'active';
         
+        // Set image source to URL and show URL input
+        document.getElementById('toolImageSourceUrl').checked = true;
+        document.getElementById('toolImageUrlSection').style.display = 'block';
+        document.getElementById('toolImageUploadSection').style.display = 'none';
+        document.getElementById('toolImageUrl').value = tool.image || '';
+        document.getElementById('toolImageFile').value = '';
+        document.getElementById('toolImagePreview').style.display = 'none';
+        
         const modal = new bootstrap.Modal(document.getElementById('toolModal'));
+        
+        // Setup toggle when modal is shown
+        document.getElementById('toolModal').addEventListener('shown.bs.modal', function() {
+            setupImageSourceToggle();
+        }, { once: true });
+        
         modal.show();
     }
     
@@ -797,34 +997,95 @@
             const url = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
             const method = editingToolId ? 'PUT' : 'POST';
             
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                name,
-                model,
-                    category: 'Robot', // Default category untuk robot
-                    location: location || null,
-                    description: description || null,
-                    status
-                })
-            });
+            const imageSource = document.querySelector('input[name="toolImageSource"]:checked')?.value || 'url';
+            const imageUrl = document.getElementById('toolImageUrl').value.trim();
+            const imageFile = document.getElementById('toolImageFile').files[0];
             
-            const data = await response.json();
-            
-            Swal.close();
-            
-            if (data.success) {
-                showSuccess(data.message);
-        bootstrap.Modal.getInstance(document.getElementById('toolModal')).hide();
-                // Reload tools from database
-                await loadTools();
+            // Use FormData if uploading file, otherwise use JSON
+            if (imageSource === 'upload' && imageFile) {
+                // Validasi ulang sebelum mengirim FormData
+                if (!name || !model) {
+                    Swal.close();
+                    showError('Nama dan Model alat wajib diisi');
+                    return;
+                }
+                
+                const formData = new FormData();
+                // Pastikan semua field required terkirim dengan nilai yang valid
+                formData.append('name', String(name));
+                formData.append('model', String(model));
+                formData.append('category', 'Robot');
+                if (location) formData.append('location', String(location));
+                if (description) formData.append('description', String(description));
+                formData.append('status', String(status || 'active'));
+                formData.append('image_file', imageFile);
+                
+                // Use POST for file uploads (PUT doesn't work well with FormData)
+                // For updates, we'll use POST and check in the route
+                const actualMethod = 'POST';
+                const actualUrl = editingToolId ? `/api/tools/${editingToolId}` : '/api/tools';
+                
+                // Debug: log FormData contents
+                console.log('FormData contents:');
+                console.log('name:', name);
+                console.log('model:', model);
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name + ' (File)' : pair[1]));
+                }
+                
+                const response = await fetch(actualUrl, {
+                    method: actualMethod,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                Swal.close();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('toolModal')).hide();
+                    // Reload tools to show updated image
+                    await loadTools();
+                } else {
+                    showError(data.message || 'Gagal menyimpan alat');
+                }
             } else {
-                showError(data.message || 'Gagal menyimpan alat');
+                // Use JSON for URL or no image
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        name,
+                        model,
+                        category: 'Robot',
+                        location: location || null,
+                        description: description || null,
+                        status,
+                        image_url: imageUrl || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                Swal.close();
+                
+                if (data.success) {
+                    showSuccess(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('toolModal')).hide();
+                    // Reload tools to show updated image
+                    await loadTools();
+                } else {
+                    showError(data.message || 'Gagal menyimpan alat');
+                }
             }
         } catch (error) {
             Swal.close();
@@ -918,7 +1179,7 @@
                 <tr data-tool-id="${tool.id}" data-robot-id="${robotId}" data-status="${tool.status}">
                     <td>
                         <div class="product-info">
-                            <img src="${tool.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"}" alt="Tool" class="product-img">
+                            <img src="${tool.image_url || tool.image || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Crect width=\'50\' height=\'50\' fill=\'%23ffeaa7\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23fdcb6e\' font-size=\'20\'%3E🐔%3C/text%3E%3C/svg%3E'}" alt="Tool" class="product-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Crect width=\'50\' height=\'50\' fill=\'%23ffeaa7\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23fdcb6e\' font-size=\'20\'%3E🐔%3C/text%3E%3C/svg%3E'">
                             <div>
                                 <div class="product-name">${tool.name}</div>
                                 <div class="product-subtitle">${tool.model}</div>

@@ -409,7 +409,8 @@
                         <div class="mb-2">
                           <label class="form-label" style="font-size: 0.875rem; font-weight: 500;">Foto (opsional, maks 5 foto):</label>
                           <input type="file" name="review_images[]" id="reviewImages-{{ $detail->order_detail_id }}" accept="image/*" multiple class="form-control" style="font-size: 0.875rem;" onchange="previewReviewImages('{{ $detail->order_detail_id }}', this)">
-                          <div id="reviewImagesPreview-{{ $detail->order_detail_id }}" class="mt-2">
+                          <input type="hidden" id="removedImages-{{ $detail->order_detail_id }}" name="removed_images" value="">
+                          <div id="reviewImagesPreview-{{ $detail->order_detail_id }}" class="mt-2" style="@if(isset($userReview) && $userReview && $userReview->image) display: block; @else display: none; @endif">
                             <div class="d-flex flex-wrap gap-2" id="reviewImagesList-{{ $detail->order_detail_id }}">
                               @if(isset($userReview) && $userReview && $userReview->image)
                                 @php
@@ -766,6 +767,34 @@
       input.files = dt.files;
       
       previewReviewImages(detailId, input);
+    }
+    
+    function removeExistingReviewImage(detailId, imagePath, buttonElement) {
+      // Remove the image container from DOM
+      const container = buttonElement.closest('.existing-image-container');
+      if (container) {
+        container.remove();
+      }
+      
+      // Add to removed images list
+      const removedInput = document.getElementById(`removedImages-${detailId}`);
+      if (removedInput) {
+        const currentRemoved = removedInput.value ? removedInput.value.split(',').filter(p => p.trim()) : [];
+        if (!currentRemoved.includes(imagePath)) {
+          currentRemoved.push(imagePath);
+          removedInput.value = currentRemoved.join(',');
+        }
+      }
+      
+      // Hide preview container if no images left
+      const previewContainer = document.getElementById(`reviewImagesPreview-${detailId}`);
+      const imagesList = document.getElementById(`reviewImagesList-${detailId}`);
+      if (previewContainer && imagesList) {
+        const remainingImages = imagesList.querySelectorAll('.existing-image-container, .position-relative');
+        if (remainingImages.length === 0) {
+          previewContainer.style.display = 'none';
+        }
+      }
     }
     
     async function submitReview(e, productId, orderId, detailId) {

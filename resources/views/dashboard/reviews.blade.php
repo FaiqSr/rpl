@@ -639,7 +639,7 @@
               <!-- Replies -->
               @if($review->replies && $review->replies->count() > 0)
               <div class="mt-4 ml-4" style="border-left: 2px solid #e5e7eb; padding-left: 1rem;">
-                @foreach($review->replies as $reply)
+                @foreach($review->replies->unique('review_id') as $reply)
                 <div class="bg-gray-50 rounded-lg p-3 mb-2" id="reply-{{ $reply->review_id }}">
                   <div class="d-flex align-items-center justify-content-between mb-2">
                     <div class="d-flex align-items-center gap-2">
@@ -651,7 +651,13 @@
                         <div style="font-size: 0.75rem; color: #6c757d;">{{ $reply->created_at->setTimezone('Asia/Jakarta')->format('d M Y, H:i') }} WIB</div>
                       </div>
                     </div>
-                    @if($reply->user_id === Auth::id())
+                    @php
+                      $replyUser = $reply->user;
+                      $isAdminReply = $replyUser && ($replyUser->role ?? 'visitor') === 'admin';
+                      $currentUserIsAdmin = Auth::check() && (Auth::user()->role ?? 'visitor') === 'admin';
+                      $canDelete = $currentUserIsAdmin && ($isAdminReply || $reply->user_id === Auth::id());
+                    @endphp
+                    @if($canDelete)
                       <button onclick="deleteReply('{{ $review->review_id }}', '{{ $reply->review_id }}')" class="btn btn-sm btn-link text-danger p-0" title="Hapus balasan">
                         <i class="fa-solid fa-trash"></i>
                       </button>
@@ -1007,14 +1013,8 @@
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
         try {
-          const reviewElement = document.querySelector(`[data-review-id="${reviewId}"]`);
-          const productId = reviewElement ? reviewElement.getAttribute('data-product-id') : null;
-          
-          if (!productId) {
-            throw new Error('Product ID tidak ditemukan');
-          }
-          
-          const response = await fetch(`/api/products/${productId}/reviews/${reviewId}/reply/${replyId}`, {
+          // Use dashboard API endpoint which allows admins to delete admin replies
+          const response = await fetch(`/api/dashboard/reviews/${reviewId}/reply/${replyId}`, {
             method: 'DELETE',
             headers: {
               'X-CSRF-TOKEN': csrfToken,

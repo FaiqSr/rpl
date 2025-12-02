@@ -94,12 +94,25 @@
       overflow: hidden;
     }
     
+    /* Override global table styles untuk desktop */
     .table {
       margin: 0;
+      width: 100%;
+      border-collapse: collapse;
+      display: table !important;
     }
     
     .table thead {
       background: #f8f9fa;
+      display: table-header-group !important;
+    }
+    
+    .table tbody {
+      display: table-row-group !important;
+    }
+    
+    .table tr {
+      display: table-row !important;
     }
     
     .table th {
@@ -110,12 +123,21 @@
       color: #6c757d;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      display: table-cell !important;
+      vertical-align: middle;
+      text-align: center;
     }
     
     .table td {
       padding: 1rem;
       vertical-align: middle;
       border-bottom: 1px solid #f1f3f5;
+      display: table-cell !important;
+      text-align: center;
+    }
+    
+    .table td::before {
+      display: none !important;
     }
     
     .article-title {
@@ -253,7 +275,7 @@
               <td>
                 <div class="article-excerpt">{{ Str::limit(strip_tags($article->content), 100) }}</div>
               </td>
-              <td>{{ $article->user->name ?? 'Admin' }}</td>
+              <td>{{ $article->user->name ?? ($article->user->email ?? 'Admin') }}</td>
               <td>{{ $article->created_at->format('d M Y') }}</td>
               <td>
                 <button class="btn-action btn-edit me-2" onclick="editArticle('{{ $article->article_id }}')">

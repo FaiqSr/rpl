@@ -27,6 +27,38 @@
       padding: 1.5rem;
     }
     
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .table {
+        font-size: 0.75rem;
+      }
+      
+      .table th,
+      .table td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .btn-action {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+      }
+    }
+    
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -69,12 +101,25 @@
       overflow: hidden;
     }
     
+    /* Override global table styles untuk desktop */
     .table {
       margin: 0;
+      width: 100%;
+      border-collapse: collapse;
+      display: table !important;
     }
     
     .table thead {
       background: #f8f9fa;
+      display: table-header-group !important;
+    }
+    
+    .table tbody {
+      display: table-row-group !important;
+    }
+    
+    .table tr {
+      display: table-row !important;
     }
     
     .table th {
@@ -85,12 +130,21 @@
       color: #6c757d;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      display: table-cell !important;
+      vertical-align: middle;
+      text-align: center;
     }
     
     .table td {
       padding: 1rem;
       vertical-align: middle;
       border-bottom: 1px solid #f1f3f5;
+      display: table-cell !important;
+      text-align: center;
+    }
+    
+    .table td::before {
+      display: none !important;
     }
     
     .btn-action {

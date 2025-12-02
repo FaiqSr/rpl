@@ -73,6 +73,33 @@ Route::get('/storage/products/{filename}', function ($filename) {
     }
 })->name('storage.products');
 
+// Serve tool images
+Route::get('/storage/tools/{filename}', function ($filename) {
+    try {
+        // Security: prevent directory traversal
+        if (strpos($filename, '..') !== false || strpos($filename, '/') !== false) {
+            abort(403, 'Forbidden');
+        }
+        
+        $filePath = 'tools/' . $filename;
+        
+        // Check if file exists using Storage
+        if (!Storage::disk('public')->exists($filePath)) {
+            \Log::error("Storage file not found: {$filePath}");
+            abort(404, 'File not found');
+        }
+        
+        // Serve file using Storage response
+        return Storage::disk('public')->response($filePath, null, [
+            'Cache-Control' => 'public, max-age=31536000',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    } catch (\Exception $e) {
+        \Log::error("Error serving tool image {$filename}: " . $e->getMessage());
+        abort(500, 'Error serving file');
+    }
+})->name('storage.tools');
+
 // Serve review images
 Route::get('/storage/reviews/{filename}', function ($filename) {
     try {
@@ -168,49 +195,60 @@ Route::get('/', function () {
             // Map category names to product keywords (diperluas dan lebih fleksibel)
             $categoryKeywords = [
                 // Jeroan Ayam
-                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
-                'jeroan ayam' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan'],
+                'jeroan' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan', 'jeroan ayam', 'jeroan broiler'],
+                'jeroan ayam' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan', 'jeroan ayam', 'jeroan broiler'],
+                'jeroan-ayam' => ['jeroan', 'ati', 'ampela', 'hati', 'usus', 'paru', 'limpa', 'ginjal', 'jantung', 'paket jeroan', 'jeroan ayam', 'jeroan broiler'],
                 
-                // Ayam Potong Segar
-                'daging segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
-                'daging' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
-                'ayam potong segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'kulit ayam', 'kepala ayam', 'ceker ayam'],
+                // Ayam Potong Segar / Daging Segar - Tidak termasuk dada (karena ada kategori khusus)
+                'daging segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'sayap', 'wing', 'kulit ayam', 'kulit', 'kepala ayam', 'kepala', 'ceker ayam', 'ceker', 'daging ayam', 'daging segar', 'ayam segar', 'broiler', 'potong', 'paha', 'paha atas', 'paha bawah'],
+                'daging-segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'sayap', 'wing', 'kulit ayam', 'kulit', 'kepala ayam', 'kepala', 'ceker ayam', 'ceker', 'daging ayam', 'daging segar', 'ayam segar', 'broiler', 'potong', 'paha', 'paha atas', 'paha bawah'],
+                'daging' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'sayap', 'wing', 'kulit ayam', 'kulit', 'kepala ayam', 'kepala', 'ceker ayam', 'ceker', 'daging ayam', 'daging segar', 'ayam segar', 'broiler', 'potong', 'paha', 'paha atas', 'paha bawah'],
+                'ayam potong segar' => ['ayam broiler', 'ayam potong', 'ayam utuh', 'paha atas', 'paha bawah', 'drumstick', 'thigh', 'sayap ayam', 'sayap', 'wing', 'kulit ayam', 'kulit', 'kepala ayam', 'kepala', 'ceker ayam', 'ceker', 'daging ayam', 'daging segar', 'ayam segar', 'broiler', 'potong', 'paha', 'paha atas', 'paha bawah'],
                 
-                // Dada Ayam
-                'dada' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
-                'dada ayam' => ['dada ayam', 'dada', 'breast', 'fillet', 'tenderloin', 'slice', 'cube', 'skinless', 'boneless', 'premium'],
+                // Dada Ayam - Berdasarkan data produk yang ada di database
+                'dada' => ['dada ayam', 'dada-ayam', 'fillet', 'tenderloin', 'skinless', 'boneless', 'slice', 'cube', 'dada-ayam-utuh', 'dada-ayam-fillet', 'dada-ayam-slice', 'dada-ayam-cube', 'dada-ayam-skinless', 'dada-ayam-boneless', 'dada-ayam-beku', 'fillet-ayam-beku', 'tenderloin-ayam'],
+                'dada-ayam' => ['dada ayam', 'dada-ayam', 'fillet', 'tenderloin', 'skinless', 'boneless', 'slice', 'cube', 'dada-ayam-utuh', 'dada-ayam-fillet', 'dada-ayam-slice', 'dada-ayam-cube', 'dada-ayam-skinless', 'dada-ayam-boneless', 'dada-ayam-beku', 'fillet-ayam-beku', 'tenderloin-ayam'],
+                'dada ayam' => ['dada ayam', 'dada-ayam', 'fillet', 'tenderloin', 'skinless', 'boneless', 'slice', 'cube', 'dada-ayam-utuh', 'dada-ayam-fillet', 'dada-ayam-slice', 'dada-ayam-cube', 'dada-ayam-skinless', 'dada-ayam-boneless', 'dada-ayam-beku', 'fillet-ayam-beku', 'tenderloin-ayam'],
                 
                 // Ayam Karkas
-                'ayam karkas' => ['karkas', 'carcass', 'ayam karkas'],
-                'karkas' => ['karkas', 'carcass', 'ayam karkas'],
+                'ayam karkas' => ['karkas', 'carcass', 'ayam karkas', 'karkas ayam', 'karkas broiler', 'karkas potong', 'whole chicken', 'ayam utuh karkas'],
+                'ayam-karkas' => ['karkas', 'carcass', 'ayam karkas', 'karkas ayam', 'karkas broiler', 'karkas potong', 'whole chicken', 'ayam utuh karkas'],
+                'karkas' => ['karkas', 'carcass', 'ayam karkas', 'karkas ayam', 'karkas broiler', 'karkas potong', 'whole chicken', 'ayam utuh karkas'],
                 
                 // Produk Frozen
-                'produk frozen' => ['beku', 'frozen'],
-                'frozen' => ['beku', 'frozen'],
-                'ayam beku' => ['beku', 'frozen'],
+                'produk frozen' => ['beku', 'frozen', 'ayam beku', 'frozen chicken', 'produk beku', 'chicken frozen', 'frozen product'],
+                'produk-frozen' => ['beku', 'frozen', 'ayam beku', 'frozen chicken', 'produk beku', 'chicken frozen', 'frozen product'],
+                'frozen' => ['beku', 'frozen', 'ayam beku', 'frozen chicken', 'produk beku', 'chicken frozen', 'frozen product'],
+                'ayam beku' => ['beku', 'frozen', 'ayam beku', 'frozen chicken', 'produk beku', 'chicken frozen', 'frozen product'],
                 
                 // Produk Olahan
-                'produk olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
-                'olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
-                'produk olahan ayam' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings'],
+                'produk olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings', 'olahan ayam', 'produk olahan ayam', 'olahan', 'chicken nugget', 'chicken sausage', 'chicken karage', 'chicken popcorn'],
+                'produk-olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings', 'olahan ayam', 'produk olahan ayam', 'olahan', 'chicken nugget', 'chicken sausage', 'chicken karage', 'chicken popcorn'],
+                'olahan' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings', 'olahan ayam', 'produk olahan ayam', 'olahan', 'chicken nugget', 'chicken sausage', 'chicken karage', 'chicken popcorn'],
+                'produk olahan ayam' => ['nugget', 'sosis', 'karage', 'popcorn', 'wings', 'chicken wings', 'olahan ayam', 'produk olahan ayam', 'olahan', 'chicken nugget', 'chicken sausage', 'chicken karage', 'chicken popcorn'],
                 
                 // Obat & Vitamin
-                'obat vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
-                'obat & vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
-                'obat & vitamin ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix'],
+                'obat vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix', 'obat ayam', 'vitamin ayam', 'obat & vitamin', 'obat dan vitamin', 'poligrip', 'electrovit', 'neobro', 'supertop', 'vito plex', 'vito plex', 'vitoplex'],
+                'obat & vitamin' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix', 'obat ayam', 'vitamin ayam', 'obat & vitamin', 'obat dan vitamin', 'poligrip', 'electrovit', 'neobro', 'supertop', 'vito plex', 'vito plex', 'vitoplex'],
+                'obat & vitamin ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix', 'obat ayam', 'vitamin ayam', 'obat & vitamin', 'obat dan vitamin', 'poligrip', 'electrovit', 'neobro', 'supertop', 'vito plex', 'vito plex', 'vitoplex'],
+                'obat-dan-vitamin-ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix', 'obat ayam', 'vitamin ayam', 'obat & vitamin', 'obat dan vitamin', 'poligrip', 'electrovit', 'neobro', 'supertop', 'vito plex', 'vito plex', 'vitoplex'],
+                'obat-vitamin-ayam' => ['vitamin', 'antibiotik', 'obat', 'probiotik', 'multivitamin', 'disinfectant', 'disinfektan', 'electrolyte', 'suplemen', 'antistress', 'vitachick', 'vitamix', 'obat ayam', 'vitamin ayam', 'obat & vitamin', 'obat dan vitamin', 'poligrip', 'electrovit', 'neobro', 'supertop', 'vito plex', 'vito plex', 'vitoplex'],
                 
                 // Pakan Ayam
-                'pakan' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
-                'pakan ayam' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib'],
+                'pakan' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib', 'pakan ayam', 'feed', 'chicken feed', 'pakan broiler'],
+                'pakan ayam' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib', 'pakan ayam', 'feed', 'chicken feed', 'pakan broiler'],
+                'pakan-ayam' => ['pakan', 'vaksin', 'desinfektan air', 'mineral feed', 'starter', 'finisher', 'nd/ib', 'pakan ayam', 'feed', 'chicken feed', 'pakan broiler'],
                 
-                // Peralatan Kandang
-                'peralatan kandang' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
-                'peralatan' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
-                'alat-alat' => ['tempat', 'nipple', 'selang', 'lampu', 'pemanas', 'timbangan', 'sensor', 'tirai', 'keranjang', 'kandang', 'sprayer', 'mesin', 'knapsack', 'termometer', 'exhaust', 'blower', 'feeder', 'drinker', 'brooder', 'gasolec', 'infrared', 'doc', 'plastik uv', 'pencabut bulu'],
+                // Peralatan Kandang - Berdasarkan data produk yang ada di database
+                'peralatan kandang' => ['tempat minum', 'tempat pakan', 'nipple', 'drinker', 'selang kandang', 'lampu penghangat', 'brooder', 'pemanas kandang', 'gasolec', 'infrared', 'timbangan digital', 'sensor suhu', 'kelembaban', 'tirai kandang', 'plastik uv', 'keranjang ayam', 'kandang doc', 'sprayer', 'disinfektan', 'mesin pencabut', 'knapsack', 'termometer kandang', 'exhaust', 'blower', 'timbangan pakan', 'tempat-minum-ayam', 'tempat-pakan-ayam', 'nipple-drinker', 'selang-kandang-ayam', 'lampu-penghangat', 'pemanas-kandang', 'timbangan-digital-ayam', 'sensor-suhu', 'tirai-kandang', 'keranjang-ayam', 'kandang-doc', 'sprayer-disinfektan', 'mesin-pencabut-bulu', 'knapsack-sprayer', 'termometer-kandang', 'exhaust-fan', 'timbangan-pakan', 'feeder'],
+                'peralatan-kandang' => ['tempat minum', 'tempat pakan', 'nipple', 'drinker', 'selang kandang', 'lampu penghangat', 'brooder', 'pemanas kandang', 'gasolec', 'infrared', 'timbangan digital', 'sensor suhu', 'kelembaban', 'tirai kandang', 'plastik uv', 'keranjang ayam', 'kandang doc', 'sprayer', 'disinfektan', 'mesin pencabut', 'knapsack', 'termometer kandang', 'exhaust', 'blower', 'timbangan pakan', 'tempat-minum-ayam', 'tempat-pakan-ayam', 'nipple-drinker', 'selang-kandang-ayam', 'lampu-penghangat', 'pemanas-kandang', 'timbangan-digital-ayam', 'sensor-suhu', 'tirai-kandang', 'keranjang-ayam', 'kandang-doc', 'sprayer-disinfektan', 'mesin-pencabut-bulu', 'knapsack-sprayer', 'termometer-kandang', 'exhaust-fan', 'timbangan-pakan', 'feeder'],
+                'peralatan' => ['tempat minum', 'tempat pakan', 'nipple', 'drinker', 'selang kandang', 'lampu penghangat', 'brooder', 'pemanas kandang', 'gasolec', 'infrared', 'timbangan digital', 'sensor suhu', 'kelembaban', 'tirai kandang', 'plastik uv', 'keranjang ayam', 'kandang doc', 'sprayer', 'disinfektan', 'mesin pencabut', 'knapsack', 'termometer kandang', 'exhaust', 'blower', 'timbangan pakan', 'tempat-minum-ayam', 'tempat-pakan-ayam', 'nipple-drinker', 'selang-kandang-ayam', 'lampu-penghangat', 'pemanas-kandang', 'timbangan-digital-ayam', 'sensor-suhu', 'tirai-kandang', 'keranjang-ayam', 'kandang-doc', 'sprayer-disinfektan', 'mesin-pencabut-bulu', 'knapsack-sprayer', 'termometer-kandang', 'exhaust-fan', 'timbangan-pakan', 'feeder'],
+                'alat-alat' => ['tempat minum', 'tempat pakan', 'nipple', 'drinker', 'selang kandang', 'lampu penghangat', 'brooder', 'pemanas kandang', 'gasolec', 'infrared', 'timbangan digital', 'sensor suhu', 'kelembaban', 'tirai kandang', 'plastik uv', 'keranjang ayam', 'kandang doc', 'sprayer', 'disinfektan', 'mesin pencabut', 'knapsack', 'termometer kandang', 'exhaust', 'blower', 'timbangan pakan', 'tempat-minum-ayam', 'tempat-pakan-ayam', 'nipple-drinker', 'selang-kandang-ayam', 'lampu-penghangat', 'pemanas-kandang', 'timbangan-digital-ayam', 'sensor-suhu', 'tirai-kandang', 'keranjang-ayam', 'kandang-doc', 'sprayer-disinfektan', 'mesin-pencabut-bulu', 'knapsack-sprayer', 'termometer-kandang', 'exhaust-fan', 'timbangan-pakan', 'feeder'],
                 
                 // Robot ChickPatrol
-                'robot' => ['robot', 'chickpatrol', 'chick patrol'],
-                'robot chickpatrol' => ['robot', 'chickpatrol', 'chick patrol'],
+                'robot' => ['robot', 'chickpatrol', 'chick patrol', 'chick-patrol', 'monitoring', 'robot monitoring'],
+                'robot chickpatrol' => ['robot', 'chickpatrol', 'chick patrol', 'chick-patrol', 'monitoring', 'robot monitoring'],
+                'robot-chickpatrol' => ['robot', 'chickpatrol', 'chick patrol', 'chick-patrol', 'monitoring', 'robot monitoring'],
             ];
             
             // Get keywords for this category
@@ -223,9 +261,12 @@ Route::get('/', function () {
             
             $query->where(function($q) use ($keywords) {
                 foreach ($keywords as $keyword) {
-                    $q->orWhere('slug', 'like', '%' . $keyword . '%')
-                      ->orWhere('name', 'like', '%' . $keyword . '%')
-                      ->orWhere('description', 'like', '%' . $keyword . '%');
+                    $keyword = trim($keyword);
+                    if (!empty($keyword)) {
+                        $q->orWhereRaw('LOWER(slug) LIKE ?', ['%' . strtolower($keyword) . '%'])
+                          ->orWhereRaw('LOWER(name) LIKE ?', ['%' . strtolower($keyword) . '%'])
+                          ->orWhereRaw('LOWER(description) LIKE ?', ['%' . strtolower($keyword) . '%']);
+                    }
                 }
             });
         } else {
@@ -1126,7 +1167,19 @@ Route::middleware(['auth.session','admin'])->group(function() {
         $reviews = $query->paginate(20)->withQueryString();
         
         // Reload relationships after join to ensure eager loading works
-        $reviews->load(['product.images', 'user', 'order', 'replies.user']);
+        // Prevent duplicate replies by reloading properly
+        $reviews->getCollection()->each(function($review) {
+            $review->load(['product.images', 'user', 'order']);
+            // Reload replies to ensure fresh data and no duplicates
+            $review->load(['replies' => function($query) {
+                $query->with('user')->orderBy('created_at', 'asc');
+            }]);
+            // Ensure no duplicate replies by using unique on review_id
+            if ($review->relationLoaded('replies')) {
+                $uniqueReplies = $review->replies->unique('review_id');
+                $review->setRelation('replies', $uniqueReplies);
+            }
+        });
         
         // Get statistics
         $totalReviews = \App\Models\ProductReview::whereNull('parent_id')
@@ -1207,6 +1260,54 @@ Route::middleware(['auth.session','admin'])->group(function() {
             'reply' => $reply
         ]);
     })->name('api.dashboard.review.reply');
+    
+    // Delete Reply API (for dashboard - allows any admin to delete admin replies)
+    Route::delete('/api/dashboard/reviews/{reviewId}/reply/{replyId}', function ($reviewId, $replyId, \Illuminate\Http\Request $request) {
+        $user = Auth::user();
+        
+        // Check if user is admin
+        if (($user->role ?? 'visitor') !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak: hanya admin yang dapat menghapus balasan'
+            ], 403);
+        }
+        
+        $parentReview = \App\Models\ProductReview::where('review_id', $reviewId)
+            ->whereNull('parent_id')
+            ->firstOrFail();
+        
+        $reply = \App\Models\ProductReview::where('review_id', $replyId)
+            ->where('parent_id', $parentReview->review_id)
+            ->firstOrFail();
+        
+        // Check if reply is from an admin (allow any admin to delete admin replies)
+        $replyUser = $reply->user;
+        if ($replyUser && ($replyUser->role ?? 'visitor') === 'admin') {
+            // Allow any admin to delete admin replies
+            $reply->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Balasan berhasil dihapus'
+            ]);
+        } else {
+            // For non-admin replies, only allow the owner to delete
+            if ($reply->user_id !== $user->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda hanya dapat menghapus balasan Anda sendiri'
+                ], 403);
+            }
+            
+            $reply->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Balasan berhasil dihapus'
+            ]);
+        }
+    })->name('api.dashboard.review.delete-reply');
     
     // Bulk Reply to Reviews API
     Route::post('/api/dashboard/reviews/bulk-reply', function (\Illuminate\Http\Request $request) {
@@ -2013,7 +2114,7 @@ Route::middleware(['auth.session','admin'])->group(function() {
     })->name('dashboard.articles');
     
     Route::get('/dashboard/articles/{id}', function ($id) {
-        $article = \App\Models\Article::with('categories')->findOrFail($id);
+        $article = \App\Models\Article::with(['user', 'categories'])->findOrFail($id);
         return response()->json([
             'success' => true,
             'article' => $article
@@ -2064,10 +2165,13 @@ Route::middleware(['auth.session','admin'])->group(function() {
             // Attach categories
             $article->categories()->attach($categoryIds);
             
+            // Load user relationship to ensure author name is available
+            $article->load(['user', 'categories']);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Artikel berhasil dibuat',
-                'article' => $article->load('categories')
+                'article' => $article
             ]);
         } catch (\Exception $e) {
             \Log::error('Error creating article: ' . $e->getMessage());
@@ -2129,10 +2233,13 @@ Route::middleware(['auth.session','admin'])->group(function() {
             // Sync categories
             $article->categories()->sync($categoryIds);
             
+            // Load user relationship to ensure author name is available
+            $article->load(['user', 'categories']);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Artikel berhasil diperbarui',
-                'article' => $article->load('categories')
+                'article' => $article
             ]);
         } catch (\Exception $e) {
             \Log::error('Error updating article: ' . $e->getMessage());

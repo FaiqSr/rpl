@@ -233,6 +233,56 @@
       #productGrid {
         grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
       }
+      
+      /* Desktop: Pastikan kategori ujung kanan sejajar dengan banner */
+      .categories-container {
+        width: 1205px !important;
+        max-width: 1205px !important;
+        min-width: 1205px !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* Spacing kategori: 5 item × 213px = 1065px, sisa 140px untuk 4 gap = 35px per gap */
+      /* Untuk alignment yang tepat dengan banner 1205px */
+      /* Pastikan 5 item muat dalam satu baris */
+      .category-item {
+        margin-right: 35px !important;
+        flex-shrink: 0 !important;
+        width: 213px !important;
+        max-width: 213px !important;
+        min-width: 213px !important;
+        flex: 0 0 213px !important;
+      }
+      
+      /* Item ke-5 (setiap baris) tidak ada margin kanan */
+      .category-item:nth-child(5n) {
+        margin-right: 0 !important;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      /* Desktop besar: spacing sedikit lebih besar untuk alignment lebih baik */
+      .category-item {
+        margin-right: 35px !important;
+      }
+      
+      .category-item:nth-child(5n) {
+        margin-right: 0 !important;
+      }
+    }
+    
+    @media (min-width: 1280px) {
+      /* Desktop sangat besar: spacing optimal */
+      .category-item {
+        margin-right: 35px !important;
+      }
+      
+      .category-item:nth-child(5n) {
+        margin-right: 0 !important;
+      }
     }
     
     /* Mobile Responsive */
@@ -464,6 +514,29 @@
         gap: 0.5rem !important;
       }
     }
+    /* New responsive rules for banners and categories */
+    @media (max-width: 1024px) {
+      .hero-banners {
+        flex-direction: column !important;
+      }
+      .hero-banners .banner-left,
+      .hero-banners .banner-right {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+      }
+    }
+    @media (max-width: 768px) {
+      .categories-container .category-item {
+        width: calc(50% - 8px) !important;
+        flex: 0 0 calc(50% - 8px) !important;
+        margin-right: 0 !important;
+      }
+      .categories-container .category-image,
+      .categories-container .category-name {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen">
@@ -478,10 +551,10 @@
       $hasAnyBanner = $squareBanners->count() > 0 || $rectTopBanners->count() > 0 || $rectBottomBanners->count() > 0;
     @endphp
     @if($hasAnyBanner)
-    <section class="mb-6" style="width: 1205px; max-width: 1205px; height: 365px; border-radius: 8px; opacity: 1; margin: 0 auto;">
-      <div style="display: flex; gap: 4px; width: 100%; height: 100%;">
+    <section class="mb-6" style="width: 100%; max-width: 1205px; border-radius: 8px; opacity: 1; margin: 0 auto;">
+      <div class="hero-banners" style="display: flex; gap: 4px; width: 100%;">
         <!-- Banner Persegi (Kiri) -->
-        <div style="width: 365px; height: 365px; border-radius: 8px; overflow: hidden; position: relative;">
+        <div class="banner-left" style="flex: 0 0 30.3%; max-width: 30.3%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; position: relative; width: 100%;">
           @if($squareBanners->count() > 0)
             <div id="squareBannerCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="width: 100%; height: 100%;">
               <div class="carousel-inner" style="width: 100%; height: 100%;">
@@ -492,7 +565,7 @@
                     @endif
                     <img src="{{ $banner->image_url }}" 
                          alt="{{ $banner->title ?? 'Banner' }}" 
-                         style="width: 365px; height: 365px; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
+                         style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
                          loading="eager"
                          fetchpriority="high"
                          decoding="async"
@@ -518,14 +591,14 @@
               @endif
             </div>
           @else
-            <div style="width: 365px; height: 365px; background: #f9fafb; border-radius: 8px;"></div>
+            <div style="width: 100%; height: 100%; aspect-ratio: 1/1; background: #f9fafb; border-radius: 8px;"></div>
           @endif
         </div>
         
         <!-- Banner Persegi Panjang (Kanan) -->
-        <div style="display: flex; flex-direction: column; gap: 4px; width: 836px; height: 365px;">
+        <div class="banner-right" style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
           <!-- Banner Persegi Panjang Atas -->
-          <div style="width: 836px; height: 180.5px; border-radius: 8px; overflow: hidden; position: relative;">
+          <div style="width: 100%; aspect-ratio: 836 / 180.5; border-radius: 8px; overflow: hidden; position: relative;">
             @if($rectTopBanners->count() > 0)
               <div id="rectTopBannerCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="width: 100%; height: 100%;">
                 <div class="carousel-inner" style="width: 100%; height: 100%;">
@@ -536,7 +609,7 @@
                       @endif
                       <img src="{{ $banner->image_url }}" 
                            alt="{{ $banner->title ?? 'Banner' }}" 
-                           style="width: 836px; height: 180.5px; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
+                           style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
                            loading="eager"
                            fetchpriority="high"
                            decoding="async"
@@ -562,12 +635,12 @@
                 @endif
               </div>
             @else
-              <div style="width: 836px; height: 180.5px; background: #f9fafb; border-radius: 8px;"></div>
+              <div style="width: 100%; height: 100%; background: #f9fafb; border-radius: 8px;"></div>
             @endif
       </div>
       
           <!-- Banner Persegi Panjang Bawah -->
-          <div style="width: 836px; height: 180.5px; border-radius: 8px; overflow: hidden; position: relative;">
+          <div style="width: 100%; aspect-ratio: 836 / 180.5; border-radius: 8px; overflow: hidden; position: relative;">
             @if($rectBottomBanners->count() > 0)
               <div id="rectBottomBannerCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000" style="width: 100%; height: 100%;">
                 <div class="carousel-inner" style="width: 100%; height: 100%;">
@@ -578,7 +651,7 @@
                       @endif
                       <img src="{{ $banner->image_url }}" 
                            alt="{{ $banner->title ?? 'Banner' }}" 
-                           style="width: 836px; height: 180.5px; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
+                           style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover; object-position: center; image-rendering: auto; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform;"
                            loading="eager"
                            fetchpriority="high"
                            decoding="async"
@@ -604,7 +677,7 @@
                 @endif
               </div>
         @else
-              <div style="width: 836px; height: 180.5px; background: #f9fafb; border-radius: 8px;"></div>
+              <div style="width: 100%; height: 100%; background: #f9fafb; border-radius: 8px;"></div>
         @endif
       </div>
     </div>
@@ -614,13 +687,13 @@
 
     <!-- Categories dengan foto -->
     @if(isset($homepageCategories) && $homepageCategories && $homepageCategories->count() > 0)
-    <section class="mb-6" style="margin-top: 2rem; margin-bottom: 2rem; width: 1205px; max-width: 1205px; margin-left: auto; margin-right: auto;">
-      <h2 class="text-sm font-semibold text-gray-700 mb-4" style="width: 1205px; max-width: 1205px; margin-left: auto; margin-right: auto;">Kategori</h2>
-      <div class="categories-container" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; width: 1205px !important; max-width: 1205px !important; margin: 0 auto 1.5rem auto !important; align-items: flex-start !important; justify-content: flex-start !important;">
+    <section class="mb-6" style="margin-top: 2rem; margin-bottom: 2rem; width: 100%; max-width: 1205px; margin-left: auto; margin-right: auto;">
+      <h2 class="text-sm font-semibold text-gray-700 mb-4" style="width: 100%; max-width: 1205px; margin-left: auto; margin-right: auto;">Kategori</h2>
+      <div class="categories-container" style="display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; width: 100% !important; max-width: 1205px !important; margin: 0 auto 1.5rem auto !important; align-items: flex-start !important; justify-content: flex-start !important; gap: 0 !important;">
         @foreach($homepageCategories as $index => $category)
           <div class="category-item" 
                onclick="filterByHomepageCategory('{{ $category->slug }}')"
-               style="cursor: pointer; width: 213px !important; flex: 0 0 213px !important; flex-shrink: 0 !important; margin-bottom: 1rem !important; margin-right: {{ ($loop->iteration % 5 == 0) ? '0' : '35' }}px !important; display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important;">
+               style="cursor: pointer; width: 213px !important; flex: 0 0 213px !important; flex-shrink: 0 !important; margin-bottom: 1rem !important; display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important;">
             <img src="{{ $category->image_url }}" 
                  alt="{{ $category->name }}" 
                  class="category-image"

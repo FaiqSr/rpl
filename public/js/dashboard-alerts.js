@@ -245,5 +245,28 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 2000);
     }
   }
+  // ========== RESPONSIVE ENHANCEMENTS (Tables, Code blocks) ==========
+  try {
+    // Wrap wide tables to allow horizontal scroll on small screens
+    document.querySelectorAll('table').forEach((table) => {
+      if (table.closest('.table-responsive, .table-scroll, .table-responsive-auto')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive-auto';
+      wrapper.style.overflowX = 'auto';
+      wrapper.style.webkitOverflowScrolling = 'touch';
+      wrapper.style.width = '100%';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+    // Make long code/pre blocks scroll instead of overflowing
+    document.querySelectorAll('pre, code').forEach((el) => {
+      el.style.whiteSpace = 'pre';
+      el.style.overflowX = 'auto';
+      el.style.maxWidth = '100%';
+      el.style.display = 'block';
+    });
+  } catch (e) {
+    console.warn('Responsive enhancement failed:', e);
+  }
 });
 

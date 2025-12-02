@@ -54,21 +54,22 @@
         border-bottom: none;
       }
       
+      /* Mobile: Tabel menjadi block untuk responsif */
       .table {
         font-size: 0.875rem;
         overflow-x: auto;
-        display: block;
+        display: block !important;
       }
       
       .table thead,
       .table tbody,
       .table tr {
-        display: block;
+        display: block !important;
       }
       
       .table th,
       .table td {
-        display: block;
+        display: block !important;
         padding: 0.5rem;
         text-align: left;
       }
@@ -85,6 +86,7 @@
         width: 100px;
       }
     }
+    
     
     .page-header {
       margin-bottom: 1.5rem;
@@ -162,12 +164,25 @@
       color: white;
     }
     
+    /* Override global table styles untuk desktop */
     .table {
       margin: 0;
+      width: 100%;
+      border-collapse: collapse;
+      display: table !important;
     }
     
     .table thead {
       background: #f8f9fa;
+      display: table-header-group !important;
+    }
+    
+    .table tbody {
+      display: table-row-group !important;
+    }
+    
+    .table tr {
+      display: table-row !important;
     }
     
     .table th {
@@ -178,12 +193,21 @@
       color: #6c757d;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      display: table-cell !important;
+      vertical-align: middle;
+      text-align: center;
     }
     
     .table td {
       padding: 1rem;
       vertical-align: middle;
       border-bottom: 1px solid #f1f3f5;
+      display: table-cell !important;
+      text-align: center;
+    }
+    
+    .table td::before {
+      display: none !important;
     }
     
     .btn-action {

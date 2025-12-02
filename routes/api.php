@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 // Route::middleware(['auth:sanctum'])->group(function () {
 Route::prefix('article')->name('article.')->group(function () {
@@ -931,6 +932,7 @@ Route::prefix('tools')->name('tools.')->group(function () {
     Route::get('/', function () {
         try {
             $tools = \App\Models\Tools::all()->map(function ($tool) {
+                $defaultImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E";
                 return [
                     'id' => $tool->id,
                     'tool_id' => $tool->tool_id,
@@ -942,7 +944,8 @@ Route::prefix('tools')->name('tools.')->group(function () {
                     'category' => 'Alat', // Default category
                     'description' => 'Alat monitoring otomatis',
                     'rating' => 4, // Default rating
-                    'image' => "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='50' height='50' fill='%23ffeaa7'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23fdcb6e' font-size='20'%3E🐔%3C/text%3E%3C/svg%3E"
+                    'image' => $tool->image_url ?: $defaultImage,
+                    'image_url' => $tool->image_url
                 ];
             });
             
@@ -959,17 +962,68 @@ Route::prefix('tools')->name('tools.')->group(function () {
         }
     })->name('index');
     
-    // Create new tool
+    // Create new tool (only POST without ID)
     Route::post('/', function (Request $request) {
+        // Don't process if it's an update request (has ID in URL)
+        if ($request->route()->parameter('id')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Use PUT or POST /api/tools/{id} for updates'
+            ], 400);
+        }
         try {
-            $validated = $request->validate([
+            // Log request data for debugging
+            Log::info('Tool create request:', [
+                'has_file' => $request->hasFile('image_file'),
+                'name' => $request->input('name'),
+                'model' => $request->input('model'),
+                'all_inputs' => $request->all(),
+                'content_type' => $request->header('Content-Type')
+            ]);
+            
+            // Validation rules
+            $rules = [
                 'name' => 'required|string|max:255',
                 'model' => 'required|string|max:255',
                 'location' => 'nullable|string|max:255',
                 'category' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
-                'status' => 'nullable|string|in:active,inactive'
-            ]);
+                'status' => 'nullable|string|in:active,inactive',
+            ];
+            
+            // Add image validation only if file is uploaded
+            if ($request->hasFile('image_file')) {
+                $rules['image_file'] = 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
+            } else {
+                $rules['image_url'] = 'nullable|string';
+            }
+            
+            $validated = $request->validate($rules);
+            
+            // Handle image upload
+            $imageUrl = null;
+            if ($request->hasFile('image_file')) {
+                $file = $request->file('image_file');
+                $filename = \Illuminate\Support\Str::uuid() . '.' . $file->getClientOriginalExtension();
+                
+                // Store file using Storage facade
+                $path = $file->storeAs('tools', $filename, 'public');
+                $imageUrl = asset('storage/' . $path);
+            } elseif (!empty($validated['image_url'])) {
+                $imageUrl = $validated['image_url'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    $filename = \Illuminate\Support\Str::uuid() . '.' . $extension;
+                    
+                    // Store using Storage facade
+                    \Illuminate\Support\Facades\Storage::disk('public')->put('tools/' . $filename, $imageData);
+                    $imageUrl = asset('storage/tools/' . $filename);
+                }
+            }
             
             // Generate tool_id
             $toolId = 'CHICKPATROL-' . str_pad(\App\Models\Tools::count() + 1, 3, '0', STR_PAD_LEFT);
@@ -981,6 +1035,7 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 'name' => $validated['name'],
                 'model' => $validated['model'],
                 'location' => $validated['location'] ?? null,
+                'image_url' => $imageUrl,
                 'operational_status' => $operationalStatus,
                 'battery_level' => 100,
                 'last_activity_at' => now(),
@@ -992,6 +1047,9 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 ]
             ]);
             
+            // Refresh tool to get latest data
+            $tool->refresh();
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Alat berhasil ditambahkan',
@@ -1001,14 +1059,22 @@ Route::prefix('tools')->name('tools.')->group(function () {
                     'name' => $tool->name,
                     'model' => $tool->model,
                     'location' => $tool->location,
+                    'image' => $tool->image_url,
+                    'image_url' => $tool->image_url,
                     'status' => $tool->operational_status === 'operating' || $tool->operational_status === 'idle' ? 'active' : 'inactive'
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $errorMessages = [];
+            foreach ($errors as $field => $messages) {
+                $errorMessages[$field] = is_array($messages) ? $messages[0] : $messages;
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Validasi gagal',
-                'errors' => $e->errors()
+                'message' => 'Validasi gagal: ' . implode(', ', array_values($errorMessages)),
+                'errors' => $errors
             ], 422);
         } catch (\Exception $e) {
             Log::error('Error creating tool: ' . $e->getMessage());
@@ -1019,19 +1085,82 @@ Route::prefix('tools')->name('tools.')->group(function () {
         }
     })->name('store');
     
-    // Update tool
-    Route::put('/{id}', function (Request $request, $id) {
+    // Update tool (supports both PUT and POST for file uploads)
+    Route::match(['put', 'post'], '/{id}', function (Request $request, $id) {
         try {
             $tool = \App\Models\Tools::findOrFail($id);
             
-            $validated = $request->validate([
+            // Log request for debugging
+            Log::info('Tool update request:', [
+                'id' => $id,
+                'method' => $request->method(),
+                'has_file' => $request->hasFile('image_file'),
+                'name' => $request->input('name'),
+                'model' => $request->input('model'),
+                'all_inputs' => $request->except(['image_file'])
+            ]);
+            
+            // Validation rules
+            $rules = [
                 'name' => 'required|string|max:255',
                 'model' => 'required|string|max:255',
                 'location' => 'nullable|string|max:255',
                 'category' => 'nullable|string|max:255',
                 'description' => 'nullable|string',
-                'status' => 'nullable|string|in:active,inactive'
-            ]);
+                'status' => 'nullable|string|in:active,inactive',
+            ];
+            
+            // Add image validation only if file is uploaded
+            if ($request->hasFile('image_file')) {
+                $rules['image_file'] = 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048';
+            } else {
+                $rules['image_url'] = 'nullable|string';
+            }
+            
+            $validated = $request->validate($rules);
+            
+            // Handle image upload
+            $imageUrl = $tool->image_url; // Keep existing image by default
+            if ($request->hasFile('image_file')) {
+                // Delete old image if exists
+                if ($tool->image_url && strpos($tool->image_url, 'storage/tools/') !== false) {
+                    $oldFilename = basename($tool->image_url);
+                    $oldPath = 'tools/' . $oldFilename;
+                    if (Storage::disk('public')->exists($oldPath)) {
+                        Storage::disk('public')->delete($oldPath);
+                    }
+                }
+                
+                $file = $request->file('image_file');
+                $filename = \Illuminate\Support\Str::uuid() . '.' . $file->getClientOriginalExtension();
+                
+                // Store file using Storage facade
+                $path = $file->storeAs('tools', $filename, 'public');
+                $imageUrl = asset('storage/' . $path);
+            } elseif (isset($validated['image_url']) && $validated['image_url'] !== $tool->image_url) {
+                $imageUrl = $validated['image_url'];
+                
+                // Check if it's a base64 image
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageUrl, $matches)) {
+                    // Delete old image if exists
+                    if ($tool->image_url && strpos($tool->image_url, 'storage/tools/') !== false) {
+                        $oldFilename = basename($tool->image_url);
+                        $oldPath = 'tools/' . $oldFilename;
+                        if (Storage::disk('public')->exists($oldPath)) {
+                            Storage::disk('public')->delete($oldPath);
+                        }
+                    }
+                    
+                    $imageData = substr($imageUrl, strpos($imageUrl, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = $matches[1] ?? 'jpg';
+                    $filename = \Illuminate\Support\Str::uuid() . '.' . $extension;
+                    
+                    // Store using Storage facade
+                    Storage::disk('public')->put('tools/' . $filename, $imageData);
+                    $imageUrl = asset('storage/tools/' . $filename);
+                }
+            }
             
             $operationalStatus = ($validated['status'] ?? 'active') === 'active' ? 
                 ($tool->operational_status === 'offline' ? 'idle' : $tool->operational_status) : 
@@ -1041,8 +1170,12 @@ Route::prefix('tools')->name('tools.')->group(function () {
                 'name' => $validated['name'],
                 'model' => $validated['model'],
                 'location' => $validated['location'] ?? null,
+                'image_url' => $imageUrl,
                 'operational_status' => $operationalStatus
             ]);
+            
+            // Refresh tool to get latest data
+            $tool->refresh();
             
             return response()->json([
                 'success' => true,
@@ -1053,14 +1186,22 @@ Route::prefix('tools')->name('tools.')->group(function () {
                     'name' => $tool->name,
                     'model' => $tool->model,
                     'location' => $tool->location,
+                    'image' => $tool->image_url,
+                    'image_url' => $tool->image_url,
                     'status' => $tool->operational_status === 'operating' || $tool->operational_status === 'idle' ? 'active' : 'inactive'
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $errorMessages = [];
+            foreach ($errors as $field => $messages) {
+                $errorMessages[$field] = is_array($messages) ? $messages[0] : $messages;
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Validasi gagal',
-                'errors' => $e->errors()
+                'message' => 'Validasi gagal: ' . implode(', ', array_values($errorMessages)),
+                'errors' => $errors
             ], 422);
         } catch (\Exception $e) {
             Log::error('Error updating tool: ' . $e->getMessage());

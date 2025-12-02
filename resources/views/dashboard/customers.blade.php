@@ -30,6 +30,39 @@
       padding: 1.5rem;
     }
     
+    @media (max-width: 768px) {
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        margin-top: 60px;
+      }
+      
+      .content-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .customer-table {
+        font-size: 0.75rem;
+      }
+      
+      .customer-table th,
+      .customer-table td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      
+      .btn-action {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+      }
+    }
+    
     .content-header {
       display: flex;
       align-items: center;
@@ -51,22 +84,35 @@
       overflow: hidden;
     }
     
+    /* Override global table styles untuk desktop */
     .customer-table {
       width: 100%;
       border-collapse: collapse;
+      display: table !important;
     }
     
     .customer-table thead {
       background: #f8f9fa;
+      display: table-header-group !important;
+    }
+    
+    .customer-table tbody {
+      display: table-row-group !important;
+    }
+    
+    .customer-table tr {
+      display: table-row !important;
     }
     
     .customer-table th {
       padding: 1rem;
-      text-align: left;
+      text-align: center;
       font-size: 0.875rem;
       font-weight: 600;
       color: #2F2F2F;
       border-bottom: 1px solid #e9ecef;
+      display: table-cell !important;
+      vertical-align: middle;
     }
     
     .customer-table td {
@@ -74,6 +120,13 @@
       font-size: 0.875rem;
       color: #2F2F2F;
       border-bottom: 1px solid #f8f9fa;
+      display: table-cell !important;
+      vertical-align: middle;
+      text-align: center;
+    }
+    
+    .customer-table td::before {
+      display: none !important;
     }
     
     .customer-table tbody tr:hover {
