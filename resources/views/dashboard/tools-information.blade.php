@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Konfigurasi - ChickPatrol Seller</title>
+  
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Google Fonts - Inter (Premium Typography) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- SweetAlert2 -->
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css" rel="stylesheet">
+  
+  <style>
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { background: #F8F9FB; margin: 0; }
+    
+    .main-content {
+      margin-left: 220px;
+      padding: 1.5rem;
+    }
+    
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2F2F2F;
+      margin: 0;
+    }
+    
+    .performa-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: #6c757d;
+    }
+    
+    .performa-value {
+      font-weight: 700;
+      color: #2F2F2F;
+    }
+    
+    .chart-card {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .chart-card h6 {
+      margin: 0 0 .75rem;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #6c757d;
+    }
+    
+    /* Professional Threshold Cards */
+    .threshold-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+      .threshold-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (min-width: 1200px) {
+      .threshold-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    
+    .threshold-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .threshold-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%);
+    }
+    
+    .threshold-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .threshold-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .threshold-header > div:last-child {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .threshold-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      color: white;
+    }
+    
+    .threshold-title {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: #2F2F2F;
+      margin: 0 0 0.15rem 0;
+      line-height: 1.3;
+    }
+    
+    .threshold-subtitle {
+      font-size: 0.7rem;
+      color: #6c757d;
+      margin: 0;
+      line-height: 1.3;
+    }
+    
+    .threshold-ranges {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex: 1;
+    }
+    
+    .range-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      flex-wrap: wrap;
+    }
+    
+    .range-badge {
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    
+    .range-badge.ideal {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .range-badge.warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .range-badge.danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .range-value {
+      color: #6c757d;
+      flex: 1;
+    }
+    
+    /* Professional Classification Cards */
+    .classification-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .classification-card {
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid transparent;
+    }
+    
+    .classification-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+    
+    .classification-card.baik {
+      background: linear-gradient(135deg, #f0f9f4 0%, #e8f5ed 100%);
+      border-color: #c3e6cb;
+    }
+    
+    .classification-card.baik::before {
+      background: linear-gradient(180deg, #22C55E 0%, #16A34A 100%);
+    }
+    
+    .classification-card.perhatian {
+      background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%);
+      border-color: #ffeaa7;
+    }
+    
+    .classification-card.perhatian::before {
+      background: linear-gradient(180deg, #FACC15 0%, #EAB308 100%);
+    }
+    
+    .classification-card.buruk {
+      background: linear-gradient(135deg, #fff0f0 0%, #ffe0e0 100%);
+      border-color: #f5c6cb;
+    }
+    
+    .classification-card.buruk::before {
+      background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
+    }
+    
+    .classification-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .classification-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .classification-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    
+    .classification-card.baik .classification-icon {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      color: white;
+    }
+    
+    .classification-card.perhatian .classification-icon {
+      background: linear-gradient(135deg, #FACC15 0%, #EAB308 100%);
+      color: #000;
+    }
+    
+    .classification-card.buruk .classification-icon {
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      color: white;
+    }
+    
+    .classification-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 0;
+    }
+    
+    .classification-card.baik .classification-title {
+      color: #155724;
+    }
+    
+    .classification-card.perhatian .classification-title {
+      color: #856404;
+    }
+    
+    .classification-card.buruk .classification-title {
+      color: #721c24;
+    }
+    
+    .classification-description {
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #495057;
+      margin: 0;
+    }
+    
+    /* Toggle Switch Styles - Premium */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 56px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 30px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-slider-button {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .toggle-switch input:checked + .toggle-slider .toggle-slider-button {
+      transform: translateX(26px);
+      box-shadow: 0 3px 8px rgba(34, 197, 94, 0.4), 0 1px 3px rgba(0,0,0,0.2);
+    }
+    
+    .toggle-switch input:focus + .toggle-slider {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
+    }
+    
+    .toggle-switch input:disabled + .toggle-slider {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background-color: #e2e8f0;
+    }
+    
+    .toggle-switch:hover input:not(:disabled) + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+    }
+    
+    .toggle-switch:hover input:not(:disabled):checked + .toggle-slider {
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2), inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* ML Model Information */
+    .ml-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+      .ml-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .ml-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .ml-info-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ml-info-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, #6c5ce7 0%, #a29bfe 100%);
+    }
+    
+    .ml-info-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .ml-info-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .ml-info-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+      color: white;
+    }
+    
+    .ml-info-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #2F2F2F;
+      margin: 0;
+    }
+    
+    .ml-info-value {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin: 0;
+      margin-top: 0.25rem;
+    }
+    
+    .ml-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    
+    .ml-status-badge.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .ml-status-badge.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .ml-status-badge.fallback {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .mobile-menu-toggle {
+        display: block;
+      }
+      
+      .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+      }
+      
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        padding: 1rem !important;
+        padding-top: 4rem;
+      }
+      
+      .page-header {
+        margin-top: 0;
+      }
+      
+      .chart-card {
+        margin-bottom: 1rem;
+        padding: 1rem;
+      }
+      
+      .chart-card form {
+        display: grid;
+        gap: .75rem;
+      }
+      
+      .chart-card form > div {
+        width: 100%;
+      }
+      
+      .chart-card form button {
+        width: 100%;
+      }
+      
+      .threshold-grid,
+      .classification-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .threshold-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      
+      .threshold-icon {
+        width: 50px;
+        height: 50px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .page-header h1 {
+        font-size: 1.25rem;
+      }
+      
+      .chart-card h6 {
+        font-size: .75rem;
+      }
+      
+      .chart-card form button {
+        font-size: .75rem;
+        padding: .4rem .75rem;
+      }
+      
+      .threshold-card,
+      .classification-card {
+        padding: 1rem;
+      }
+      
+      .threshold-icon,
+      .classification-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+      }
+      
+      .threshold-title,
+      .classification-title {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+  </head>
+  <body>
+  <!-- Mobile Menu Toggle -->
+  <button class="mobile-menu-toggle" onclick="toggleSidebar()" aria-label="Toggle Menu">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+  
+  @include('layouts.sidebar')
+  
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="page-header">
+      <h1>
+        <i class="fa-solid fa-info-circle me-2"></i>
+        Konfigurasi
+      </h1>
+    </div>
+
+    <!-- Threshold Information -->
+    <div class="chart-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h6 style="margin:0;">
+          <i class="fa-solid fa-sliders me-2"></i>
+          Threshold Parameter Sensor
+        </h6>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <select id="thresholdProfile" style="padding:.5rem; border:1px solid #ddd; border-radius:6px; font-size:.875rem;">
+            <option value="default">Default</option>
+            <option value="1-7">1-7 hari</option>
+            <option value="8-14">8-14 hari</option>
+            <option value="15-21">15-21 hari</option>
+            <option value="22-28">22-28 hari</option>
+            <option value="29+">29+ hari</option>
+          </select>
+          <button id="resetThresholdBtn" class="btn btn-sm btn-outline-warning" style="font-size:.875rem;">
+            <i class="fa-solid fa-rotate-left me-1"></i>Reset to Default
+          </button>
+          <button id="saveThresholdBtn" class="btn btn-sm btn-success" style="font-size:.875rem;">
+            <i class="fa-solid fa-save me-1"></i>Simpan
+          </button>
+        </div>
+      </div>
+      <div id="thresholdLoading" style="display:none; text-align:center; padding:2rem;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:2rem; color:#22C55E;"></i>
+        <p style="margin-top:.5rem; color:#6c757d;">Memuat threshold...</p>
+      </div>
+      <div id="thresholdForm" class="threshold-grid">
+        <div class="threshold-card">
+          <div class="threshold-header">
+            <div class="threshold-icon">
+              <i class="fa-solid fa-temperature-half"></i>
+            </div>
+            <div>
+              <div class="threshold-title">Suhu (Temperature)</div>
+              <div class="threshold-subtitle">Parameter Suhu Kandang</div>
+            </div>
+          </div>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Min</span>
+              <input type="number" id="suhu_ideal_min" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="23">
+              <span style="color:#6c757d;">°C</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="suhu_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="34">
+              <span style="color:#6c757d;">°C</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger Low</span>
+              <input type="number" id="suhu_danger_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="23">
+              <span style="color:#6c757d;">°C</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger High</span>
+              <input type="number" id="suhu_danger_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="34">
+              <span style="color:#6c757d;">°C</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="threshold-card">
+          <div class="threshold-header">
+            <div class="threshold-icon">
+              <i class="fa-solid fa-droplet"></i>
+            </div>
+            <div>
+              <div class="threshold-title">Kelembaban (Humidity)</div>
+              <div class="threshold-subtitle">Parameter Kelembaban Udara</div>
+            </div>
+          </div>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Min</span>
+              <input type="number" id="kelembaban_ideal_min" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="50">
+              <span style="color:#6c757d;">%</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="kelembaban_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="70">
+              <span style="color:#6c757d;">%</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn High</span>
+              <input type="number" id="kelembaban_warn_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="80">
+              <span style="color:#6c757d;">%</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger High</span>
+              <input type="number" id="kelembaban_danger_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="80">
+              <span style="color:#6c757d;">%</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="threshold-card">
+          <div class="threshold-header">
+            <div class="threshold-icon">
+              <i class="fa-solid fa-wind"></i>
+            </div>
+            <div>
+              <div class="threshold-title">Amoniak (Ammonia)</div>
+              <div class="threshold-subtitle">Parameter Kadar Amoniak</div>
+            </div>
+          </div>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Max</span>
+              <input type="number" id="amonia_ideal_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="20">
+              <span style="color:#6c757d;">ppm</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn Max</span>
+              <input type="number" id="amonia_warn_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="35">
+              <span style="color:#6c757d;">ppm</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge danger" style="min-width:80px;">Danger Max</span>
+              <input type="number" id="amonia_danger_max" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="35">
+              <span style="color:#6c757d;">ppm</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="threshold-card">
+          <div class="threshold-header">
+            <div class="threshold-icon">
+              <i class="fa-solid fa-sun"></i>
+            </div>
+            <div>
+              <div class="threshold-title">Cahaya (Light)</div>
+              <div class="threshold-subtitle">Parameter Intensitas Cahaya</div>
+            </div>
+          </div>
+          <div class="threshold-ranges" style="display:flex; flex-direction:column; gap:.5rem;">
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal Low</span>
+              <input type="number" id="cahaya_ideal_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="20">
+              <span style="color:#6c757d;">lux</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge ideal" style="min-width:80px;">Ideal High</span>
+              <input type="number" id="cahaya_ideal_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="40">
+              <span style="color:#6c757d;">lux</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn Low</span>
+              <input type="number" id="cahaya_warn_low" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="10">
+              <span style="color:#6c757d;">lux</span>
+            </div>
+            <div class="range-item" style="display:flex; align-items:center; gap:.5rem;">
+              <span class="range-badge warning" style="min-width:80px;">Warn High</span>
+              <input type="number" id="cahaya_warn_high" step="0.1" style="flex:1; padding:.375rem; border:1px solid #ddd; border-radius:4px; font-size:.875rem;" placeholder="60">
+              <span style="color:#6c757d;">lux</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:1rem; padding:.75rem; background:#d1ecf1; border-radius:8px; font-size:.75rem; color:#0c5460; display:flex; align-items:center; gap:.5rem;">
+        <i class="fa-solid fa-info-circle"></i>
+        <span>Threshold dapat disesuaikan sesuai umur ayam broiler. Setiap profile memiliki threshold yang berbeda.</span>
+      </div>
+    </div>
+    
+    <!-- Classification Information -->
+    <div class="chart-card">
+      <h6>
+        <i class="fa-solid fa-chart-line me-2"></i>
+        Klasifikasi Status Kandang
+      </h6>
+      <div class="classification-grid">
+        <div class="classification-card baik">
+          <div class="classification-header">
+            <div class="classification-icon">
+              <i class="fa-solid fa-check-circle"></i>
+            </div>
+            <div>
+              <div class="classification-title">BAIK</div>
+            </div>
+          </div>
+          <p class="classification-description">
+            Semua parameter sensor dalam batas aman sesuai threshold yang ditetapkan. Kondisi kandang optimal untuk pertumbuhan ayam.
+          </p>
+        </div>
+        
+        <div class="classification-card perhatian">
+          <div class="classification-header">
+            <div class="classification-icon">
+              <i class="fa-solid fa-exclamation-triangle"></i>
+            </div>
+            <div>
+              <div class="classification-title">PERHATIAN</div>
+            </div>
+          </div>
+          <p class="classification-description">
+            Beberapa parameter sensor perlu ditinjau karena mendekati atau melewati batas warning. Lakukan pengecekan dan penyesuaian.
+          </p>
+        </div>
+        
+        <div class="classification-card buruk">
+          <div class="classification-header">
+            <div class="classification-icon">
+              <i class="fa-solid fa-times-circle"></i>
+            </div>
+            <div>
+              <div class="classification-title">BURUK</div>
+            </div>
+          </div>
+          <p class="classification-description">
+            Banyak parameter sensor bermasalah, memerlukan pemeriksaan segera. Kondisi kandang tidak optimal dan dapat mempengaruhi kesehatan ayam.
+          </p>
+        </div>
+      </div>
+      <div style="margin-top:1rem; padding:.75rem; background:#fff3cd; border-radius:8px; font-size:.75rem; color:#856404; display:flex; align-items:center; gap:.5rem;">
+        <i class="fa-solid fa-lock"></i>
+        <span>Klasifikasi ini tidak dapat diubah karena sudah diatur sesuai model Machine Learning (Random Forest).</span>
+      </div>
+    </div>
+
+    <!-- Informasi Model Machine Learning -->
+    <div class="chart-card">
+      <h6>
+        <i class="fa-solid fa-brain me-2"></i>
+        Informasi Model Machine Learning
+      </h6>
+      <div id="mlInfoContent" class="ml-info-grid">
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-plug"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">Status Koneksi</div>
+              <div class="ml-info-value" id="mlConnectionStatus">Memuat...</div>
+            </div>
+          </div>
+        </div>
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">LSTM</div>
+              <div class="ml-info-value">Prediksi Tren Sensor</div>
+            </div>
+          </div>
+        </div>
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-tree"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">Random Forest</div>
+              <div class="ml-info-value">Klasifikasi Status</div>
+            </div>
+          </div>
+        </div>
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">Isolation Forest</div>
+              <div class="ml-info-value">Deteksi Anomali</div>
+            </div>
+          </div>
+        </div>
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-bullseye"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">Akurasi Model</div>
+              <div class="ml-info-value" id="mlAccuracy">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="ml-info-card">
+          <div class="ml-info-header">
+            <div class="ml-info-icon">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+            <div>
+              <div class="ml-info-title">Waktu Prediksi</div>
+              <div class="ml-info-value" id="mlPredictionTime">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ekspor Data -->
+    <div class="chart-card">
+      <h6>
+        <i class="fas fa-download me-2"></i>
+        Ekspor Data
+      </h6>
+      <div style="margin-top:.75rem;">
+        <p style="font-size:.8rem; color:#6c757d; margin-bottom:.75rem;">
+          Ekspor data sensor untuk laporan atau analisis lebih lanjut.
+        </p>
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+          <a href="{{ route('export.csv') }}" class="btn btn-success" target="_blank" style="font-size:.8rem; padding:.5rem 1rem;">
+            <i class="fas fa-file-csv me-2"></i>Ekspor CSV (Dataset)
+          </a>
+        </div>
+        <div style="margin-top:.75rem;">
+          <small style="font-size:.7rem; color:#6c757d; display:block; line-height:1.5;">
+            <strong>CSV:</strong> Dataset mentah (hanya nilai parameter, tanpa timestamp)
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pengaturan Telegram -->
+    <div class="chart-card">
+      <h6>
+        <i class="fa-brands fa-telegram me-2"></i>
+        Pengaturan Telegram
+      </h6>
+      <form id="telegramSettingsForm" style="margin-top:.75rem;">
+        <div style="display:grid; gap:.75rem;">
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.25rem;">
+              Token Bot
+            </label>
+            <input type="text" id="telegramBotToken" name="bot_token" 
+                   placeholder="Masukkan token bot Telegram" 
+                   style="width:100%; padding:.5rem; border:1px solid #ddd; border-radius:6px; font-size:.8rem;"
+                   value="{{ old('bot_token', env('TELEGRAM_BOT_TOKEN', '')) }}">
+            <small style="font-size:.7rem; color:#6c757d; display:block; margin-top:.25rem;">
+              Dapatkan token dari <a href="https://t.me/BotFather" target="_blank" style="color:#007bff;">@BotFather</a>
+            </small>
+          </div>
+          
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.25rem;">
+              Chat ID Pengguna
+            </label>
+            <input type="text" id="telegramChatId" name="chat_id" 
+                   placeholder="Masukkan Chat ID pengguna" 
+                   style="width:100%; padding:.5rem; border:1px solid #ddd; border-radius:6px; font-size:.8rem;"
+                   value="{{ old('chat_id', env('TELEGRAM_CHAT_ID', '')) }}">
+            <small style="font-size:.7rem; color:#6c757d; display:block; margin-top:.25rem;">
+              Dapatkan Chat ID dari <a href="https://t.me/userinfobot" target="_blank" style="color:#007bff;">@userinfobot</a>
+            </small>
+          </div>
+          
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.25rem;">
+              Status Koneksi
+            </label>
+            <div id="telegramStatus" style="padding:.5rem; border-radius:6px; font-size:.8rem; font-weight:600;">
+              <span id="telegramStatusText">Memeriksa...</span>
+            </div>
+          </div>
+          
+          <div>
+            <label style="display:block; font-size:.75rem; font-weight:600; color:#6c757d; margin-bottom:.5rem;">
+              Notifikasi Otomatis
+            </label>
+            <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; background:linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius:10px; border:1px solid #e9ecef; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:.85rem; font-weight:700; color:#2F2F2F; margin-bottom:.4rem; display:flex; align-items:center; gap:.5rem;">
+                  <i class="fa-solid fa-bell" style="color:#22C55E;"></i>
+                  Notifikasi Otomatis
+                </div>
+                <div style="font-size:.75rem; color:#6c757d; line-height:1.5; margin-bottom:.5rem;">
+                  Notifikasi akan dikirim otomatis ke Telegram berdasarkan kondisi kandang (1 jam untuk kondisi BAIK, 5 menit untuk PERHATIAN/BURUK).
+                </div>
+                <div style="display:flex; align-items:center; gap:.5rem;">
+                  <div id="notificationStatus" style="flex:1; font-size:.7rem; color:#6c757d; padding:.5rem; background:#fff; border-radius:6px; border:1px solid #e9ecef;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...
+                  </div>
+                  <button onclick="loadNotificationStatus()" title="Refresh status" style="padding:.4rem .6rem; background:#fff; border:1px solid #e9ecef; border-radius:6px; cursor:pointer; transition:all 0.2s;">
+                    <i class="fa-solid fa-sync-alt" style="font-size:.7rem; color:#6c757d;"></i>
+                  </button>
+                </div>
+              </div>
+              <div style="flex-shrink:0; display:flex; align-items:center; padding-top:.25rem;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="telegramNotificationsEnabled">
+                  <span class="toggle-slider">
+                    <span class="toggle-slider-button"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <small style="font-size:.7rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.75rem; padding:.5rem; background:#fff3cd; border-radius:6px; border-left:3px solid #facc15;">
+              <i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i>
+              <span><strong>Penting:</strong> Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.1rem .3rem; border-radius:3px; font-family:monospace;">php artisan schedule:work</code></span>
+            </small>
+              <i class="fa-solid fa-info-circle" style="color:#856404;"></i>
+              <span>Notifikasi akan berhenti jika dinonaktifkan. Pastikan Laravel Scheduler berjalan untuk notifikasi otomatis. Jalankan: <code style="background:#fff; padding:.15rem .4rem; border-radius:4px; font-size:.65rem;">php artisan schedule:work</code></span>
+            </small>
+          </div>
+          
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <button type="button" id="testTelegramBtn" 
+                    style="padding:.5rem 1rem; background:#17a2b8; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
+              <i class="fa-solid fa-paper-plane me-1"></i>
+              Tes Kirim Pesan
+            </button>
+            <button type="submit" id="saveTelegramBtn"
+                    style="padding:.5rem 1rem; background:#22C55E; color:white; border:none; border-radius:6px; font-size:.8rem; cursor:pointer; font-weight:600;">
+              <i class="fa-solid fa-save me-1"></i>
+              Simpan
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="{{ asset('js/dashboard-alerts.js') }}"></script>
+  
+  <script>
+    // Telegram Settings Functions
+    async function checkTelegramStatus(){
+      const statusEl = document.getElementById('telegramStatus');
+      const statusText = document.getElementById('telegramStatusText');
+      const botToken = document.getElementById('telegramBotToken').value;
+      const chatId = document.getElementById('telegramChatId').value;
+      
+      if (!botToken || !chatId) {
+        statusEl.style.background = '#fff3cd';
+        statusEl.style.color = '#856404';
+        statusText.innerHTML = '<i class="fa-solid fa-times-circle"></i> Belum terhubung ❌';
+        return false;
+      }
+      
+      // Show loading state
+      statusEl.style.background = '#e7f3ff';
+      statusEl.style.color = '#004085';
+      statusText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memeriksa koneksi...';
+      
+      try {
+        const response = await fetch('/api/telegram/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ bot_token: botToken, chat_id: chatId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          statusEl.style.background = '#d4edda';
+          statusEl.style.color = '#155724';
+          statusText.innerHTML = '<i class="fa-solid fa-check-circle"></i> Terhubung ✔️';
+          return true;
+        } else {
+          statusEl.style.background = '#f8d7da';
+          statusEl.style.color = '#721c24';
+          statusText.innerHTML = '<i class="fa-solid fa-times-circle"></i> Belum terhubung ❌';
+          return false;
+        }
+      } catch (error) {
+        statusEl.style.background = '#f8d7da';
+        statusEl.style.color = '#721c24';
+        statusText.innerHTML = '<i class="fa-solid fa-times-circle"></i> Belum terhubung ❌';
+        return false;
+      }
+    }
+    
+    async function testTelegramMessage(){
+      const botToken = document.getElementById('telegramBotToken').value;
+      const chatId = document.getElementById('telegramChatId').value;
+      
+      if (!botToken || !chatId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Data Belum Lengkap',
+          text: 'Silakan isi Token Bot dan Chat ID terlebih dahulu.',
+          confirmButtonColor: '#FACC15'
+        });
+        return;
+      }
+      
+      const btn = document.getElementById('testTelegramBtn');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Mengirim...';
+      
+      try {
+        const response = await fetch('/api/telegram/send-test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ 
+            bot_token: botToken, 
+            chat_id: chatId,
+            message: '✅ Test pesan dari ChickPatrol Monitoring System. Telegram bot berfungsi dengan baik!'
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update status connection setelah pesan test berhasil
+          setTimeout(() => {
+            checkTelegramStatus();
+          }, 500);
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Pesan Terkirim!',
+            text: 'Pesan test berhasil dikirim ke Telegram Anda.',
+            confirmButtonColor: '#22C55E'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Mengirim',
+            text: data.message || 'Terjadi kesalahan saat mengirim pesan.',
+            confirmButtonColor: '#EF4444'
+          });
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan: ' + error.message,
+          confirmButtonColor: '#dc3545'
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+    
+    async function saveTelegramSettings(e){
+      e.preventDefault();
+      
+      const botToken = document.getElementById('telegramBotToken').value;
+      const chatId = document.getElementById('telegramChatId').value;
+      
+      if (!botToken || !chatId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Data Belum Lengkap',
+          text: 'Silakan isi Token Bot dan Chat ID terlebih dahulu.',
+          confirmButtonColor: '#FACC15'
+        });
+        return;
+      }
+      
+      const btn = document.getElementById('saveTelegramBtn');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...';
+      
+      try {
+        const response = await fetch('/api/telegram/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ bot_token: botToken, chat_id: chatId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil Disimpan!',
+            text: 'Pengaturan Telegram berhasil disimpan.',
+            confirmButtonColor: '#22C55E'
+          });
+          checkTelegramStatus();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Menyimpan',
+            text: data.message || 'Terjadi kesalahan saat menyimpan pengaturan.',
+            confirmButtonColor: '#EF4444'
+          });
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan: ' + error.message,
+          confirmButtonColor: '#dc3545'
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+    
+    // Toggle Sidebar (Mobile)
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.sidebar-overlay');
+      sidebar.classList.toggle('show');
+      overlay.classList.toggle('show');
+    }
+    
+    // Toggle Submenu
+    // Toggle Sidebar (Mobile)
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.querySelector('.sidebar-overlay');
+      sidebar.classList.toggle('show');
+      overlay.classList.toggle('show');
+    }
+    
+    // Toggle Submenu
+    function toggleSubmenu() {
+      const submenu = document.querySelector('.sidebar-submenu');
+      const chevron = document.querySelector('.chevron-icon');
+      submenu.classList.toggle('show');
+      chevron.classList.toggle('rotate');
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.querySelector('.mobile-menu-toggle');
+      const overlay = document.querySelector('.sidebar-overlay');
+      
+      if (window.innerWidth <= 768) {
+        if (!sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('show')) {
+          sidebar.classList.remove('show');
+          overlay.classList.remove('show');
+        }
+      }
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(e) {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.querySelector('.mobile-menu-toggle');
+      const overlay = document.querySelector('.sidebar-overlay');
+      
+      if (window.innerWidth <= 768) {
+        if (!sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('show')) {
+          sidebar.classList.remove('show');
+          overlay.classList.remove('show');
+        }
+      }
+    });
+    
+    // Load ML Information
+    async function loadMLInfo(){
+      try {
+        const res = await fetch('/api/monitoring/tools?t=' + Date.now(), { headers:{ 'Accept':'application/json' } });
+        if (!res.ok) {
+          console.error('Failed to load ML info:', res.status);
+          return;
+        }
+        const data = await res.json();
+        const { ml_metadata, meta } = data;
+        
+        // Use meta data if ml_metadata is empty
+        const mlData = ml_metadata && Object.keys(ml_metadata).length > 0 ? ml_metadata : {
+          model_name: meta?.ml_model_name || null,
+          model_version: meta?.ml_model_version || null,
+          accuracy: meta?.ml_accuracy || null,
+          confidence: meta?.ml_confidence || null,
+          prediction_time: meta?.ml_prediction_time || null,
+          source: meta?.ml_source || 'fallback'
+        };
+        
+        const source = meta?.ml_source || mlData.source || 'fallback';
+        // Handle boolean dari JSON (bisa true/false atau "True"/"False" dari PHP)
+        const connectedRaw = meta?.ml_connected;
+        const connected = connectedRaw === true || connectedRaw === 'True' || connectedRaw === 1 || (connectedRaw === undefined && source === 'ml_service');
+        
+        // Status Connection
+        const statusEl = document.getElementById('mlConnectionStatus');
+        if (statusEl) {
+          // Cek apakah benar-benar terhubung ke ML service
+          if (connected && source === 'ml_service') {
+            statusEl.innerHTML = '<span class="ml-status-badge connected"><i class="fa-solid fa-check-circle"></i> Terhubung ke ML Service</span>';
+          } else if (source === 'ml_service' && !connected) {
+            statusEl.innerHTML = '<span class="ml-status-badge disconnected"><i class="fa-solid fa-times-circle"></i> ML Service Tidak Tersedia</span>';
+          } else {
+            statusEl.innerHTML = `<span class="ml-status-badge ${source === 'fallback' ? 'fallback' : 'disconnected'}"><i class="fa-solid ${source === 'fallback' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i> ${source === 'fallback' ? 'Menggunakan Prediksi Sederhana' : 'ML Service Tidak Tersedia'}</span>`;
+          }
+        }
+        
+        console.log('ML Connection Status:', { 
+          source, 
+          connected, 
+          connectedRaw, 
+          meta_ml_connected: meta?.ml_connected,
+          meta_ml_source: meta?.ml_source,
+          mlData_source: mlData?.source 
+        });
+        
+        // Accuracy
+        const accuracyEl = document.getElementById('mlAccuracy');
+        if (accuracyEl) {
+          const accuracy = mlData.accuracy !== null && mlData.accuracy !== undefined ? mlData.accuracy : meta?.ml_accuracy;
+          if (accuracy !== null && accuracy !== undefined) {
+            // If accuracy is already a percentage (0-100), use as is, otherwise multiply by 100
+            const accuracyValue = accuracy > 1 ? accuracy : (accuracy * 100);
+            accuracyEl.textContent = accuracyValue.toFixed(2) + '%';
+          } else {
+            accuracyEl.textContent = '-';
+          }
+        }
+        
+        // Prediction Time
+        const predictionTimeEl = document.getElementById('mlPredictionTime');
+        if (predictionTimeEl) {
+          const predictionTime = mlData.prediction_time || meta?.ml_prediction_time;
+          predictionTimeEl.textContent = predictionTime ? predictionTime + 'ms' : '-';
+        }
+        
+        console.log('ML Info loaded:', { mlData, meta, source, connected });
+      } catch (error) {
+        console.error('Error loading ML info:', error);
+        // Set default values on error
+        const statusEl = document.getElementById('mlConnectionStatus');
+        if (statusEl) {
+          statusEl.innerHTML = '<span class="ml-status-badge disconnected"><i class="fa-solid fa-times-circle"></i> Error memuat data</span>';
+        }
+      }
+    }
+    
+    // Helper functions for notifications
+    async function showSuccess(message) {
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: message,
+        confirmButtonColor: '#22C55E',
+        timer: 2000,
+        timerProgressBar: true
+      });
+    }
+    
+    async function showError(message) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: message,
+        confirmButtonColor: '#EF4444'
+      });
+    }
+    
+    // Threshold Management Functions
+    async function loadThresholdProfile(profileKey) {
+      const loading = document.getElementById('thresholdLoading');
+      const form = document.getElementById('thresholdForm');
+      
+      if (loading) loading.style.display = 'block';
+      if (form) form.style.display = 'none';
+      
+      try {
+        const response = await fetch(`/api/threshold/profile/${profileKey}`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load threshold profile');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.thresholds) {
+          // Fill form with threshold values
+          const thresholds = data.thresholds;
+          
+          // Amoniak
+          if (thresholds.amonia_ppm) {
+            document.getElementById('amonia_ideal_max').value = thresholds.amonia_ppm.ideal_max || '';
+            document.getElementById('amonia_warn_max').value = thresholds.amonia_ppm.warn_max || '';
+            document.getElementById('amonia_danger_max').value = thresholds.amonia_ppm.danger_max || '';
+          }
+          
+          // Suhu
+          if (thresholds.suhu_c) {
+            document.getElementById('suhu_ideal_min').value = thresholds.suhu_c.ideal_min || '';
+            document.getElementById('suhu_ideal_max').value = thresholds.suhu_c.ideal_max || '';
+            document.getElementById('suhu_danger_low').value = thresholds.suhu_c.danger_low || '';
+            document.getElementById('suhu_danger_high').value = thresholds.suhu_c.danger_high || '';
+          }
+          
+          // Kelembaban
+          if (thresholds.kelembaban_rh) {
+            document.getElementById('kelembaban_ideal_min').value = thresholds.kelembaban_rh.ideal_min || '';
+            document.getElementById('kelembaban_ideal_max').value = thresholds.kelembaban_rh.ideal_max || '';
+            document.getElementById('kelembaban_warn_high').value = thresholds.kelembaban_rh.warn_high || '';
+            document.getElementById('kelembaban_danger_high').value = thresholds.kelembaban_rh.danger_high || '';
+          }
+          
+          // Cahaya
+          if (thresholds.cahaya_lux) {
+            document.getElementById('cahaya_ideal_low').value = thresholds.cahaya_lux.ideal_low || '';
+            document.getElementById('cahaya_ideal_high').value = thresholds.cahaya_lux.ideal_high || '';
+            document.getElementById('cahaya_warn_low').value = thresholds.cahaya_lux.warn_low || '';
+            document.getElementById('cahaya_warn_high').value = thresholds.cahaya_lux.warn_high || '';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading threshold profile:', error);
+        await showError('Gagal memuat threshold profile');
+      } finally {
+        if (loading) loading.style.display = 'none';
+        if (form) form.style.display = 'grid';
+      }
+    }
+    
+    async function saveThreshold() {
+      const profileSelect = document.getElementById('thresholdProfile');
+      const profileKey = profileSelect ? profileSelect.value : 'default';
+      
+      // Prevent saving default profile
+      if (profileKey === 'default') {
+        await showError('Profile default tidak dapat diubah. Pilih profile umur tertentu untuk mengedit threshold.');
+        return;
+      }
+      
+      const loading = document.getElementById('thresholdLoading');
+      if (loading) loading.style.display = 'block';
+      
+      try {
+        const thresholds = {
+          amonia_ppm: {
+            ideal_max: parseFloat(document.getElementById('amonia_ideal_max').value) || null,
+            warn_max: parseFloat(document.getElementById('amonia_warn_max').value) || null,
+            danger_max: parseFloat(document.getElementById('amonia_danger_max').value) || null
+          },
+          suhu_c: {
+            ideal_min: parseFloat(document.getElementById('suhu_ideal_min').value) || null,
+            ideal_max: parseFloat(document.getElementById('suhu_ideal_max').value) || null,
+            danger_low: parseFloat(document.getElementById('suhu_danger_low').value) || null,
+            danger_high: parseFloat(document.getElementById('suhu_danger_high').value) || null
+          },
+          kelembaban_rh: {
+            ideal_min: parseFloat(document.getElementById('kelembaban_ideal_min').value) || null,
+            ideal_max: parseFloat(document.getElementById('kelembaban_ideal_max').value) || null,
+            warn_high: parseFloat(document.getElementById('kelembaban_warn_high').value) || null,
+            danger_high: parseFloat(document.getElementById('kelembaban_danger_high').value) || null
+          },
+          cahaya_lux: {
+            ideal_low: parseFloat(document.getElementById('cahaya_ideal_low').value) || null,
+            ideal_high: parseFloat(document.getElementById('cahaya_ideal_high').value) || null,
+            warn_low: parseFloat(document.getElementById('cahaya_warn_low').value) || null,
+            warn_high: parseFloat(document.getElementById('cahaya_warn_high').value) || null
+          }
+        };
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        const response = await fetch(`/api/threshold/profile/${profileKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken || ''
+          },
+          body: JSON.stringify(thresholds)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          await showSuccess(data.message || 'Threshold berhasil disimpan');
+          // Reload threshold values setelah save berhasil
+          await loadThresholdProfile(profileKey);
+          
+          // Trigger reload monitoring jika halaman monitoring terbuka
+          // Menggunakan localStorage event untuk komunikasi antar tab/window
+          localStorage.setItem('threshold_updated', Date.now().toString());
+          window.dispatchEvent(new Event('thresholdUpdated'));
+          
+          // Jika ada window monitoring, reload juga
+          if (window.opener && window.opener.loadMonitoring) {
+            window.opener.loadMonitoring();
+          }
+        } else {
+          await showError(data.message || 'Gagal menyimpan threshold');
+        }
+      } catch (error) {
+        console.error('Error saving threshold:', error);
+        await showError('Terjadi kesalahan saat menyimpan threshold');
+      } finally {
+        if (loading) loading.style.display = 'none';
+      }
+    }
+    
+    async function resetThresholdToDefault() {
+      const profileSelect = document.getElementById('thresholdProfile');
+      const profileKey = profileSelect ? profileSelect.value : 'default';
+      
+      if (profileKey === 'default') {
+        await showError('Profile default tidak dapat di-reset');
+        return;
+      }
+      
+      const result = await Swal.fire({
+        title: 'Reset ke Default?',
+        text: `Apakah Anda yakin ingin mengembalikan threshold profile "${profileSelect.options[profileSelect.selectedIndex].text}" ke nilai default?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#FACC15',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Reset',
+        cancelButtonText: 'Batal'
+      });
+      
+      if (result.isConfirmed) {
+        const loading = document.getElementById('thresholdLoading');
+        if (loading) loading.style.display = 'block';
+        
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+          
+          const response = await fetch(`/api/threshold/profile/${profileKey}/reset`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': csrfToken || ''
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            await showSuccess(data.message || 'Threshold berhasil di-reset ke default');
+            // Reload threshold values
+            await loadThresholdProfile(profileKey);
+          } else {
+            await showError(data.message || 'Gagal reset threshold');
+          }
+        } catch (error) {
+          console.error('Error resetting threshold:', error);
+          await showError('Terjadi kesalahan saat reset threshold');
+        } finally {
+          if (loading) loading.style.display = 'none';
+        }
+      }
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function(){
+      // Load ML Information
+      loadMLInfo();
+      
+      // Threshold Management
+      const profileSelect = document.getElementById('thresholdProfile');
+      const saveBtn = document.getElementById('saveThresholdBtn');
+      const resetBtn = document.getElementById('resetThresholdBtn');
+      
+      if (profileSelect) {
+        // Disable inputs for default profile
+        function toggleFormEditable(isEditable) {
+          const inputs = document.querySelectorAll('#thresholdForm input[type="number"]');
+          inputs.forEach(input => {
+            input.disabled = !isEditable;
+            input.style.opacity = isEditable ? '1' : '0.6';
+            input.style.cursor = isEditable ? 'text' : 'not-allowed';
+          });
+          
+          const saveBtn = document.getElementById('saveThresholdBtn');
+          if (saveBtn) {
+            saveBtn.disabled = !isEditable;
+            saveBtn.style.opacity = isEditable ? '1' : '0.6';
+            saveBtn.style.cursor = isEditable ? 'pointer' : 'not-allowed';
+          }
+        }
+        
+        // Load saved profile from localStorage, atau default jika tidak ada
+        const savedProfile = localStorage.getItem('selectedThresholdProfile') || 'default';
+        profileSelect.value = savedProfile;
+        
+        // Load profile on page load
+        loadThresholdProfile(savedProfile);
+        toggleFormEditable(savedProfile !== 'default');
+        
+        // Load profile when dropdown changes
+        profileSelect.addEventListener('change', function(e) {
+          const profileKey = e.target.value;
+          // Simpan pilihan ke localStorage
+          localStorage.setItem('selectedThresholdProfile', profileKey);
+          loadThresholdProfile(profileKey);
+          toggleFormEditable(profileKey !== 'default');
+        });
+      }
+      
+      if (saveBtn) {
+        saveBtn.addEventListener('click', saveThreshold);
+      }
+      
+      if (resetBtn) {
+        resetBtn.addEventListener('click', resetThresholdToDefault);
+      }
+      
+      // Telegram settings
+      const telegramForm = document.getElementById('telegramSettingsForm');
+      const testBtn = document.getElementById('testTelegramBtn');
+      const botTokenInput = document.getElementById('telegramBotToken');
+      const chatIdInput = document.getElementById('telegramChatId');
+      
+      if (telegramForm) {
+        telegramForm.addEventListener('submit', saveTelegramSettings);
+      }
+      
+      if (testBtn) {
+        testBtn.addEventListener('click', testTelegramMessage);
+      }
+      
+      // Check status on input change
+      if (botTokenInput && chatIdInput) {
+        botTokenInput.addEventListener('blur', checkTelegramStatus);
+        chatIdInput.addEventListener('blur', checkTelegramStatus);
+        // Also check when test message is sent successfully
+        const originalTestTelegram = testTelegramMessage;
+        window.testTelegramMessage = async function() {
+          const result = await originalTestTelegram();
+          if (result) {
+            // If test message sent successfully, update status
+            setTimeout(checkTelegramStatus, 1000);
+          }
+          return result;
+        };
+      }
+      
+      // Initial status check
+      setTimeout(checkTelegramStatus, 500);
+      
+      // Load notification status
+      loadNotificationStatus();
+      
+      // Toggle notification switch
+      const notificationToggle = document.getElementById('telegramNotificationsEnabled');
+      if (notificationToggle) {
+        notificationToggle.addEventListener('change', toggleNotifications);
+      }
+    });
+    
+    // Load notification status
+    async function loadNotificationStatus() {
+      const statusEl = document.getElementById('notificationStatus');
+      
+      // Show loading state
+      if (statusEl) {
+        statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memuat status...';
+        statusEl.style.color = '#6c757d';
+        statusEl.style.background = '#f8f9fa';
+        statusEl.style.borderColor = '#e9ecef';
+      }
+      
+      try {
+        // Add cache busting parameter
+        const cacheBuster = Date.now();
+        const response = await fetch(`/api/telegram/notification-status?_=${cacheBuster}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          cache: 'no-cache'
+        });
+        
+        // Check if response is ok
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Try to parse JSON
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Error parsing JSON:', parseError);
+          throw new Error('Invalid JSON response');
+        }
+        
+        // Handle response
+        if (data && typeof data === 'object' && data.success) {
+          const enabled = data.enabled === true || data.enabled === 'true' || data.enabled === 1;
+          
+          const toggle = document.getElementById('telegramNotificationsEnabled');
+          if (toggle) {
+            toggle.checked = enabled;
+          }
+          
+          // Update status display
+          if (statusEl) {
+            if (enabled) {
+              statusEl.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#22C55E;"></i> <strong style="color:#22C55E;">Aktif</strong> - Notifikasi akan dikirim otomatis';
+              statusEl.style.color = '#155724';
+              statusEl.style.background = '#d4edda';
+              statusEl.style.borderColor = '#c3e6cb';
+            } else {
+              statusEl.innerHTML = '<i class="fa-solid fa-times-circle" style="color:#dc2626;"></i> <strong style="color:#dc2626;">Nonaktif</strong> - Notifikasi tidak akan dikirim';
+              statusEl.style.color = '#721c24';
+              statusEl.style.background = '#f8d7da';
+              statusEl.style.borderColor = '#f5c6cb';
+            }
+          }
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error loading notification status:', error);
+        if (statusEl) {
+          statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle" style="color:#856404;"></i> Error memuat status: ' + (error.message || 'Unknown error');
+          statusEl.style.color = '#856404';
+          statusEl.style.background = '#fff3cd';
+          statusEl.style.borderColor = '#ffeaa7';
+        }
+        
+        // DON'T auto-retry - just show error
+        // User can refresh manually if needed
+      }
+    }
+    
+    // Toggle notifications
+    async function toggleNotifications(event) {
+      const enabled = event.target.checked;
+      const toggle = event.target;
+      const statusEl = document.getElementById('notificationStatus');
+      toggle.disabled = true;
+      
+      // Update status display immediately (optimistic update)
+      if (statusEl) {
+        if (enabled) {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Mengaktifkan...';
+        } else {
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menonaktifkan...';
+        }
+      }
+      
+      try {
+        const response = await fetch('/api/telegram/toggle-notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ enabled: enabled })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Reload status to get updated value
+          await loadNotificationStatus();
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: data.message,
+            confirmButtonColor: '#22C55E',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else {
+          // Revert toggle if failed
+          toggle.checked = !enabled;
+          await loadNotificationStatus(); // Reload to show correct status
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: data.message || 'Gagal mengubah status notifikasi',
+            confirmButtonColor: '#EF4444'
+          });
+        }
+      } catch (error) {
+        // Revert toggle if error
+        toggle.checked = !enabled;
+        await loadNotificationStatus(); // Reload to show correct status
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan saat mengubah status notifikasi',
+          confirmButtonColor: '#EF4444'
+        });
+      } finally {
+        toggle.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
+
